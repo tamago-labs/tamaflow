@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAI } from './context/AIContext'
 import ModelSelector from './pages/ModelSelector'
 import LoadingScreen from './pages/LoadingScreen'
-import Ready from './pages/Ready'
+import MainLayout from './components/MainLayout'
+import Dashboard from './pages/Dashboard'
+import Employees from './pages/Employees'
+import NewFlow from './pages/NewFlow'
+import ActiveFlows from './pages/ActiveFlows'
+import Settlements from './pages/Settlements'
+import Inbox from './pages/Inbox'
+import Settings from './pages/Settings'
 import { SPLASH_DELAY_MS } from './theme'
 import type { ModelEntry } from '../../preload/index.d'
 
-type AppState = 'loading' | 'model' | 'model-loading' | 'ready'
+type AppState = 'loading' | 'model' | 'model-loading' | 'app'
 
 /**
  * Boot flow:
@@ -15,12 +23,13 @@ type AppState = 'loading' | 'model' | 'model-loading' | 'ready'
  *   model          user picks a model in ModelSelector
  *   model-loading  LoadingScreen tracks the in-flight load via useAI();
  *                  advances on its own when isReady
- *   ready          "AI is ready" landing page
+ *   app            MainLayout with router — Dashboard, Flows, etc.
  *
- * The model step is required because the chat (and everything else
- * downstream of `isReady`) needs a loaded model. The "Continue
- * without loading" link on the ModelSelector jumps straight to
- * `ready` with `isReady = false` so the user can pick later.
+ * The model step is required because every page (and the AI features in
+ * particular) needs a loaded model. The "Continue without loading" link
+ * on the ModelSelector jumps straight to `app` with `isReady = false`
+ * so the user can browse first and load later. From inside the app the
+ * user can trigger the same "back to picker" via Settings > AI Model.
  */
 function App() {
   const [appState, setAppState] = useState<AppState>('loading')
@@ -28,14 +37,14 @@ function App() {
 
   // Brief splash so the wordmark fades in gracefully.
   useEffect(() => {
-    const t = setTimeout(() => setAppState('model'), SPLASH_DELAY_MS)
+    const t = setTimeout(() => setAppState((s) => (s === 'loading' ? 'model' : s)), SPLASH_DELAY_MS)
     return () => clearTimeout(t)
   }, [])
 
-  // Once a model is loaded in the main process, refresh the status
-  // so the `Ready` page shows the correct card.
+  // Once we're in the app, refresh status so the TopBar / Settings
+  // show the correct AI state.
   useEffect(() => {
-    if (appState === 'ready') void refresh()
+    if (appState === 'app') void refresh()
   }, [appState, refresh])
 
   const handleModelSelect = (_entry: ModelEntry) => {
@@ -43,32 +52,20 @@ function App() {
   }
 
   const handleLoadingComplete = () => {
-    setAppState('ready')
+    setAppState('app')
   }
 
   const handleModelSkip = () => {
-    setAppState('ready')
+    setAppState('app')
   }
 
   const handleBackToPicker = () => {
     setAppState('model')
   }
 
-  const handleUnload = async () => {
-    try {
-      await window.api?.ai?.unload()
-    } catch (e) {
-      console.error('[App] unload failed:', e)
-    }
-    await refresh()
-    setAppState('model')
-  }
-
   return (
     <>
-      {appState === 'loading' && (
-        <Splash />
-      )}
+      {appState === 'loading' && <Splash />}
 
       {appState === 'model' && (
         <ModelSelectorGate
@@ -81,10 +78,33 @@ function App() {
 
       {appState === 'model-loading' && <LoadingScreen onComplete={handleLoadingComplete} />}
 
-      {appState === 'ready' && (
-        <Ready onBackToPicker={handleBackToPicker} onUnload={() => void handleUnload()} />
-      )}
+      {appState === 'app' && <AppRouter onChangeModel={handleBackToPicker} />}
     </>
+  )
+}
+
+/**
+ * HashRouter wrapper. Passes `onChangeModel` to MainLayout, which
+ * forwards it to child routes via Outlet context. That way Settings >
+ * AI Model can navigate the user back to the model picker without
+ * prop-drilling through Sidebar/TopBar.
+ */
+function AppRouter({ onChangeModel }: { onChangeModel: () => void }) {
+  return (
+    <HashRouter>
+      <Routes>
+        <Route element={<MainLayout onChangeModel={onChangeModel} />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/employees" element={<Employees />} />
+          <Route path="/flows" element={<ActiveFlows />} />
+          <Route path="/flows/new" element={<NewFlow />} />
+          <Route path="/settlements" element={<Settlements />} />
+          <Route path="/inbox" element={<Inbox />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </HashRouter>
   )
 }
 

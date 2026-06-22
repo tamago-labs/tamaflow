@@ -23,6 +23,7 @@ interface AIContextValue {
   select: (id: string) => Promise<void>
   cancel: (clearCache?: boolean) => Promise<void>
   reload: () => Promise<void>
+  unload: () => Promise<void>
   resetCache: (id: string) => Promise<{ success: boolean; deleted: string[]; error?: string }>
   setError: (e: ModelErrorPayload | null) => void
 }
@@ -107,6 +108,17 @@ export function AIProvider({ children }: { children: ReactNode }) {
     await select(status.active.id)
   }, [select, status])
 
+  const unload = useCallback(async () => {
+    if (!window.api?.ai?.unload) return
+    setError(null)
+    try {
+      await window.api.ai.unload()
+    } catch (e) {
+      console.error('[AIContext] unload failed:', e)
+    }
+    await refresh()
+  }, [refresh])
+
   const resetCache = useCallback(
     async (id: string) => {
       if (!window.api?.models?.resetCache) {
@@ -141,6 +153,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
         select,
         cancel,
         reload,
+        unload,
         resetCache,
         setError,
       }}
