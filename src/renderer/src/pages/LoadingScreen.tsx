@@ -52,14 +52,14 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
 
         {/* App label */}
         <p className="text-[11px] font-medium tracking-wider3 text-brand-muted uppercase mb-2.5 m-0">
-          Private & On-Device AI
+          AI Auto-Payroll on Canton
         </p>
 
         {/* App title */}
         <h1 className="text-[32px] font-light text-brand-navy tracking-tight leading-[1.15] mb-10 m-0">
-          Loading
+          Preparing
           <br />
-          <strong className="font-medium">AI model</strong>
+          <strong className="font-medium">Local AI</strong>
         </h1>
 
         {/* Progress bar or Error state */}
