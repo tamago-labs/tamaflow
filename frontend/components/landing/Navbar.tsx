@@ -12,7 +12,7 @@ import { marketingNav, marketingMore } from "@/lib/nav";
  *   Left   — wordmark
  *   Mid    — 3 anchor links (How it works, Features, Why Canton)
  *           + a "More ▾" dropdown (GitHub in v1, expandable)
- *   Right  — "Launch App" CTA (links to /app)
+ *   Right  — "Employee Dashboard" CTA (links to /app)
  *
  * On small screens the mid links collapse into a hamburger drawer.
  * The More dropdown is flattened into a regular <a> in the drawer
@@ -139,7 +139,7 @@ export default function Navbar() {
             href="/app"
             className="inline-flex items-center gap-1.5 py-2 px-4 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity"
           >
-            Launch App
+            Employee Dashboard
             <ArrowUpRight size={12} />
           </Link>
         </div>
@@ -190,7 +190,7 @@ export default function Navbar() {
               onClick={() => setOpen(false)}
               className="inline-flex items-center justify-center gap-1.5 py-2.5 px-4 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline"
             >
-              Launch App
+              Employee Dashboard
               <ArrowUpRight size={12} />
             </Link>
           </div>
