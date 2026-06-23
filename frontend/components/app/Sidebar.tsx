@@ -10,8 +10,6 @@ import BrandLockup from "@/components/shared/BrandLockup";
  * Fixed 200px left navigation for the in-app shell.
  *
  * Visual:
- *   • Teal 3px accent bar across the top (matches the desktop-app
- *     reference and the landing mockup).
  *   • Wordmark in NAVY + BLUE.
  *   • Two categories (Payroll, Account) with mono uppercase labels.
  *   • Active link = brand-blue fill + white text; hover = brand-light.
@@ -28,9 +26,6 @@ export default function Sidebar() {
       className="fixed top-0 left-0 w-[200px] h-screen bg-white border-r border-brand-border flex flex-col z-[100] box-border"
       style={{ padding: "24px 16px" }}
     >
-      {/* Teal top accent — matches the my-doctor-ai / desktop-app ref */}
-      <div className="absolute top-0 left-0 right-0 h-[3px] bg-brand-teal" />
-
       {/* Wordmark — links back to the landing page */}
       <div className="mb-8">
         <BrandLockup href="/" mark="hexagon" box="duotone" size="md" />

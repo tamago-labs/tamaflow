@@ -87,7 +87,7 @@ export default function DownloadDesktopApp() {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-2 py-3 px-6 bg-white text-brand-navy border border-brand-border rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light transition-colors"
+        className="inline-flex items-center gap-2 py-3 px-6 bg-white text-brand-navy border border-brand-border rounded-md   text-[11px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light transition-colors"
       >
         I'm an Employer
         <ChevronDown
@@ -101,7 +101,7 @@ export default function DownloadDesktopApp() {
           role="menu"
           className="absolute right-0 mt-2 w-64 bg-white border border-brand-border rounded-md shadow-[0_18px_50px_-12px_rgba(10,10,92,0.25)] overflow-hidden z-50"
         >
-          <p className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase font-semibold px-4 pt-3 pb-2">
+          <p className=" text-[10px] tracking-wider2 text-brand-muted uppercase font-semibold px-4 pt-3 pb-2">
             Download Desktop App
           </p>
           <ul className="pb-1">
@@ -119,10 +119,10 @@ export default function DownloadDesktopApp() {
                     <Icon size={16} />
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block font-mono text-[12px] font-bold tracking-wider2 text-brand-navy uppercase">
+                    <span className="block  text-[12px] font-bold tracking-wider2 text-brand-navy uppercase">
                       {label}
                     </span>
-                    <span className="block font-mono text-[10px] text-brand-muted">
+                    <span className="block text-[10px] text-brand-muted">
                       {hint}
                     </span>
                   </span>

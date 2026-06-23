@@ -50,7 +50,7 @@ export default function Hero() {
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
               href="/app"
-              className="inline-flex items-center gap-2 py-3 px-6 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity shadow-[0_4px_18px_-6px_rgba(26,26,232,0.45)]"
+              className="inline-flex items-center gap-2 py-3 px-6 bg-brand-blue text-white rounded-md  text-[11px] font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity shadow-[0_4px_18px_-6px_rgba(26,26,232,0.45)]"
             >
               I'm an Employee
               <ArrowUpRight size={14} />
@@ -67,7 +67,7 @@ export default function Hero() {
             ].map((b) => (
               <span
                 key={b.label}
-                className="inline-flex items-center gap-2 font-mono text-[10px] tracking-wider2 text-brand-muted uppercase"
+                className="inline-flex items-center gap-2  text-[10px] tracking-wider2 text-brand-muted uppercase"
               >
                 <b.icon size={14} className="text-brand-teal" />
                 {b.label}
