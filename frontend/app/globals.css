@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ */
+/* TamaFlow design tokens — ported from desktop-app/tailwind.config.js */
+/* In Tailwind v4 the @theme directive makes these into utilities.    */
+/* ------------------------------------------------------------------ */
+@theme {
+  /* Brand palette */
+  --color-brand-blue: #1A1AE8;
+  --color-brand-teal: #3EC4C0;
+  --color-brand-navy: #0a0a5c;
+  --color-brand-muted: #9999bb;
+  --color-brand-light: #f7f7fc;
+  --color-brand-border: #e0e0f0;
+  --color-brand-ok: #0a8463;
+  --color-brand-err: #cc0000;
+  --color-brand-errBg: #fff0f0;
+  --color-brand-errBorder: #ffcccc;
+  --color-brand-errDark: #660000;
+  --color-brand-tealAccent: #085041;
+
+  /* Type families — bound to the next/font variables in layout.tsx */
+  --font-sans: var(--font-dm-sans), "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-space-mono), "Space Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Custom letter-spacing tokens (mirrors desktop's tracking.wider2 etc.) */
+  --tracking-wider2: 0.14em;
+  --tracking-wider3: 0.18em;
+  --tracking-wide2: 0.1em;
+}
+
+/* Base layer — keeps the same body setup as the desktop-app so the
+   landing and the in-app shell look identical. */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-brand-navy);
+  background: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Subtle ambient grid used on the landing hero — uses brand tokens so
+   it blends with the rest of the system. */
+.landing-grid {
+  background-image:
+    linear-gradient(to right, rgba(10, 10, 92, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(10, 10, 92, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
