@@ -1,46 +1,41 @@
-import Link from "next/link";
-import { WORDMARK } from "@/lib/theme";
+import BrandLockup from "./BrandLockup";
 
 /**
- * The TamaFlow wordmark — used in:
- *   • landing page navbar / footer
- *   • desktop-app sidebar (see app/Sidebar)
+ * The TamaFlow wordmark.
  *
- * Renders `Tama` in NAVY and `flow` in BLUE. Wraps in a Next.js Link
- * to the landing page by default. Pass `href={null}` or `as="span"` to
- * render without a wrapping anchor.
+ * After the v1 rebrand, the wordmark renders with the `Hexagon`
+ * lucide icon on a diagonal navy → blue duotone box. The two-tone
+ * reflects the wordmark's own two-colour split ("Tama" navy +
+ * "flow" blue) so the lockup forms a single visual unit.
+ *
+ * This component is a thin shim over `BrandLockup` and is kept
+ * around so existing call sites keep working without changes.
+ *
+ * If you ever need to render the wordmark *without* the new
+ * mark, import `BrandLockup` directly and pass `mark={false}`.
  */
+
 export interface WordmarkProps {
+  /** Link target. `null` → no anchor. Default: "/" */
   href?: string | null;
+  /** Size step. Default: "md". */
   size?: "sm" | "md" | "lg" | "xl";
+  /** Optional className on the wrapper. */
   className?: string;
 }
-
-const sizeMap = {
-  sm: "text-base",
-  md: "text-lg",
-  lg: "text-xl",
-  xl: "text-2xl",
-} as const;
 
 export default function Wordmark({
   href = "/",
   size = "md",
-  className = "",
+  className,
 }: WordmarkProps) {
-  const inner = (
-    <p
-      className={`font-mono font-bold tracking-wide leading-none m-0 ${sizeMap[size]} ${className}`}
-    >
-      <span className="text-brand-navy">{WORDMARK.prefix}</span>
-      <span className="text-brand-blue">{WORDMARK.suffix}</span>
-    </p>
-  );
-
-  if (!href) return inner;
   return (
-    <Link href={href} className="no-underline">
-      {inner}
-    </Link>
+    <BrandLockup
+      href={href}
+      mark="hexagon"
+      box="duotone"
+      size={size}
+      className={className}
+    />
   );
 }

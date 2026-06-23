@@ -34,18 +34,9 @@ export default function Hero() {
         }}
       />
 
-      <div className="relative max-w-7xl mx-auto px-6 lg:px-10 pt-16 pb-24 lg:pt-24 lg:pb-32 grid lg:grid-cols-[1.05fr_0.95fr] gap-16 items-center">
+      <div className="relative max-w-7xl mx-auto px-6 lg:px-10 pt-8 pb-24 lg:pt-12 lg:pb-32 grid lg:grid-cols-[1.05fr_0.95fr] gap-16 items-center">
         {/* Left: copy */}
         <div>
-          <div className="inline-flex items-center gap-2 py-1.5 pl-1.5 pr-3 rounded-full border border-brand-border bg-white">
-            <span className="font-mono text-[10px] font-bold tracking-wider2 uppercase bg-brand-navy text-white px-2 py-0.5 rounded-full">
-              v0.1
-            </span>
-            <span className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase">
-              TamaFlow · Local AI Auto-Payroll on Canton
-            </span>
-          </div>
-
           <h1 className="mt-6 text-4xl md:text-5xl lg:text-6xl font-light text-brand-navy tracking-tight leading-[1.05]">
             Zero-Cloud AI.{" "}
             <span className="text-brand-blue">Zero-Leaked</span>{" "}

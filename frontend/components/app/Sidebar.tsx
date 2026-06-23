@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navCategories } from "@/lib/nav";
-import { WORDMARK, SITE } from "@/lib/theme";
+import { SITE } from "@/lib/theme";
+import BrandLockup from "@/components/shared/BrandLockup";
 
 /**
  * Fixed 200px left navigation for the in-app shell.
@@ -30,14 +31,9 @@ export default function Sidebar() {
       {/* Teal top accent — matches the my-doctor-ai / desktop-app ref */}
       <div className="absolute top-0 left-0 right-0 h-[3px] bg-brand-teal" />
 
-      {/* Wordmark */}
+      {/* Wordmark — links back to the landing page */}
       <div className="mb-8">
-        <Link href="/app" className="no-underline">
-          <p className="font-mono font-bold text-lg tracking-wide text-brand-navy m-0 leading-none">
-            <span className="text-brand-navy">{WORDMARK.prefix}</span>
-            <span className="text-brand-blue">{WORDMARK.suffix}</span>
-          </p>
-        </Link>
+        <BrandLockup href="/" mark="hexagon" box="duotone" size="md" />
       </div>
 
       {/* Nav items grouped by category */}
