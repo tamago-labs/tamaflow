@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, ShieldCheck, Lock, Cpu } from "lucide-react";
-import Wordmark from "@/components/shared/Wordmark";
+import DownloadDesktopApp from "./DownloadDesktopApp";
 
 /**
  * Landing-page hero.
@@ -39,16 +39,12 @@ export default function Hero() {
         <div>
           <h1 className="mt-6 text-4xl md:text-5xl lg:text-6xl font-light text-brand-navy tracking-tight leading-[1.05]">
             Zero-Cloud AI.{" "}
-            <span className="text-brand-blue">Zero-Leaked</span>{" "}
-            <br className="hidden md:block" />
+            <span className="text-brand-blue">Zero-Leaked</span>{" "} 
             Payroll Data.
           </h1>
 
           <p className="mt-6 text-lg text-brand-navy/80 max-w-xl leading-relaxed">
-            Stop leaking corporate finances to third-party cloud LLMs.
-            TamaFlow runs autonomous workforce settlement agents entirely
-            within your secure local infrastructure, executing private,
-            atomic token transfers on Canton.
+            Stop leaking corporate finances to third-party cloud LLMs. Import sensitive data locally, verify employees with 5N ID, and let AI run payroll end-to-end on Canton through Loop SDK.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -56,15 +52,10 @@ export default function Hero() {
               href="/app"
               className="inline-flex items-center gap-2 py-3 px-6 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity shadow-[0_4px_18px_-6px_rgba(26,26,232,0.45)]"
             >
-              Launch App
+              I'm an Employee
               <ArrowUpRight size={14} />
             </Link>
-            <a
-              href="#whitepaper"
-              className="inline-flex items-center gap-2 py-3 px-6 bg-white text-brand-navy border border-brand-border rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:bg-brand-light transition-colors"
-            >
-              Read the Whitepaper
-            </a>
+            <DownloadDesktopApp />
           </div>
 
           {/* Trust strip — three small mono badges */}
@@ -112,7 +103,7 @@ function DashboardMockup() {
             <span className="w-2.5 h-2.5 rounded-full bg-brand-border" />
           </div>
           <span className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
-            app.tamaflow
+            tamaflow
           </span>
           <span className="w-12" />
         </div>
@@ -121,16 +112,15 @@ function DashboardMockup() {
         <div className="grid grid-cols-[64px_1fr]">
           {/* Sidebar mock */}
           <aside className="bg-white border-r border-brand-border py-3 flex flex-col items-center gap-3">
-            <Wordmark size="sm" className="!text-[11px]" href={null} />
+           
             <div className="mt-1 flex flex-col gap-1 w-10">
               {["◆", "◇", "◇", "◇", "◇"].map((g, i) => (
                 <span
                   key={i}
-                  className={`h-6 rounded flex items-center justify-center text-[10px] ${
-                    i === 0
+                  className={`h-6 rounded flex items-center justify-center text-[10px] ${i === 0
                       ? "bg-brand-blue text-white"
                       : "text-brand-muted"
-                  }`}
+                    }`}
                 >
                   {g}
                 </span>
@@ -194,15 +184,7 @@ function DashboardMockup() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Floating "atomic settlement" badge */}
-      <div className="absolute -bottom-5 -left-5 hidden md:flex items-center gap-2 bg-white border border-brand-border rounded-md px-3 py-2 shadow-[0_10px_30px_-12px_rgba(10,10,92,0.25)]">
-        <span className="w-2 h-2 rounded-full bg-brand-ok" />
-        <span className="font-mono text-[10px] tracking-wider2 text-brand-navy uppercase font-semibold">
-          Settled · 0x9a4f…c2
-        </span>
-      </div>
+      </div> 
     </div>
   );
 }

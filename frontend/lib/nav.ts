@@ -67,11 +67,30 @@ export const routeLabels: Record<string, string> = {
 
 /* -------------------------------------------------------------------------- */
 /* Landing-page marketing nav                                                 */
+/*                                                                             */
+/*   marketingNav    — items rendered as direct anchor links in the navbar     */
+/*                     (desktop + mobile drawer).                              */
+/*   marketingMore   — items rendered inside the navbar's "More ▾" dropdown. */
+/*                     v1 ships with just the GitHub link, but the array is   */
+/*                     structured so future items (Whitepaper, Docs, Discord)  */
+/*                     can be added in one line.                               */
 /* -------------------------------------------------------------------------- */
 export const marketingNav: { href: string; label: string }[] = [
-  { href: "#problem", label: "Problem" },
-  { href: "#solution", label: "Solution" },
   { href: "#flow", label: "How it works" },
   { href: "#features", label: "Features" },
   { href: "#why-canton", label: "Why Canton" },
+];
+
+export interface MarketingMoreItem {
+  label: string;
+  href: string;
+  external?: boolean;
+}
+
+export const marketingMore: MarketingMoreItem[] = [
+  {
+    label: "GitHub Repo",
+    href: "https://github.com/tamago-labs/tamaflow",
+    external: true,
+  },
 ];
