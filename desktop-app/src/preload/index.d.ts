@@ -70,12 +70,57 @@ export interface AIStatus {
   downloadProgress: number
 }
 
+export interface WalletStatus {
+  exists: boolean
+  encryptionAvailable: boolean
+  partyId?: string
+  partyHint?: string
+  fingerprint?: string
+  publicKey?: string
+  createdAt?: string
+  filePath: string
+}
+
+export interface WalletCreateResult {
+  success: boolean
+  partyId?: string
+  fingerprint?: string
+  error?: string
+  errorCode?: 'OS_KEYCHAIN_UNAVAILABLE' | 'SDK_ERROR' | 'AUTH_ERROR'
+}
+
+export interface Holding {
+  contractId: string
+  instrumentId: string
+  symbol: string
+  amount: string
+  lockedAmount?: string
+}
+
+export interface FaucetResult {
+  success: boolean
+  txHash?: string
+  amount?: string
+  error?: string
+}
+
+export interface WalletAPI {
+  status: () => Promise<WalletStatus>
+  create: () => Promise<WalletCreateResult>
+  destroy: () => Promise<{ success: boolean }>
+  exportKey: () => Promise<{ success: boolean; privateKey?: string; error?: string }>
+  holdings: () => Promise<Holding[]>
+  faucet: (amount?: string) => Promise<FaucetResult>
+  onChange: (callback: () => void) => () => void
+}
+
 export interface TamaflowAPI {
   models: ModelsAPI
   ai: {
     getStatus: () => Promise<AIStatus>
     unload: () => Promise<{ success: boolean; error?: string }>
   }
+  wallet: WalletAPI
 }
 
 declare global {

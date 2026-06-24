@@ -15,6 +15,7 @@ import {
   mapError,
 } from './qvac'
 import { modelStore, type ModelEntry, type ModelSourceKind } from './modelStore'
+import { registerWalletIpcHandlers } from './wallet'
 
 app.commandLine.appendSwitch('no-sandbox')
 
@@ -214,6 +215,7 @@ app.whenReady().then(() => {
 
   // Register IPC handlers
   registerModelsIpcHandlers()
+  registerWalletIpcHandlers()
 
   // Create window
   createWindow()

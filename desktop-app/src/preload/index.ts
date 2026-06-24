@@ -5,6 +5,10 @@ import type {
   ModelLoadProgress,
   ModelErrorPayload,
   ModelStatus,
+  WalletStatus,
+  WalletCreateResult,
+  Holding,
+  FaucetResult,
 } from './index.d'
 
 // Custom APIs for renderer
@@ -48,6 +52,22 @@ const api = {
       downloadProgress: number
     }> => ipcRenderer.invoke('ai:getStatus'),
     unload: (): Promise<{ success: boolean; error?: string }> => ipcRenderer.invoke('ai:unload'),
+  },
+
+  wallet: {
+    status: (): Promise<WalletStatus> => ipcRenderer.invoke('wallet:status'),
+    create: (): Promise<WalletCreateResult> => ipcRenderer.invoke('wallet:create'),
+    destroy: (): Promise<{ success: boolean }> => ipcRenderer.invoke('wallet:destroy'),
+    exportKey: (): Promise<{ success: boolean; privateKey?: string; error?: string }> =>
+      ipcRenderer.invoke('wallet:exportKey'),
+    holdings: (): Promise<Holding[]> => ipcRenderer.invoke('wallet:holdings'),
+    faucet: (amount?: string): Promise<FaucetResult> =>
+      ipcRenderer.invoke('wallet:faucet', amount),
+    onChange: (callback: () => void) => {
+      const handler = () => callback()
+      ipcRenderer.on('wallet:onChange', handler)
+      return () => ipcRenderer.removeListener('wallet:onChange', handler)
+    },
   },
 }
 

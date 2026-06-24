@@ -1,11 +1,14 @@
+import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useAI } from '../context/AIContext'
-import { ChevronRight, Wallet } from 'lucide-react'
+import { useWallet } from '../context/WalletContext'
+import AccountMenu from './AccountMenu'
+import { ChevronRight, Wallet, ChevronDown } from 'lucide-react'
 
 /**
  * Sticky 56px top bar:
  *   Left  — breadcrumb (mono, brand-muted) derived from the matched route.
- *   Right — Connect Wallet button + AI status dot.
+ *   Right — AI status dot + Wallet chip / Setup button.
  *
  * The breadcrumb is computed from a static route→label map so we don't
  * need a router config to introspect. Dynamic segments (e.g. /flows/:id)
@@ -44,10 +47,47 @@ function buildCrumbs(pathname: string): Crumb[] {
   return crumbs
 }
 
+function truncateParty(partyId: string | undefined): string {
+  if (!partyId) return '…'
+  // Canton party format: `hint::fingerprint` — keep the hint + first 4
+  // chars of the fingerprint after `::`. e.g. `tamaflow::1220…abcd`.
+  const sep = '::'
+  const i = partyId.indexOf(sep)
+  if (i < 0) {
+    return partyId.length <= 10 ? partyId : `…${partyId.slice(-4)}`
+  }
+  const hint = partyId.slice(0, i)
+  const fingerprint = partyId.slice(i + sep.length)
+  return `${hint}::${fingerprint.slice(0, 4)}…${fingerprint.slice(-4)}`
+}
+
 export default function TopBar() {
   const { isReady } = useAI()
+  const { status, openSetup } = useWallet()
   const location = useLocation()
   const crumbs = buildCrumbs(location.pathname)
+
+  const [menuOpen, setMenuOpen] = useState(false)
+  const chipRef = useRef<HTMLDivElement>(null)
+
+  // Close menu on outside click — the AccountMenu itself also handles
+  // this but doing it here too prevents the chip's own click from
+  // re-toggling the menu open after close.
+  useEffect(() => {
+    if (!menuOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (
+        chipRef.current &&
+        !chipRef.current.contains(e.target as Node)
+      ) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [menuOpen])
+
+  const walletPresent = !!status?.exists
 
   return (
     <header className="sticky top-0 z-50 h-14 bg-white border-b border-brand-border flex items-center justify-between px-8">
@@ -85,14 +125,35 @@ export default function TopBar() {
           </span>
         </span>
 
-        {/* Connect Wallet button — placeholder, no real wallet logic yet */}
-        <button
-          type="button"
-          className="flex items-center gap-1.5 py-1.5 px-3 border border-brand-blue text-brand-blue bg-white rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light"
-        >
-          <Wallet size={12} />
-          Connect Wallet
-        </button>
+        {/* Wallet: chip (with dropdown) when set up, Setup button otherwise */}
+        {!walletPresent && (
+          <button
+            type="button"
+            onClick={openSetup}
+            className="flex items-center gap-1.5 py-1.5 px-3 border border-brand-blue text-brand-blue bg-white rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light"
+          >
+            <Wallet size={12} />
+            Setup Wallet
+          </button>
+        )}
+
+        {walletPresent && (
+          <div ref={chipRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              className="flex items-center gap-1.5 py-1.5 px-3 border border-brand-blue text-brand-blue bg-white rounded-md font-mono text-[10px] font-bold tracking-wider2 cursor-pointer hover:bg-brand-light"
+            >
+              <span className="font-mono text-[10px] tracking-wide">
+                {truncateParty(status?.partyId)}
+              </span>
+              <ChevronDown size={11} />
+            </button>
+            <AccountMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+          </div>
+        )}
       </div>
     </header>
   )

@@ -1,4 +1,3 @@
-import type { TokenProviderConfig } from '@canton-network/core-wallet-auth';
 import { DEVNET } from './constants.js';
 
 /**
@@ -64,7 +63,15 @@ export async function fetchToken(
  * The SDK accepts a static token via `method: 'static'` — it will pass
  * it as a `Bearer` header without trying to refresh or re-validate.
  * Since the faucet script is short-lived, an 8-hour token is plenty.
+ *
+ * The return type is intentionally inferred (no `TokenProviderConfig`
+ * annotation) because the `TokenProviderConfig` type lives in the
+ * newer `@canton-network/core-wallet-auth` version that the wallet-sdk
+ * bundles internally — the top-level `core-wallet-auth` we declare as
+ * a dev-dep doesn't yet export it. The literal `{ method: 'static',
+ * token }` shape is structurally compatible with `TokenProviderConfig`
+ * at the SDK call site.
  */
-export function staticAuth(token: string): TokenProviderConfig {
-  return { method: 'static', token };
+export function staticAuth(token: string) {
+  return { method: 'static', token } as const;
 }
