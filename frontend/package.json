@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@fivenorth/loop-sdk": "^0.13.1",
+    "framer-motion": "^12.41.0",
     "lucide-react": "^0.469.0",
     "next": "16.2.9",
     "postcss": "^8.5.15",

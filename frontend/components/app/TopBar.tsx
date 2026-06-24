@@ -1,8 +1,10 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { ChevronRight, Wallet } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { routeLabels } from "@/lib/nav";
+import ConnectButton from "@/components/wallet/ConnectButton";
+import NetworkBadge from "@/components/wallet/NetworkBadge";
 
 /**
  * Sticky 56px top bar for the in-app shell.
@@ -52,11 +54,6 @@ export default function TopBar() {
   const pathname = usePathname() ?? "/app";
   const crumbs = buildCrumbs(pathname);
 
-  // Web build: there's no real local model to query, so we always
-  // show the "no AI" dot. The desktop-app would set this via
-  // useAI(); we mimic the visual with a static placeholder.
-  const isReady = false;
-
   return (
     <header className="sticky top-0 z-50 h-14 bg-white border-b border-brand-border flex items-center justify-between px-8">
       {/* Breadcrumb */}
@@ -87,28 +84,11 @@ export default function TopBar() {
 
       {/* Right-side actions */}
       <div className="flex items-center gap-3">
-        {/* AI status dot */}
-        <span
-          className="flex items-center gap-1.5"
-          title={isReady ? "AI ready" : "No model loaded"}
-        >
-          <span
-            className="w-[7px] h-[7px] rounded-full flex-shrink-0"
-            style={{ background: isReady ? "#3EC4C0" : "#9999bb" }}
-          />
-          <span className="font-mono text-[9px] text-brand-muted uppercase tracking-wider2">
-            {isReady ? "AI" : "No AI"}
-          </span>
-        </span>
+        {/* Network badge */}
+        <NetworkBadge />
 
-        {/* Connect Wallet button — placeholder */}
-        <button
-          type="button"
-          className="flex items-center gap-1.5 py-1.5 px-3 border border-brand-blue text-brand-blue bg-white rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light"
-        >
-          <Wallet size={12} />
-          Connect Wallet
-        </button>
+        {/* Connect Wallet — drives the Loop SDK */}
+        <ConnectButton />
       </div>
     </header>
   );

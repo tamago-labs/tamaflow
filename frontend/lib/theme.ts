@@ -37,5 +37,5 @@ export const STYLES = {
   buttonSecondary:
     "inline-flex items-center gap-2 py-2.5 px-5 bg-white text-brand-navy border border-brand-border rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light transition-colors",
   buttonOutlineBlue:
-    "inline-flex items-center gap-2 py-2.5 px-5 bg-white text-brand-blue border border-brand-blue rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light transition-colors",
+    "inline-flex items-center gap-1.5 py-1.5 px-3 bg-white text-brand-blue border border-brand-blue rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light transition-colors",
 } as const;

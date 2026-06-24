@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Sidebar from "@/components/app/Sidebar";
 import TopBar from "@/components/app/TopBar";
+import { WalletProvider } from "@/lib/wallet/WalletContext";
 
 export const metadata: Metadata = {
   title: "TamaFlow · Dashboard",
@@ -23,11 +24,13 @@ export default function AppLayout({
 }) {
   return (
     <div className="min-h-screen bg-brand-light flex">
-      <Sidebar />
-      <div className="flex-1 ml-[200px] flex flex-col min-h-screen">
-        <TopBar />
-        <main className="flex-1 p-8 overflow-y-auto">{children}</main>
-      </div>
+      <WalletProvider>
+        <Sidebar />
+        <div className="flex-1 ml-[200px] flex flex-col min-h-screen">
+          <TopBar />
+          <main className="flex-1 p-8 overflow-y-auto">{children}</main>
+        </div>
+      </WalletProvider>
     </div>
   );
 }

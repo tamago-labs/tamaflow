@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Cpu, Power, RotateCcw } from "lucide-react";
 import PageHeader from "@/components/app/PageHeader";
+import HoldingsCard from "@/components/wallet/HoldingsCard";
 
 /**
  * Dashboard placeholder — high-level overview:
@@ -102,6 +103,9 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
+
+      {/* Holdings — Loop SDK island */}
+      <HoldingsCard />
 
       {/* KPI tiles */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl">

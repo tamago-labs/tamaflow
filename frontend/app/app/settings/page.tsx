@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { Cpu, Wallet, User, GitBranch } from "lucide-react";
 import PageHeader from "@/components/app/PageHeader";
+import AccountIsland from "@/components/wallet/AccountIsland";
 
 /**
  * Settings placeholder — four sub-tabs (mirrors the desktop-app):
@@ -77,25 +78,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {tab === "wallet" && (
-        <div className="bg-white border border-brand-border rounded-md p-6 max-w-2xl">
-          <p className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase mb-3 m-0">
-            Canton Wallet
-          </p>
-          <p className="font-sans text-sm text-brand-muted m-0 mb-4">
-            Connect a Canton-compatible wallet to enable settlement. The
-            wallet is used to sign settlement transactions on the
-            network.
-          </p>
-          <button
-            type="button"
-            className="px-4 py-2 bg-brand-blue text-white border-0 rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase cursor-pointer hover:opacity-90"
-          >
-            <Wallet size={12} className="inline-block mr-1.5 -mt-0.5" />
-            Connect Wallet
-          </button>
-        </div>
-      )}
+      {tab === "wallet" && <AccountIsland />}
 
       {tab === "profile" && (
         <div className="bg-white border border-brand-border rounded-md p-6 max-w-2xl">
