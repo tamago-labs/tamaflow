@@ -10,6 +10,8 @@
   "scripts": {
     "faucet": "tsx 01-amulet-faucet.ts",
     "01": "tsx 01-amulet-faucet.ts",
+    "create-wallet": "tsx 02-create-wallet.ts",
+    "02": "tsx 02-create-wallet.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
@@ -19,6 +21,7 @@
     "tsx": "^4.19.2"
   },
   "devDependencies": {
-    "@canton-network/core-wallet-auth": "^0.10.0"
+    "@canton-network/core-wallet-auth": "^0.10.0",
+    "typescript": "^6.0.3"
   }
 }
