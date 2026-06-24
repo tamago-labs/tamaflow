@@ -9,6 +9,7 @@ import {
   Settings as SettingsIcon,
 } from 'lucide-react'
 import { WORDMARK } from '../theme'
+import Logomark from './Logomark'
 
 /**
  * Fixed 200px left navigation. Grouped into two sections:
@@ -58,10 +59,13 @@ const navCategories: NavCategory[] = [
 
 function Wordmark() {
   return (
-    <p className="font-mono font-bold text-lg tracking-wide text-brand-navy m-0 leading-none">
-      <span className="text-brand-navy">{WORDMARK.prefix}</span>
-      <span className="text-brand-blue">{WORDMARK.suffix}</span>
-    </p>
+    <div className="flex items-center gap-2 leading-none">
+      <Logomark size={24} />
+      <p className="font-mono font-bold text-lg tracking-wide text-brand-navy m-0 leading-none">
+        <span className="text-brand-navy">{WORDMARK.prefix}</span>
+        <span className="text-brand-blue">{WORDMARK.suffix}</span>
+      </p>
+    </div>
   )
 }
 

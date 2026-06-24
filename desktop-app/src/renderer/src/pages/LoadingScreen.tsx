@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useAI } from '../context/AIContext'
 import { LOADING_COMPLETE_DELAY_MS, WORDMARK } from '../theme'
+import Logomark from '../components/Logomark'
 
 /**
  * LoadingScreen — listens to `progress` / `isReady` from the AI
@@ -44,11 +45,14 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
 
       {/* Content */}
       <div className="relative z-[10]">
-        {/* Wordmark */}
-        <p className="font-mono font-bold text-2xl tracking-wide text-brand-blue mb-12 m-0">
-          <span className="text-brand-navy">{WORDMARK.prefix}</span>
-          <span className="text-brand-blue">{WORDMARK.suffix}</span>
-        </p>
+        {/* Brand lockup */}
+        <div className="flex items-center gap-2.5 mb-12">
+          <Logomark size={36} />
+          <p className="font-mono font-bold text-2xl tracking-wide text-brand-blue m-0">
+            <span className="text-brand-navy">{WORDMARK.prefix}</span>
+            <span className="text-brand-blue">{WORDMARK.suffix}</span>
+          </p>
+        </div>
 
         {/* App label */}
         <p className="text-[11px] font-medium tracking-wider3 text-brand-muted uppercase mb-2.5 m-0">
