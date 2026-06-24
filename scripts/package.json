@@ -1,0 +1,24 @@
+{
+  "name": "tamaflow-scripts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Devnet Canton Network faucet scripts for TamaFlow. Built on @canton-network/wallet-sdk. Independent package - npm install here only.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "faucet": "tsx 01-amulet-faucet.ts",
+    "01": "tsx 01-amulet-faucet.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@canton-network/wallet-sdk": "^1.3.1",
+    "pino": "^9.5.0",
+    "pino-pretty": "^11.3.0",
+    "tsx": "^4.19.2"
+  },
+  "devDependencies": {
+    "@canton-network/core-wallet-auth": "^0.10.0"
+  }
+}
