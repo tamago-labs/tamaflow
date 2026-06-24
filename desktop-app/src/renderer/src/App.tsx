@@ -11,6 +11,11 @@ import ActiveFlows from './pages/ActiveFlows'
 import Settlements from './pages/Settlements'
 import Inbox from './pages/Inbox'
 import Settings from './pages/Settings'
+import SetupWalletModal from './components/SetupWalletModal'
+import AccountInfoModal from './components/AccountInfoModal'
+import FaucetModal from './components/FaucetModal'
+import ExportKeyModal from './components/ExportKeyModal'
+import ConfirmDestroyModal from './components/ConfirmDestroyModal'
 import { SPLASH_DELAY_MS } from './theme'
 import type { ModelEntry } from '../../preload/index.d'
 
@@ -79,6 +84,14 @@ function App() {
       {appState === 'model-loading' && <LoadingScreen onComplete={handleLoadingComplete} />}
 
       {appState === 'app' && <AppRouter onChangeModel={handleBackToPicker} />}
+
+      {/* Wallet modals — rendered at the top of the tree so they're
+          available from every route once we're in the app. */}
+      <SetupWalletModal />
+      <AccountInfoModal />
+      <FaucetModal />
+      <ExportKeyModal />
+      <ConfirmDestroyModal />
     </>
   )
 }

@@ -2,8 +2,18 @@ import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import { useAI } from '../context/AIContext'
+import { useWallet } from '../context/WalletContext'
 import { formatSize } from '../utils/modelDisplay'
-import { Cpu, Wallet, User, GitBranch, RotateCcw, Power } from 'lucide-react'
+import {
+  Cpu,
+  Wallet,
+  User,
+  GitBranch,
+  RotateCcw,
+  Power,
+  KeyRound,
+  Trash2,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 
 /**
@@ -39,7 +49,14 @@ const TABS: TabDef[] = [
 
 export default function Settings() {
   const [tab, setTab] = useState<Tab>('ai')
-  const { isReady, activeModel, reload, unload, resetCache, setError } = useAI()
+  const { activeModel, reload, unload, resetCache, setError } = useAI()
+  const {
+    status,
+    openSetup,
+    openExportKey,
+    openDestroy,
+    openAccountInfo,
+  } = useWallet()
   const { onChangeModel } = useOutletContext<OutletCtx>()
 
   return (
@@ -153,16 +170,82 @@ export default function Settings() {
           <p className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase mb-3 m-0">
             Canton Wallet
           </p>
-          <p className="font-sans text-sm text-brand-muted m-0 mb-4">
-            Connect a Canton-compatible wallet to enable settlement. The wallet is used to sign
-            settlement transactions on the network.
-          </p>
-          <button
-            type="button"
-            className="px-4 py-2 bg-brand-blue text-white border-0 rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase cursor-pointer hover:opacity-90"
-          >
-            Connect Wallet
-          </button>
+          {!status?.exists ? (
+            <>
+              <p className="font-sans text-sm text-brand-muted m-0 mb-4">
+                Set up a Canton wallet to enable settlement. The wallet
+                is generated locally and stored encrypted on this machine.
+              </p>
+              <button
+                type="button"
+                onClick={openSetup}
+                className="flex items-center gap-1.5 px-4 py-2 bg-brand-blue text-white border-0 rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase cursor-pointer hover:opacity-90"
+              >
+                <Wallet size={12} />
+                Setup Wallet
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2 mb-5">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted m-0">
+                    Party ID
+                  </p>
+                  <p className="font-mono text-xs text-brand-navy m-0 break-all">
+                    {status.partyId}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted m-0">
+                      Fingerprint
+                    </p>
+                    <p className="font-mono text-xs text-brand-navy m-0 break-all">
+                      {status.fingerprint}
+                    </p>
+                  </div>
+                  {status.createdAt && (
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted m-0">
+                        Created
+                      </p>
+                      <p className="font-sans text-xs text-brand-navy m-0">
+                        {new Date(status.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={openAccountInfo}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white text-brand-navy border border-brand-border rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light"
+                >
+                  <Wallet size={12} />
+                  View Account Info
+                </button>
+                <button
+                  type="button"
+                  onClick={openExportKey}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white text-brand-navy border border-brand-border rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light"
+                >
+                  <KeyRound size={12} />
+                  Export Private Key
+                </button>
+                <button
+                  type="button"
+                  onClick={openDestroy}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-white text-brand-err border border-brand-errBorder rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-errBg"
+                >
+                  <Trash2 size={12} />
+                  Destroy Wallet
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 

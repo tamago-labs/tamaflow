@@ -1,4 +1,5 @@
 import PageHeader from '../components/PageHeader'
+import TokensCard from '../components/TokensCard'
 import { useAI } from '../context/AIContext'
 import { Link, useOutletContext } from 'react-router-dom'
 import { ArrowRight, Power, RotateCcw, Cpu } from 'lucide-react'
@@ -110,6 +111,8 @@ export default function Dashboard() {
       </div>
 
       {/* KPI tiles */}
+      <TokensCard />
+
       <div className="grid grid-cols-3 gap-4 max-w-3xl">
         {[
           { label: 'Employees', value: '—' },
