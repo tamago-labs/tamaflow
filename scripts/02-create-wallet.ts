@@ -33,7 +33,7 @@ import { prompt } from './lib/prompt.js';
 import { fetchToken, staticAuth } from './lib/auth.js';
 import { DEVNET } from './lib/constants.js';
 
-const DEFAULT_PARTY_HINT = 'tamaflow-wallet';
+const DEFAULT_PARTY_HINT = 'tamaflow';
 const WALLET_FILE = resolve(process.cwd(), '.wallet.json');
 
 interface PersistedWallet {
