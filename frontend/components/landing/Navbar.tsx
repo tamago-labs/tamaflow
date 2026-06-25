@@ -139,7 +139,7 @@ export default function Navbar() {
             href="/app"
             className="inline-flex items-center gap-1.5 py-2 px-4 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity"
           >
-            Employee Dashboard
+            Employee Portal
             <ArrowUpRight size={12} />
           </Link>
         </div>
@@ -190,7 +190,7 @@ export default function Navbar() {
               onClick={() => setOpen(false)}
               className="inline-flex items-center justify-center gap-1.5 py-2.5 px-4 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline"
             >
-              Employee Dashboard
+              Employee Portal
               <ArrowUpRight size={12} />
             </Link>
           </div>

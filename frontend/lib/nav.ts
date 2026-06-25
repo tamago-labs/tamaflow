@@ -1,18 +1,29 @@
 import {
   LayoutDashboard,
-  Users,
-  Plus,
-  Activity,
-  Coins,
-  Inbox,
+  Wallet,
+  ArrowRightLeft,
+  Gift,
+  IdCard,
+  ShieldCheck,
+  FileText,
   Settings as SettingsIcon,
   type LucideIcon,
 } from "lucide-react";
 
 /* -------------------------------------------------------------------------- */
 /* App-shell navigation                                                       */
-/* Mirrors the desktop-app Sidebar structure. Two groups: "Payroll" +         */
-/* "Account". Used by the in-app Sidebar component.                           */
+/*                                                                             */
+/* Layout in the Sidebar (top → bottom):                                      */
+/*                                                                             */
+/*   1. topItems      — top-level items, no category label                     */
+/*                     (Dashboard · Assets · Payments · Rewards Hub)           */
+/*   2. navCategories — items grouped under a mono label                       */
+/*                     (Account)                                              */
+/*   3. bottomLink    — single utility link at the very bottom                 */
+/*                     (Download Employer Client)                              */
+/*                                                                             */
+/* Every entry has an `icon` so the Sidebar can render them all without       */
+/* any extra icon lookups.                                                    */
 /* -------------------------------------------------------------------------- */
 
 export type IconType = LucideIcon;
@@ -30,38 +41,46 @@ export interface NavCategory {
   items: NavItem[];
 }
 
+/** Top-level items, rendered above any category. */
+export const topItems: NavItem[] = [
+  { path: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
+  { path: "/app/assets", label: "Assets", icon: Wallet },
+  { path: "/app/payments", label: "Payments", icon: ArrowRightLeft },
+  { path: "/app/rewards", label: "Rewards Hub", icon: Gift },
+];
+
+/** Categorized items, rendered with a mono label. */
 export const navCategories: NavCategory[] = [
-  {
-    key: "payroll",
-    label: "Payroll",
-    items: [
-      { path: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
-      { path: "/app/employees", label: "Employees", icon: Users },
-      { path: "/app/flows/new", label: "New Flow", icon: Plus },
-      { path: "/app/flows", label: "Active Flows", icon: Activity, end: true },
-      { path: "/app/settlements", label: "Settlements", icon: Coins },
-    ],
-  },
   {
     key: "account",
     label: "Account",
     items: [
-      { path: "/app/inbox", label: "Inbox", icon: Inbox },
+      { path: "/app/identification", label: "Identification", icon: IdCard },
+      { path: "/app/security", label: "Security", icon: ShieldCheck },
+      { path: "/app/statement", label: "Account Statement", icon: FileText },
       { path: "/app/settings", label: "Settings", icon: SettingsIcon },
     ],
   },
 ];
+
+/** Single utility button rendered at the very bottom of the Sidebar.
+ *  Opens the DownloadEmployerClientModal rather than navigating. */
+export const bottomLink: { href: string; label: string } = {
+  href: "https://github.com/tamago-labs/tamaflow",
+  label: "Download",
+};
 
 /* -------------------------------------------------------------------------- */
 /* Route → breadcrumb label map for the TopBar                                 */
 /* -------------------------------------------------------------------------- */
 export const routeLabels: Record<string, string> = {
   app: "Dashboard",
-  employees: "Employees",
-  flows: "Active Flows",
-  new: "New Flow",
-  settlements: "Settlements",
-  inbox: "Inbox",
+  assets: "Assets",
+  payments: "Payments",
+  rewards: "Rewards Hub",
+  identification: "Identification",
+  security: "Security",
+  statement: "Account Statement",
   settings: "Settings",
 };
 

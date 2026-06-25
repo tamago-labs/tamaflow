@@ -44,7 +44,7 @@ export default function Hero() {
           </h1>
 
           <p className="mt-6 text-lg text-brand-navy/80 max-w-xl leading-relaxed">
-            Stop leaking corporate finances to third-party cloud LLMs. Import sensitive data locally, verify employees with 5N ID, and let AI run payroll end-to-end on Canton through Loop SDK.
+            Stop leaking corporate finances to third-party cloud LLMs. Import sensitive data locally, verify employees with 5N ID, and let AI run payroll end-to-end on Canton.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">

@@ -4,7 +4,7 @@ import TopBar from "@/components/app/TopBar";
 import { WalletProvider } from "@/lib/wallet/WalletContext";
 
 export const metadata: Metadata = {
-  title: "TamaFlow · Dashboard",
+  title: "Employee Portal",
   description:
     "TamaFlow in-app shell — privacy-first payroll on Canton. Manage employees, run flows, and settle on Canton.",
 };
