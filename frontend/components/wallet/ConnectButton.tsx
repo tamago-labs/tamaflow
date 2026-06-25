@@ -13,7 +13,7 @@
  * we don't have to add a separate toast system. The next click clears it.
  */
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Loader2, Wallet, X } from "lucide-react";
+import { ChevronDown, Loader2, LogIn, X } from "lucide-react";
 import { useWallet } from "@/lib/wallet/WalletContext";
 import { STYLES } from "@/lib/theme";
 import { truncateParty } from "@/lib/wallet/format";
@@ -95,8 +95,8 @@ export default function ConnectButton() {
         onClick={connect}
         className={STYLES.buttonOutlineBlue}
       >
-        <Wallet size={12} />
-        Connect Wallet
+        <LogIn size={12} />
+        Login
       </button>
       {status === "error" && error && (
         <span
