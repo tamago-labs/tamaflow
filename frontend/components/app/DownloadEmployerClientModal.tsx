@@ -8,12 +8,16 @@
  * Escape handling) is provided by the shared `<Modal>` component;
  * this file only owns the *content* of the modal.
  *
- * Shows: an explanation of the desktop app (local AI + Canton
- * settlement), a platforms grid, and the actual download CTA which
- * opens the GitHub repo in a new tab.
+ * Layout (top → bottom):
+ *   1. Icon + title on a single row — minimal, brand-anchored
+ *   2. Body copy — the product promise, in one sentence
+ *   3. Primary CTA — "Download Page" → opens the GitHub repo in a new tab
+ *
+ * No platforms grid, no feature pills — the body copy carries the
+ * full message. The CTA is the single action.
  */
 import { motion } from "framer-motion";
-import { X, Download, Github, Monitor, Apple, Sparkles } from "lucide-react";
+import { X, Download } from "lucide-react";
 import Modal from "@/components/shared/Modal";
 import { bottomLink } from "@/lib/nav";
 
@@ -21,24 +25,6 @@ interface DownloadEmployerClientModalProps {
   open: boolean;
   onClose: () => void;
 }
-
-const platforms = [
-  {
-    Icon: Monitor,
-    label: "Windows",
-    hint: ".exe installer",
-  },
-  {
-    Icon: Apple,
-    label: "Linux",
-    hint: ".AppImage · .deb",
-  },
-  {
-    Icon: Github,
-    label: "Build from source",
-    hint: "git clone · pnpm install",
-  },
-];
 
 export default function DownloadEmployerClientModal({
   open,
@@ -62,8 +48,8 @@ export default function DownloadEmployerClientModal({
       </button>
 
       <div className="p-6 lg:p-8">
-        {/* Header */}
-        <div className="flex items-start gap-4 mb-5">
+        {/* Header — single row, icon + title */}
+        <div className="flex items-center gap-3 mb-5">
           <motion.span
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -77,42 +63,32 @@ export default function DownloadEmployerClientModal({
           >
             <Download size={20} />
           </motion.span>
-          <div>
-            <p className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase font-semibold mb-1">
-              Desktop App
-            </p>
-            <h2
-              id="download-employer-client-title"
-              className="text-[22px] font-light text-brand-navy tracking-tight leading-tight m-0"
-            >
-              Download Employer Client
-            </h2>
-          </div>
+          <h2
+            id="download-employer-client-title"
+            className="text-[22px] font-light text-brand-navy tracking-tight leading-tight m-0"
+          >
+            Download Employer Client
+          </h2>
         </div>
 
-        {/* Body copy */}
-        <p className="font-sans text-sm text-brand-navy/80 leading-relaxed m-0 mb-5">
-          Run payroll entirely on your machine with{" "}
-          <span className="font-semibold text-brand-navy">local AI</span>{" "}
-          and atomic settlement on{" "}
-          <span className="font-semibold text-brand-navy">Canton</span>.
-          No cloud LLMs, no third-party LLM exposure.
-        </p>
+        {/* Body copy — 3 short sentences: install, drop, settle */}
+        <div className="font-sans text-sm text-brand-navy/80 leading-relaxed m-0 mb-5 space-y-2">
+          <p>
+            Install the desktop client on your own machine.
+          </p>
+          <p>
+            Drop in your payroll documents and the{" "}
+            <span className="font-semibold text-brand-navy">on-device AI</span>{" "}
+            processes them entirely locally.
+          </p>
+          <p>
+            Each cycle then settles atomically on{" "}
+            <span className="font-semibold text-brand-navy">Canton</span> — no
+            cloud LLM ever sees your data.
+          </p>
+        </div>
 
-        {/* Feature pill */}
-        <motion.div
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.12, duration: 0.25 }}
-          className="inline-flex items-center gap-2 px-3 py-1.5 bg-brand-light border border-brand-border rounded-full mb-5"
-        >
-          <Sparkles size={12} className="text-brand-teal" />
-          <span className="font-mono text-[10px] tracking-wider2 text-brand-navy uppercase font-semibold">
-            100% local · 0% cloud LLM
-          </span>
-        </motion.div>
-  
-        {/* CTA — opens the GitHub repo in a new tab */}
+        {/* Primary CTA — opens the GitHub repo in a new tab */}
         <motion.a
           href={bottomLink.href}
           target="_blank"
@@ -123,8 +99,8 @@ export default function DownloadEmployerClientModal({
           className="inline-flex items-center justify-center gap-2 w-full py-3 px-6 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity shadow-[0_4px_18px_-6px_rgba(26,26,232,0.45)]"
         >
           <Download size={14} />
-          Download Page 
-        </motion.a> 
+          Download Page
+        </motion.a>
       </div>
     </Modal>
   );

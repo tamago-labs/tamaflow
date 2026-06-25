@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Sidebar from "@/components/app/Sidebar";
 import TopBar from "@/components/app/TopBar";
 import { WalletProvider } from "@/lib/wallet/WalletContext";
+import { PriceProvider } from "@/lib/price/PriceContext";
 
 export const metadata: Metadata = {
   title: "Employee Portal",
@@ -25,11 +26,13 @@ export default function AppLayout({
   return (
     <div className="min-h-screen bg-brand-light flex">
       <WalletProvider>
-        <Sidebar />
-        <div className="flex-1 ml-[200px] flex flex-col min-h-screen">
-          <TopBar />
-          <main className="flex-1 p-8 overflow-y-auto">{children}</main>
-        </div>
+        <PriceProvider>
+          <Sidebar />
+          <div className="flex-1 ml-[200px] flex flex-col min-h-screen">
+            <TopBar />
+            <main className="flex-1 p-8 overflow-y-auto">{children}</main>
+          </div>
+        </PriceProvider>
       </WalletProvider>
     </div>
   );
