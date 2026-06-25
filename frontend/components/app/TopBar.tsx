@@ -35,7 +35,7 @@ interface Crumb {
  *   /app/rewards                  → Rewards Hub
  *   /app/identification           → Identification
  *   /app/security                  → Security
- *   /app/statement                 → Account Statement
+ *   /app/statement                 → Statements
  *   /app/settings                  → Settings
  */
 function buildCrumbs(pathname: string): Crumb[] {
@@ -47,7 +47,7 @@ function buildCrumbs(pathname: string): Crumb[] {
     return [{ path: "/app", label: routeLabels.app }];
   }
 
-  const crumbs: Crumb[] = [{ path: "/app", label: routeLabels.app }];
+  const crumbs: Crumb[] = [];
   let acc = "/app";
   for (const seg of segments) {
     acc += `/${seg}`;

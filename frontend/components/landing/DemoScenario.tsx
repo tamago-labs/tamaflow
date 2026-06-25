@@ -14,7 +14,7 @@ const countries = [
  */
 export default function DemoScenario() {
   return (
-    <section className="bg-brand-light">
+    <section id="demo" className="bg-brand-light">
       <div className="max-w-7xl mx-auto px-6 lg:px-10 py-20 lg:py-28">
         <div className="max-w-2xl mb-12">
           <p className="font-mono text-[11px] font-medium tracking-wider3 text-brand-muted uppercase mb-3">

@@ -3,8 +3,7 @@ import {
   Wallet,
   ArrowRightLeft,
   Gift,
-  IdCard,
-  ShieldCheck,
+  IdCard, 
   FileText,
   Settings as SettingsIcon,
   type LucideIcon,
@@ -56,18 +55,19 @@ export const navCategories: NavCategory[] = [
     label: "Account",
     items: [
       { path: "/app/identification", label: "Identification", icon: IdCard },
-      { path: "/app/security", label: "Security", icon: ShieldCheck },
-      { path: "/app/statement", label: "Account Statement", icon: FileText },
+      // { path: "/app/security", label: "Security", icon: ShieldCheck },
+      { path: "/app/statement", label: "Statements", icon: FileText },
       { path: "/app/settings", label: "Settings", icon: SettingsIcon },
     ],
   },
 ];
 
 /** Single utility button rendered at the very bottom of the Sidebar.
- *  Opens the DownloadEmployerClientModal rather than navigating. */
+ *  Opens the DownloadEmployerClientModal rather than navigating.
+ *  Keep the label short so it fits on a single line in the 200px sidebar. */
 export const bottomLink: { href: string; label: string } = {
   href: "https://github.com/tamago-labs/tamaflow",
-  label: "Download",
+  label: "Download Client",
 };
 
 /* -------------------------------------------------------------------------- */
@@ -80,7 +80,7 @@ export const routeLabels: Record<string, string> = {
   rewards: "Rewards Hub",
   identification: "Identification",
   security: "Security",
-  statement: "Account Statement",
+  statement: "Statements",
   settings: "Settings",
 };
 
@@ -95,9 +95,9 @@ export const routeLabels: Record<string, string> = {
 /*                     can be added in one line.                               */
 /* -------------------------------------------------------------------------- */
 export const marketingNav: { href: string; label: string }[] = [
-  { href: "#flow", label: "How it works" },
   { href: "#features", label: "Features" },
-  { href: "#why-canton", label: "Why Canton" },
+  { href: "#flow", label: "How it works" },
+  { href: "#demo", label: "Demo" },
 ];
 
 export interface MarketingMoreItem {

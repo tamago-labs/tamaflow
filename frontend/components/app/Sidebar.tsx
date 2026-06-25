@@ -102,18 +102,18 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        {/* Bottom utility button — Download Employer Client */}
+        {/* Bottom utility button — Download Desktop App */}
         <div className="pt-4 mt-2 border-t border-brand-border">
           <button
             type="button"
             onClick={() => setDownloadOpen(true)}
-            className="flex items-start gap-2.5 py-2 px-3 rounded-md w-full text-left bg-transparent border-0 cursor-pointer text-brand-muted hover:text-brand-navy hover:bg-brand-light transition-colors group"
+            className="flex items-center justify-center gap-2.5 py-2.5 px-3 rounded-md w-full bg-transparent border-0 cursor-pointer text-brand-muted hover:text-brand-navy hover:bg-brand-light transition-colors group"
           >
             <Download
               size={16}
-              className="flex-shrink-0 mt-0.5 group-hover:text-brand-blue"
+              className="flex-shrink-0 group-hover:text-brand-blue"
             />
-            <span className="font-mono text-[10px] font-bold tracking-wider2 text-brand-muted group-hover:text-brand-navy uppercase leading-tight">
+            <span className="font-mono text-[10px] font-bold tracking-wider2 text-brand-muted group-hover:text-brand-navy uppercase">
               {bottomLink.label}
             </span>
           </button>
