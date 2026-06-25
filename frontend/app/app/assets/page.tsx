@@ -8,12 +8,7 @@ import PageHeader from "@/components/app/PageHeader";
  */
 export default function AssetsPage() {
   return (
-    <div>
-      <PageHeader
-        label="Portfolio"
-        title="Assets"
-        subtitle="Your tokenized balances and cross-currency net positions. Settled atomically on Canton."
-      />
+    <div> 
 
       <div className="bg-white border border-brand-border rounded-md p-10 max-w-3xl">
         <div className="flex flex-col items-center justify-center text-center">

@@ -32,12 +32,7 @@ export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>("ai");
 
   return (
-    <div>
-      <PageHeader
-        label="Account"
-        title="Settings"
-        subtitle="AI model, wallet, profile, and netting preferences."
-      />
+    <div> 
 
       {/* Sub-tabs */}
       <div className="flex items-center gap-1 mb-6 border-b border-brand-border overflow-x-auto">

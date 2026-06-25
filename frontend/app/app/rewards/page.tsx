@@ -8,12 +8,7 @@ import PageHeader from "@/components/app/PageHeader";
  */
 export default function RewardsPage() {
   return (
-    <div>
-      <PageHeader
-        label="Hub"
-        title="Rewards Hub"
-        subtitle="Loyalty rewards, referral bonuses, and partner offers — all settled privately on Canton."
-      />
+    <div> 
 
       <div className="bg-white border border-brand-border rounded-md p-10 max-w-3xl">
         <div className="flex flex-col items-center justify-center text-center">

@@ -8,12 +8,7 @@ import PageHeader from "@/components/app/PageHeader";
  */
 export default function PaymentsPage() {
   return (
-    <div>
-      <PageHeader
-        label="Activity"
-        title="Payments"
-        subtitle="Incoming payroll payments and your transfer history. Atomic, private, and auditable on Canton."
-      />
+    <div> 
 
       <div className="bg-white border border-brand-border rounded-md p-10 max-w-3xl">
         <div className="flex flex-col items-center justify-center text-center">

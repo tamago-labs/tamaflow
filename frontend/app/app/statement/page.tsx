@@ -9,12 +9,7 @@ import PageHeader from "@/components/app/PageHeader";
  */
 export default function StatementPage() {
   return (
-    <div>
-      <PageHeader
-        label="Ledger"
-        title="Account Statement"
-        subtitle="Monthly and annual statements of your private payroll ledger. Audit-ready, exported on demand."
-      />
+    <div> 
 
       <div className="bg-white border border-brand-border rounded-md p-10 max-w-3xl">
         <div className="flex flex-col items-center justify-center text-center">

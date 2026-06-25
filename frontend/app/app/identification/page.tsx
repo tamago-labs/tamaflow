@@ -9,13 +9,7 @@ import PageHeader from "@/components/app/PageHeader";
  */
 export default function IdentificationPage() {
   return (
-    <div>
-      <PageHeader
-        label="Identity"
-        title="Identification"
-        subtitle="Your verified identity and selective-disclosure credentials. Stored locally, never on a cloud LLM."
-      />
-
+    <div> 
       <div className="bg-white border border-brand-border rounded-md p-10 max-w-3xl">
         <div className="flex flex-col items-center justify-center text-center">
           <span className="inline-flex items-center justify-center w-12 h-12 rounded-md bg-brand-light border border-brand-border text-brand-blue mb-4">

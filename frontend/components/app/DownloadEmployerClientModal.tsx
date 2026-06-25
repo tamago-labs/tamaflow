@@ -111,35 +111,7 @@ export default function DownloadEmployerClientModal({
             100% local · 0% cloud LLM
           </span>
         </motion.div>
-
-        {/* Platforms */}
-        <p className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase font-semibold mb-2">
-          Available for
-        </p>
-        <ul className="grid grid-cols-3 gap-2 mb-6">
-          {platforms.map(({ Icon, label, hint }, i) => (
-            <motion.li
-              key={label}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                delay: 0.15 + i * 0.05,
-                duration: 0.25,
-                ease: "easeOut",
-              }}
-              className="flex flex-col items-center text-center bg-brand-light border border-brand-border rounded-md py-3 px-2"
-            >
-              <Icon size={18} className="text-brand-blue mb-1.5" />
-              <span className="font-mono text-[10px] tracking-wider2 text-brand-navy uppercase font-bold">
-                {label}
-              </span>
-              <span className="font-mono text-[9px] text-brand-muted leading-tight">
-                {hint}
-              </span>
-            </motion.li>
-          ))}
-        </ul>
-
+  
         {/* CTA — opens the GitHub repo in a new tab */}
         <motion.a
           href={bottomLink.href}
@@ -151,13 +123,8 @@ export default function DownloadEmployerClientModal({
           className="inline-flex items-center justify-center gap-2 w-full py-3 px-6 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity shadow-[0_4px_18px_-6px_rgba(26,26,232,0.45)]"
         >
           <Download size={14} />
-          Download from GitHub
-          <Github size={12} className="opacity-70 ml-1" />
-        </motion.a>
-
-        <p className="font-mono text-[10px] tracking-wider2 text-brand-muted/70 uppercase text-center mt-3 m-0">
-          github.com/tamago-labs/tamaflow
-        </p>
+          Download Page 
+        </motion.a> 
       </div>
     </Modal>
   );
