@@ -1,120 +1,141 @@
-import {
-  FileUp,
-  Sparkles,
-  Check,
-  GitBranch,
-  Coins,
-  Mail,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+"use client";
+
+/**
+ * "How it works" — vertical timeline of the 4-step payroll flow.
+ *
+ * Each step is a row: number circle on the left, content on the
+ * right, and a vertical line connecting the circles. Reads top →
+ * bottom like the actual workflow, so the visual order reinforces
+ * the order of operations.
+ *
+ * No cards / no backgrounds — the row itself is the visual unit.
+ * With only 4 steps we can afford larger type, so the title reads
+ * at `text-lg font-semibold` and the body at `text-base` — no pill
+ * needed, the action verb in the title carries the meaning.
+ *
+ * Entry animation (framer-motion, `whileInView`): each step
+ * fades in with a small upward slide as the user scrolls it into
+ * view. A short per-step delay creates a staggered "timeline draws
+ * itself" effect top → bottom.
+ */
+import { motion, type Variants } from "framer-motion";
 
 interface Step {
   num: string;
-  icon: LucideIcon;
   title: string;
   body: string;
-  tag: string;
 }
 
 const steps: Step[] = [
   {
     num: "01",
-    icon: FileUp,
-    title: "Import or create payroll",
-    body: "Upload a CSV roster or build it by hand — the system accepts both.",
-    tag: "Employer",
+    title: "Import payroll documents",
+    body: "Drag payroll files and supporting documents into TamaFlow. Local AI processes everything directly on your machine.",
   },
   {
     num: "02",
-    icon: Sparkles,
-    title: "AI reviews & summarises",
-    body: "Local LLM surfaces totals, country split, anomalies, and estimated savings.",
-    tag: "Local AI",
+    title: "Review payroll with AI",
+    body: "AI extracts payroll data, highlights anomalies, and prepares the payroll run for approval.",
   },
   {
     num: "03",
-    icon: Check,
-    title: "Employer approves",
-    body: "One-tap approval moves the flow to netting. Edits are non-destructive.",
-    tag: "Employer",
+    title: "Route approvals & settle",
+    body: "Managers approve through configurable workflows and email-based approvals. Once approved, settlements are coordinated on Canton.",
   },
   {
     num: "04",
-    icon: GitBranch,
-    title: "Net obligations",
-    body: "Cross-border payables and receivables are netted across currencies.",
-    tag: "TamaFlow",
-  },
-  {
-    num: "05",
-    icon: Coins,
-    title: "Settle on Canton",
-    body: "Tokenized deposits execute the final transfers atomically.",
-    tag: "Canton",
-  },
-  {
-    num: "06",
-    icon: Mail,
-    title: "Private payslips",
-    body: "Each employee sees only their own payment details — never the company's full payroll.",
-    tag: "Employee",
+    title: "Employees receive and access funds",
+    body: "Employees verify their identity, receive payroll, view statements, and manage assets through the Employee Portal.",
   },
 ];
 
-/**
- * "Core User Flow" — 6 numbered steps in a horizontal flow on
- * desktop, vertical cards on mobile. Each step is a brand-styled
- * card with an icon, number, and tag badge.
- */
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      stiffness: 320,
+      damping: 28,
+      delay: i * 0.08,
+    },
+  }),
+};
+
+const circleVariants: Variants = {
+  hidden: { opacity: 0, scale: 0.6 },
+  visible: (i: number) => ({
+    opacity: 1,
+    scale: 1,
+    transition: {
+      type: "spring",
+      stiffness: 360,
+      damping: 22,
+      delay: 0.04 + i * 0.08,
+    },
+  }),
+};
+
 export default function UserFlow() {
   return (
     <section id="flow" className="bg-white">
-      <div className="max-w-7xl mx-auto px-6 lg:px-10 py-20 lg:py-28">
-        <div className="max-w-2xl mb-12">
+      <div className="max-w-4xl mx-auto px-6 lg:px-10 py-20 lg:py-28">
+        {/* Section header */}
+        <div className="mb-12">
           <p className="font-mono text-[11px] font-medium tracking-wider3 text-brand-muted uppercase mb-3">
-            Core User Flow
+            How it works
           </p>
-          <h2 className="text-3xl md:text-4xl font-light text-brand-navy tracking-tight leading-tight">
-            From roster to{" "}
-            <span className="text-brand-blue">private payslip</span> in
-            six steps.
+          <h2 className="text-3xl md:text-4xl font-light text-brand-navy tracking-tight leading-tight max-w-2xl">
+            From payroll documents to{" "}
+            <span className="text-brand-blue">private settlements</span> — in
+            four steps.
           </h2>
         </div>
 
-        <ol className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {steps.map((s) => (
-            <li
+        {/* Vertical timeline */}
+        <ol className="relative">
+          {/* Vertical connecting line — sits behind the number circles */}
+          <div
+            className="absolute left-[19px] top-4 bottom-4 w-px bg-brand-border"
+            aria-hidden="true"
+          />
+
+          {steps.map((s, i) => (
+            <motion.li
               key={s.num}
-              className="relative bg-white border border-brand-border rounded-md p-6 hover:border-brand-blue/50 transition-colors"
+              custom={i}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.4 }}
+              variants={itemVariants}
+              className="relative flex gap-6 pb-10 last:pb-0"
             >
-              <div className="flex items-center justify-between mb-4">
-                <span className="font-mono text-[11px] font-bold tracking-wider2 text-brand-blue uppercase">
-                  Step {s.num}
+              {/* Number circle on the line */}
+              <motion.div
+                custom={i}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.4 }}
+                variants={circleVariants}
+                className="relative z-10 flex-shrink-0 w-10 h-10 rounded-full bg-white border border-brand-border flex items-center justify-center"
+                aria-hidden="true"
+              >
+                <span className="font-mono text- font-bold text-brand-blue">
+                  {s.num}
                 </span>
-                <span
-                  className={`inline-flex items-center font-mono text-[9px] font-bold tracking-wider2 uppercase rounded-full px-2 py-0.5 border ${
-                    s.tag === "Canton"
-                      ? "text-brand-tealAccent border-brand-teal bg-[#eafaf8]"
-                      : s.tag === "Local AI"
-                      ? "text-brand-blue border-brand-blue bg-[#eaeefc]"
-                      : s.tag === "TamaFlow"
-                      ? "text-brand-navy border-brand-border bg-brand-light"
-                      : "text-brand-ok border-brand-ok bg-[#e6f7ee]"
-                  }`}
-                >
-                  {s.tag}
-                </span>
+              </motion.div>
+
+              {/* Content */}
+              <div className="flex-1 pt-1.5 min-w-0">
+                <h3 className="text-lg font-semibold text-brand-navy mb-2">
+                  {s.title}
+                </h3>
+                <p className="text-sm lg:text-base text-brand-navy/70 leading-relaxed m-0">
+                  {s.body}
+                </p>
               </div>
-              <span className="inline-flex items-center justify-center w-10 h-10 rounded-md bg-brand-light border border-brand-border text-brand-blue mb-3">
-                <s.icon size={18} />
-              </span>
-              <h3 className="text-base font-medium text-brand-navy">
-                {s.title}
-              </h3>
-              <p className="mt-1.5 text-sm text-brand-navy/70 leading-relaxed">
-                {s.body}
-              </p>
-            </li>
+            </motion.li>
           ))}
         </ol>
       </div>
