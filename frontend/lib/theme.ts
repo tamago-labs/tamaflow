@@ -14,7 +14,7 @@ export const WORDMARK = {
 /** Site-level metadata. */
 export const SITE = {
   name: "TamaFlow",
-  tagline: "Local AI Auto-Payroll on Canton",
+  tagline: "AI Auto-Payroll on Canton",
   shortDesc:
     "Privacy-first payroll that nets cross-border obligations and settles atomically on Canton — without ever leaking data to a third-party LLM.",
   url: "https://tamaflow.xyz",

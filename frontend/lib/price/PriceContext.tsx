@@ -28,7 +28,7 @@ const PRICES: Record<string, Price> = {
   CBTC: { usd: 61138.372, change24h: -2.69 },
 };
 
-const PriceContext = createContext<Record<string, Price>>(PRICES);
+export const PriceContext = createContext<Record<string, Price>>(PRICES);
 
 export function PriceProvider({ children }: { children: ReactNode }) {
   return (

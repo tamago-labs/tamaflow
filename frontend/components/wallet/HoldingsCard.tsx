@@ -29,7 +29,7 @@
  *
  * Sort: `CC` pinned to the top, then alphabetical by symbol.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   Coins,
   MoreHorizontal,
@@ -39,7 +39,11 @@ import {
   Workflow,
 } from "lucide-react";
 import { useWallet } from "@/lib/wallet/WalletContext";
-import { usePrice, formatChange } from "@/lib/price/PriceContext";
+import {
+  PriceContext,
+  usePrice,
+  formatChange,
+} from "@/lib/price/PriceContext";
 import { STYLES } from "@/lib/theme";
 
 /** How often to re-fetch holdings while the wallet is connected. */
@@ -88,6 +92,7 @@ function formatAmount(value: string): string {
 
 export default function HoldingsTable() {
   const { status, holdings, refreshHoldings, connect } = useWallet();
+  const prices = useContext(PriceContext);
 
   // Auto-refresh
   useEffect(() => {
@@ -116,6 +121,19 @@ export default function HoldingsTable() {
     });
   }, [holdings]);
 
+  // Sum USD value across all priced holdings — shown in the header so the
+  // user sees their portfolio total at a glance without having to add
+  // each row manually. Holdings without a known price are skipped (we
+  // don't want to pretend they're worth $0).
+  const totalUsd = useMemo(() => {
+    return sortedHoldings.reduce((sum, h) => {
+      const price = prices[h.symbol];
+      const amount = parseFloat(h.unlocked.replace(/,/g, ""));
+      if (!price || Number.isNaN(amount)) return sum;
+      return sum + amount * price.usd;
+    }, 0);
+  }, [sortedHoldings, prices]);
+
   // --- 1. Wallet not connected ----------------------------------------
   if (status !== "connected") {
     return (
@@ -140,8 +158,16 @@ export default function HoldingsTable() {
   // --- 2. Holdings table ---------------------------------------------
   return (
     <div>
-      <div className="flex items-center mb-3">
-        <p className={STYLES.label}>Your Tokens</p>
+      <div className="flex items-center justify-between mb-3">
+        <p className={STYLES.label}>All Assets</p>
+        <div className="flex items-baseline gap-2">
+          <span className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase font-semibold">
+            Total Value
+          </span>
+          <span className="font-mono text-sm font-bold text-brand-navy">
+            {formatUsd(totalUsd)}
+          </span>
+        </div>
       </div>
 
       <div className="border border-brand-border rounded-md overflow-hidden">

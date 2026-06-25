@@ -30,22 +30,22 @@ const steps: Step[] = [
   {
     num: "01",
     title: "Import payroll documents",
-    body: "Drag payroll files and supporting documents into TamaFlow. Local AI processes everything directly on your machine.",
+    body: "Upload payroll spreadsheets, tax forms, and supporting documents. AI parsing happens entirely on-device, so payroll data never leaves your machine.",
   },
   {
     num: "02",
     title: "Review payroll with AI",
-    body: "AI extracts payroll data, highlights anomalies, and prepares the payroll run for approval.",
+    body: "AI reads each file, builds the payroll run, and flags anything unusual so a manager can review and approve with confidence.",
   },
   {
     num: "03",
     title: "Route approvals & settle",
-    body: "Managers approve through configurable workflows and email-based approvals. Once approved, settlements are coordinated on Canton.",
+    body: "Managers approve through configurable role-based workflows with full audit trail. Once approved, settlements are coordinated on Canton.",
   },
   {
     num: "04",
     title: "Employees receive and access funds",
-    body: "Employees verify their identity, receive payroll, view statements, and manage assets through the Employee Portal.",
+    body: "Employees sign in once to verify their identity, receive payroll into their own Canton wallet, and access statements and assets through the Employee Portal.",
   },
 ];
 
@@ -121,7 +121,7 @@ export default function UserFlow() {
                 className="relative z-10 flex-shrink-0 w-10 h-10 rounded-full bg-white border border-brand-border flex items-center justify-center"
                 aria-hidden="true"
               >
-                <span className="font-mono text- font-bold text-brand-blue">
+                <span className="font-mono text-[11px] font-bold text-brand-blue">
                   {s.num}
                 </span>
               </motion.div>
@@ -131,7 +131,7 @@ export default function UserFlow() {
                 <h3 className="text-lg font-semibold text-brand-navy mb-2">
                   {s.title}
                 </h3>
-                <p className="text-sm lg:text-base text-brand-navy/70 leading-relaxed m-0">
+                <p className="text-base text-brand-navy/70 leading-relaxed m-0">
                   {s.body}
                 </p>
               </div>
