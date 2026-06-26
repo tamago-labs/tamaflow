@@ -10,7 +10,7 @@
  *
  * Layout (top → bottom):
  *   1. Icon + title on a single row — minimal, brand-anchored
- *   2. Body copy — the product promise, in one sentence
+ *   2. Body copy — the product promise, in one paragraph
  *   3. Primary CTA — "Download Page" → opens the GitHub repo in a new tab
  *
  * No platforms grid, no feature pills — the body copy carries the
@@ -71,22 +71,17 @@ export default function DownloadEmployerClientModal({
           </h2>
         </div>
 
-        {/* Body copy — 3 short sentences: install, drop, settle */}
-        <div className="font-sans text-sm text-brand-navy/80 leading-relaxed m-0 mb-5 space-y-2">
-          <p>
-            Install the desktop client on your own machine.
-          </p>
-          <p>
-            Drop in your payroll documents and the{" "}
-            <span className="font-semibold text-brand-navy">on-device AI</span>{" "}
-            processes them entirely locally.
-          </p>
-          <p>
-            Each cycle then settles atomically on{" "}
-            <span className="font-semibold text-brand-navy">Canton</span> — no
-            cloud LLM ever sees your data.
-          </p>
-        </div>
+        {/* Body copy — one paragraph: install + local AI + private Canton settlement */}
+        <p className="font-sans text-sm text-brand-navy/80 leading-relaxed m-0 mb-5">
+          Install the desktop client to process payroll with{" "}
+          <span className="font-semibold text-brand-navy">local AI</span> so
+          sensitive employee data never leaves the machine and
+          settle via the{" "}
+          <span className="font-semibold text-brand-navy">
+            Canton network
+          </span>
+          .
+        </p>
 
         {/* Primary CTA — opens the GitHub repo in a new tab */}
         <motion.a

@@ -61,7 +61,7 @@ export default function AccountMenu({ open, onClose }: AccountMenuProps) {
         className="w-full flex items-center gap-2 px-3 py-2 text-left font-sans text-[13px] text-brand-navy hover:bg-brand-light cursor-pointer bg-transparent border-0"
       >
         <QrCode size={14} className="text-brand-muted flex-shrink-0" />
-        Receive
+        Receive Funds
       </button>
       <button
         type="button"

@@ -51,7 +51,7 @@ export default function WalletMenu({ onClose }: WalletMenuProps) {
           className="w-full flex items-center gap-2 px-3 py-2.5 text-left bg-transparent border-0 cursor-pointer font-mono text-[10px] font-bold tracking-wider2 uppercase text-brand-navy hover:bg-brand-light"
         >
           <QrCode size={12} />
-          Receive
+          Receive Funds
         </button>
         <button
           type="button"
