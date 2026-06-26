@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer, app } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type {
   ModelEntry,
@@ -13,12 +13,6 @@ import type {
 
 // Custom APIs for renderer
 const api = {
-  app: {
-    // Read from package.json via Electron — no async plumbing needed,
-    // and survives the production build (where package.json isn't on
-    // the renderer filesystem).
-    version: app.getVersion(),
-  },
   models: {
     list: (): Promise<ModelEntry[]> => ipcRenderer.invoke('models:list'),
     add: (entry: {

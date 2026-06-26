@@ -18,3 +18,7 @@ export const SPLASH_DELAY_MS = 250
  *  `isReady = true` before advancing to the Ready page. Lets the
  *  progress bar land on 100% and the "Ready" label flash. */
 export const LOADING_COMPLETE_DELAY_MS = 400
+
+/** App version, kept in sync with `desktop-app/package.json`. Bump
+ *  this when cutting a release — surfaced in the sidebar footer. */
+export const APP_VERSION = '0.1.0'

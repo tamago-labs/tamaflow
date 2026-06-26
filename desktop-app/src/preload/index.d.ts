@@ -106,7 +106,7 @@ export interface FaucetResult {
 
 export interface WalletAPI {
   status: () => Promise<WalletStatus>
-  create: () => Promise<WalletCreateResult>
+  create: (opts?: { partyHint?: string }) => Promise<WalletCreateResult>
   destroy: () => Promise<{ success: boolean }>
   exportKey: () => Promise<{ success: boolean; privateKey?: string; error?: string }>
   holdings: () => Promise<Holding[]>

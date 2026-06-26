@@ -3,18 +3,18 @@ import {
   LayoutDashboard,
   Users,
   Plus,
-  Activity,
+  Wallet,
   Coins,
-  Inbox,
+  ListTodo,
   Settings as SettingsIcon,
 } from 'lucide-react'
-import { WORDMARK } from '../theme'
+import { WORDMARK, APP_VERSION } from '../theme'
 import Logomark from './Logomark'
 
 /**
  * Fixed 200px left navigation. Grouped into two sections:
  *   Payroll: Dashboard, Employees, New Flow, Active Flows, Settlements
- *   Account: Inbox, Settings
+ *   Account: Assets, Settings
  *
  * Active item gets the brand-blue fill + white text. The teal 3px top
  * accent matches the my-doctor-ai reference.
@@ -42,8 +42,8 @@ const navCategories: NavCategory[] = [
     items: [
       { path: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
       { path: '/employees', label: 'Employees', icon: Users },
-      { path: '/flows/new', label: 'New Flow', icon: Plus },
-      { path: '/flows', label: 'Active Flows', icon: Activity, end: true },
+      { path: '/flows/new', label: 'Flow Builder', icon: Plus },
+      { path: '/flows', label: 'Active Flows', icon: ListTodo, end: true },
       { path: '/settlements', label: 'Settlements', icon: Coins },
     ],
   },
@@ -51,7 +51,7 @@ const navCategories: NavCategory[] = [
     key: 'account',
     label: 'Account',
     items: [
-      { path: '/inbox', label: 'Inbox', icon: Inbox },
+      { path: '/assets', label: 'Assets', icon: Wallet },
       { path: '/settings', label: 'Settings', icon: SettingsIcon },
     ],
   },
@@ -116,10 +116,12 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Bottom footer area — reserved for future version label etc. */}
+      {/* Bottom footer — makes it obvious this is the Employer (HR /
+       payroll-runner) client, plus the app version (kept in sync with
+       package.json via APP_VERSION in theme.ts). */}
       <div className="pt-4 mt-2 border-t border-brand-border">
         <p className="font-mono text-[9px] text-brand-muted tracking-wider2 uppercase m-0">
-          v0.1 · TamaFlow
+          Employer Client · v{APP_VERSION}
         </p>
       </div>
     </aside>
