@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, app } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type {
   ModelEntry,
@@ -13,6 +13,12 @@ import type {
 
 // Custom APIs for renderer
 const api = {
+  app: {
+    // Read from package.json via Electron — no async plumbing needed,
+    // and survives the production build (where package.json isn't on
+    // the renderer filesystem).
+    version: app.getVersion(),
+  },
   models: {
     list: (): Promise<ModelEntry[]> => ipcRenderer.invoke('models:list'),
     add: (entry: {
@@ -56,7 +62,8 @@ const api = {
 
   wallet: {
     status: (): Promise<WalletStatus> => ipcRenderer.invoke('wallet:status'),
-    create: (): Promise<WalletCreateResult> => ipcRenderer.invoke('wallet:create'),
+    create: (opts?: { partyHint?: string }): Promise<WalletCreateResult> =>
+      ipcRenderer.invoke('wallet:create', opts),
     destroy: (): Promise<{ success: boolean }> => ipcRenderer.invoke('wallet:destroy'),
     exportKey: (): Promise<{ success: boolean; privateKey?: string; error?: string }> =>
       ipcRenderer.invoke('wallet:exportKey'),

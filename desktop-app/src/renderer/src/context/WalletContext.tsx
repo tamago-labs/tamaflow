@@ -35,7 +35,9 @@ interface WalletContextValue {
   error: string | null
   refreshStatus: () => Promise<void>
   refreshHoldings: () => Promise<void>
-  setup: () => Promise<FaucetResult['success'] extends true ? void : { error?: string }>
+  setup: (
+    opts?: { partyHint?: string },
+  ) => Promise<FaucetResult['success'] extends true ? void : { error?: string }>
   destroy: () => Promise<void>
   runFaucet: (amount?: string) => Promise<FaucetResult>
   exportKey: () => Promise<void>
@@ -125,11 +127,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [loadStatus, refreshHoldings])
 
-  const setup = useCallback(async () => {
+  const setup = useCallback(async (opts?: { partyHint?: string }) => {
     if (!window.api?.wallet?.create) return { error: 'Not available' }
     setLoadStatus('creating')
     setError(null)
-    const r = await window.api.wallet.create()
+    const r = await window.api.wallet.create(opts)
     if (!mounted.current) return r
     if (!r.success) {
       setLoadStatus('error')

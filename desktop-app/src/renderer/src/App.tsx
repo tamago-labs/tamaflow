@@ -9,7 +9,7 @@ import Employees from './pages/Employees'
 import NewFlow from './pages/NewFlow'
 import ActiveFlows from './pages/ActiveFlows'
 import Settlements from './pages/Settlements'
-import Inbox from './pages/Inbox'
+import Assets from './pages/Assets'
 import Settings from './pages/Settings'
 import SetupWalletModal from './components/SetupWalletModal'
 import AccountInfoModal from './components/AccountInfoModal'
@@ -112,7 +112,7 @@ function AppRouter({ onChangeModel }: { onChangeModel: () => void }) {
           <Route path="/flows" element={<ActiveFlows />} />
           <Route path="/flows/new" element={<NewFlow />} />
           <Route path="/settlements" element={<Settlements />} />
-          <Route path="/inbox" element={<Inbox />} />
+          <Route path="/assets" element={<Assets />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

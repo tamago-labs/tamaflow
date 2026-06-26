@@ -317,7 +317,35 @@ export async function getWalletStatus(): Promise<WalletStatus> {
 // ============================================
 // Create wallet — generate keypair, allocate party, persist.
 // ============================================
-export async function createWallet(): Promise<WalletCreateResult> {
+export interface CreateWalletOptions {
+  /** Optional party hint. Slug-ified in the renderer; this is the
+   *  sanitized version. Empty / invalid → falls back to DEFAULT_PARTY_HINT. */
+  partyHint?: string
+}
+
+/**
+ * Convert a free-form organization name into a Canton-safe party hint:
+ *   - lowercase
+ *   - accents stripped (NFKD → drop combining marks)
+ *   - non-alphanumeric runs collapsed into a single hyphen
+ *   - leading / trailing hyphens trimmed
+ *   - capped at 32 chars (Canton party hint limit on this DevNet)
+ * Returns an empty string if the input has no usable characters —
+ * callers should fall back to a default in that case.
+ */
+function slugifyPartyHint(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32)
+}
+
+export async function createWallet(
+  opts: CreateWalletOptions = {},
+): Promise<WalletCreateResult> {
   const encryption = ensureEncryption()
   if (!encryption.available) {
     return {
@@ -336,6 +364,11 @@ export async function createWallet(): Promise<WalletCreateResult> {
     }
   }
 
+  // Re-validate / slug-ify in main as defence-in-depth — the renderer
+  // already slug-ifies, but we don't trust IPC payloads.
+  const requestedHint = slugifyPartyHint((opts.partyHint ?? '').trim())
+  const partyHint = requestedHint.length > 0 ? requestedHint : DEFAULT_PARTY_HINT
+
   try {
     const sdk = await buildExtendedSdk()
 
@@ -347,7 +380,7 @@ export async function createWallet(): Promise<WalletCreateResult> {
 
     // 3. Allocate the external party on the ledger.
     const created = await sdk.party.external
-      .create(keyPair.publicKey, { partyHint: DEFAULT_PARTY_HINT })
+      .create(keyPair.publicKey, { partyHint })
       .sign(keyPair.privateKey)
       .execute()
 
@@ -355,7 +388,7 @@ export async function createWallet(): Promise<WalletCreateResult> {
     const wallet: WalletFile = {
       v: 1,
       partyId: created.partyId,
-      partyHint: DEFAULT_PARTY_HINT,
+      partyHint,
       publicKey: keyPair.publicKey,
       privateKey: keyPair.privateKey,
       fingerprint: created.publicKeyFingerprint ?? fingerprint,
@@ -495,7 +528,9 @@ function notifyChange(): void {
 
 export function registerWalletIpcHandlers(): void {
   ipcMain.handle('wallet:status', () => getWalletStatus())
-  ipcMain.handle('wallet:create', () => createWallet())
+  ipcMain.handle('wallet:create', (_e, opts?: CreateWalletOptions) =>
+    createWallet(opts),
+  )
   ipcMain.handle('wallet:destroy', async () => {
     await destroyWallet()
     notifyChange()

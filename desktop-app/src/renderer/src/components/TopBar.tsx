@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { useAI } from '../context/AIContext'
 import { useWallet } from '../context/WalletContext'
 import AccountMenu from './AccountMenu'
-import { ChevronRight, Wallet, ChevronDown } from 'lucide-react'
+import { ChevronRight, ChevronDown, ArrowLeft } from 'lucide-react'
 
 /**
  * Sticky 56px top bar:
@@ -26,7 +26,7 @@ const routeLabels: Record<string, string> = {
   flows: 'Active Flows',
   new: 'New Flow',
   settlements: 'Settlements',
-  inbox: 'Inbox',
+  assets: 'Assets',
   settings: 'Settings',
 }
 
@@ -61,7 +61,7 @@ function truncateParty(partyId: string | undefined): string {
   return `${hint}::${fingerprint.slice(0, 4)}…${fingerprint.slice(-4)}`
 }
 
-export default function TopBar() {
+export default function TopBar({ onChangeModel }: { onChangeModel: () => void }) {
   const { isReady } = useAI()
   const { status, openSetup } = useWallet()
   const location = useLocation()
@@ -114,16 +114,19 @@ export default function TopBar() {
 
       {/* Right-side actions */}
       <div className="flex items-center gap-3">
-        {/* AI status dot — mirrors the old Ready card state */}
-        <span className="flex items-center gap-1.5" title={isReady ? 'AI ready' : 'No model loaded'}>
-          <span
-            className="w-[7px] h-[7px] rounded-full flex-shrink-0"
-            style={{ background: isReady ? '#3EC4C0' : '#9999bb' }}
-          />
-          <span className="font-mono text-[9px] text-brand-muted uppercase tracking-wider2">
-            {isReady ? 'AI' : 'No AI'}
-          </span>
-        </span>
+        {/* "Back to AI Selection" — replaces the old passive AI status
+            dot. Still shows the readiness state via the dot color, but
+            is now actionable: clicking returns the user to the model
+            picker. Sits to the left of the wallet chip. */}
+        <button
+          type="button"
+          onClick={onChangeModel}
+          title={isReady ? 'AI ready — change model' : 'No model loaded'}
+          className="flex items-center gap-1.5 py-1.5 px-3 border border-brand-blue text-brand-blue bg-white rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light"
+        > 
+          <ArrowLeft size={11} />
+          Back to AI Selection
+        </button>
 
         {/* Wallet: chip (with dropdown) when set up, Setup button otherwise */}
         {!walletPresent && (
@@ -131,8 +134,7 @@ export default function TopBar() {
             type="button"
             onClick={openSetup}
             className="flex items-center gap-1.5 py-1.5 px-3 border border-brand-blue text-brand-blue bg-white rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light"
-          >
-            <Wallet size={12} />
+          > 
             Setup Wallet
           </button>
         )}

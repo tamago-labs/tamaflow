@@ -1,91 +1,132 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useWallet } from '../context/WalletContext'
 import WalletModal from './WalletModal'
-import { Loader2, ShieldAlert } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 /**
- * First-run modal: confirms the user wants to generate a Canton wallet.
- * The wallet is encrypted at rest with the OS keychain via Electron's
- * safeStorage; we still surface a warning so the user understands this
- * computer can sign on their behalf.
+ * First-run modal: lets the user pick an organization name that we
+ * slug-ify into a Canton party hint, or fall back to a default if they
+ * leave it blank. Generates a new keypair, allocates the party on
+ * Canton DevNet, and encrypts the wallet with the OS keychain via
+ * Electron's safeStorage.
+ *
+ * The hint is also re-validated in the main process (defence-in-depth)
+ * — see `slugifyPartyHint` in wallet.ts.
  */
+
+const DEFAULT_PARTY_HINT = 'tamaflow'
+
+/**
+ * Convert an org name into a Canton-safe party hint. Pure / deterministic,
+ * kept here (and in wallet.ts) so the renderer can preview the result as
+ * the user types. The two implementations must stay in sync.
+ *
+ *   "Acme Corp."   → "acme-corp"
+ *   "  Foo/Bar!  " → "foo-bar"
+ *   "@@@@"         → ""           (caller falls back to default)
+ */
+function slugifyPartyHint(input: string): string {
+  return input
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 32)
+}
+
 export default function SetupWalletModal() {
   const { modal, loadStatus, error, setup, clearError, closeSetup } = useWallet()
+  const [orgName, setOrgName] = useState('')
   const [acknowledged, setAcknowledged] = useState(false)
 
+  // Reset transient state every time the modal opens.
   useEffect(() => {
     if (modal.setupOpen) {
+      setOrgName('')
       setAcknowledged(false)
       clearError()
     }
   }, [modal.setupOpen, clearError])
 
   const isBusy = loadStatus === 'creating'
-  const encryptionAvailable = true // we don't expose this state yet; modal will surface 'error' on attempt
+
+  const { usingDefault, partyHint } = useMemo(() => {
+    const slug = slugifyPartyHint(orgName.trim())
+    const usingDefault = slug.length === 0
+    return {
+      usingDefault,
+      partyHint: usingDefault ? DEFAULT_PARTY_HINT : slug,
+    }
+  }, [orgName])
 
   const handleGenerate = async () => {
-    await setup()
+    await setup({ partyHint })
   }
 
   return (
     <WalletModal
       open={modal.setupOpen}
       onClose={closeSetup}
-      title="Setup Canton Wallet"
+      title="Setup Wallet"
       subtitle="First-time setup"
       maxWidth="max-w-md"
     >
       <div className="space-y-4">
-        {!encryptionAvailable && (
-          <div className="flex items-start gap-2 p-3 bg-brand-errBg border border-brand-errBorder rounded-md">
-            <ShieldAlert size={14} className="text-brand-err mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="font-mono text-[10px] font-bold tracking-wider2 uppercase text-brand-err m-0 mb-1">
-                Encryption Unavailable
-              </p>
-              <p className="font-sans text-xs text-brand-errDark m-0">
-                The OS keychain is not reachable. On Linux, install{' '}
-                <code>libsecret-1</code> + a keyring provider
-                (gnome-keyring or kwallet), then restart the app.
-              </p>
-            </div>
-          </div>
-        )}
+        {/* Organization name → live party hint preview */}
+        <div>
+          <label
+            htmlFor="setup-wallet-org"
+            className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5"
+          >
+            Organization name
+          </label>
+          <input
+            id="setup-wallet-org"
+            type="text"
+            value={orgName}
+            onChange={(e) => setOrgName(e.target.value)}
+            placeholder="Acme Corp"
+            disabled={isBusy}
+            autoFocus
+            className="w-full px-3 py-2 bg-white border border-brand-border rounded-md font-sans text-sm text-brand-navy placeholder:text-brand-muted focus:outline-none focus:border-brand-blue transition-colors disabled:opacity-60"
+          />
+          <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted mt-1.5 m-0">
+            Party hint:{' '}
+            <span className="text-brand-navy font-semibold normal-case tracking-normal">
+              {partyHint}
+            </span>
+            {usingDefault && (
+              <span className="text-brand-muted normal-case tracking-normal">
+                {' '}
+                (default — leave blank or type your org name)
+              </span>
+            )}
+          </p>
+        </div>
 
-        <p className="font-sans text-sm text-brand-navy m-0">
-          This will generate a new Canton wallet and allocate a party on
-          the Canton DevNet ledger.
+        {/* One-line note covering the security model. */}
+        <p className="font-sans text-xs text-brand-muted m-0 leading-relaxed">
+          Your keypair is generated locally and encrypted with your OS
+          keychain. This wallet is bound to this device — destroying it
+          removes access to the funds it controls.
         </p>
 
-        <ul className="font-sans text-xs text-brand-muted m-0 pl-4 space-y-1 list-disc">
-          <li>
-            The Ed25519 keypair is generated locally — nothing is sent
-            to a server.
-          </li>
-          <li>
-            The private key is encrypted with your operating system
-            keychain (DPAPI / Keychain / libsecret) before being saved
-            to disk.
-          </li>
-          <li>
-            Anyone with access to this computer can use the wallet
-            while logged in.
-          </li>
-        </ul>
-
+        {/* Acknowledgement */}
         <label className="flex items-start gap-2 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={acknowledged}
             onChange={(e) => setAcknowledged(e.target.checked)}
+            disabled={isBusy}
             className="mt-0.5 cursor-pointer"
           />
           <span className="font-sans text-xs text-brand-navy">
-            I understand that the wallet is bound to this machine and
-            that destroying it removes access to the funds it controls.
+            I understand this wallet is bound to this machine.
           </span>
         </label>
 
+        {/* Error from a previous attempt */}
         {error && (
           <div className="p-3 bg-brand-errBg border border-brand-errBorder rounded-md">
             <p className="font-mono text-[10px] font-bold tracking-wider2 uppercase text-brand-err m-0 mb-1">
@@ -97,6 +138,7 @@ export default function SetupWalletModal() {
           </div>
         )}
 
+        {/* Actions */}
         <div className="flex items-center justify-end gap-2 pt-2">
           <button
             type="button"
