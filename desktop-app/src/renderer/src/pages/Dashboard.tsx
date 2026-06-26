@@ -1,4 +1,3 @@
-import TokensCard from '../components/TokensCard'
 import { useAI } from '../context/AIContext'
 import { Link, useOutletContext } from 'react-router-dom'
 import { ArrowRight, ArrowLeft, Power, RotateCcw, TrendingUp, Coins } from 'lucide-react'
@@ -18,7 +17,7 @@ interface OutletCtx {
  *
  *   1. AI card (left 2/3) + 2 stat cards (right 1/3)
  *   2. "Continue where you left off" — Latest Flow card
- *   3. Wallet holdings (TokensCard)
+ *   3. Three small KPI tiles
  *   4. Three small KPI tiles
  */
 
@@ -209,9 +208,6 @@ export default function Dashboard() {
           </Link>
         </div>
       </div>
-
-      {/* ── Wallet tokens ──────────────────────────────────────────── */}
-      <TokensCard />
 
       {/* ── KPI tiles ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-4 max-w-4xl">

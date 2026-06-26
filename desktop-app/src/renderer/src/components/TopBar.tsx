@@ -34,16 +34,17 @@ const routeLabels: Record<string, string> = {
 
 function buildCrumbs(pathname: string): Crumb[] {
   const segments = pathname.split('/').filter(Boolean)
+  // Root — single "Dashboard" crumb, no prefix.
   if (segments.length === 0) return [{ path: '/', label: 'Dashboard' }]
-  const crumbs: Crumb[] = [{ path: '/', label: 'Dashboard' }]
+  // Sub-routes — drop the redundant "Dashboard > …" prefix. The breadcrumb
+  // should read as the current location's path only (e.g. "Employees",
+  // "Active Flows > New Flow", "Settings"). This matches how typical
+  // product breadcrumbs work — the first segment is the section, not the
+  // always-present "Home" link.
+  const crumbs: Crumb[] = []
   let acc = ''
   for (const seg of segments) {
     acc += `/${seg}`
-    // /flows/new should be a single "New Flow" crumb, not "Active Flows / New Flow"
-    if (acc === '/flows/new') {
-      crumbs.push({ path: acc, label: 'New Flow' })
-      continue
-    }
     crumbs.push({ path: acc, label: routeLabels[seg] ?? seg })
   }
   return crumbs

@@ -4,7 +4,7 @@ import {
   Users,
   Plus,
   Wallet,
-  Coins,
+  Receipt,
   ListTodo,
   Settings as SettingsIcon,
 } from 'lucide-react'
@@ -13,8 +13,13 @@ import Logomark from './Logomark'
 
 /**
  * Fixed 200px left navigation. Grouped into two sections:
- *   Payroll: Dashboard, Employees, New Flow, Active Flows, Settlements
- *   Account: Assets, Settings
+ *   Payroll: Dashboard, Employees, Flow Builder, Active Flows
+ *   Account: Assets, Settlements, Settings
+ *
+ * Settlements is an account-level ledger view (the record of completed
+ * on-ledger payments), so it lives next to Assets rather than under
+ * the operational Payroll group. The icon is a receipt — settlements
+ * are receipts of completed transactions.
  *
  * Active item gets the brand-blue fill + white text. The teal 3px top
  * accent matches the my-doctor-ai reference.
@@ -44,7 +49,6 @@ const navCategories: NavCategory[] = [
       { path: '/employees', label: 'Employees', icon: Users },
       { path: '/flows/new', label: 'Flow Builder', icon: Plus },
       { path: '/flows', label: 'Active Flows', icon: ListTodo, end: true },
-      { path: '/settlements', label: 'Settlements', icon: Coins },
     ],
   },
   {
@@ -52,6 +56,7 @@ const navCategories: NavCategory[] = [
     label: 'Account',
     items: [
       { path: '/assets', label: 'Assets', icon: Wallet },
+      { path: '/settlements', label: 'Settlements', icon: Receipt },
       { path: '/settings', label: 'Settings', icon: SettingsIcon },
     ],
   },

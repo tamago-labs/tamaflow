@@ -15,9 +15,7 @@ export default function FaucetModal() {
     txHash?: string
     amount?: string
   } | null>(null)
-
-  console.log("error:", error)
-
+ 
   const isBusy = loadStatus === 'fauceting'
 
   const handleRun = async () => {

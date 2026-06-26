@@ -94,7 +94,6 @@ export interface Holding {
   instrumentId: string
   symbol: string
   amount: string
-  lockedAmount?: string
 }
 
 export interface FaucetResult {

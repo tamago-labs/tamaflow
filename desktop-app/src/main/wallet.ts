@@ -104,7 +104,6 @@ export interface Holding {
   instrumentId: string
   symbol: string
   amount: string
-  lockedAmount?: string
 }
 
 // ============================================
@@ -434,38 +433,157 @@ export async function exportPrivateKey(): Promise<{
 
 // ============================================
 // Holdings — list token UTXOs for the wallet.
+//
+// Canton uses a UTXO model, so a party's balance is the sum of all
+// `Holding` contracts in their position. We aggregate by instrumentId
+// (NOT contractId — each UTXO is its own contract) and sum the
+// amounts to produce one row per token for the Assets table. See
+// https://docs.digitalasset.com/integrations/wallet/wallet-sdk-v1-migration
+// for the SDK's recommended pattern.
+//
+// Tracing: every entry/exit is logged with `[wallet.getHoldings]` so
+// it's easy to grep the main-process console when the IPC call isn't
+// reaching us.
 // ============================================
 export async function getHoldings(): Promise<Holding[]> {
+  const TAG = '[wallet.getHoldings]'
+  console.log(TAG, 'called')
+
   const w = await loadWallet()
-  if (!w) return []
-  const sdk = await buildExtendedSdk()
-  const utxos = await sdk.token.utxos.list({ partyId: w.partyId })
-  // Aggregate by instrumentId so the UI gets one row per token.
-  const byInstrument = new Map<string, Holding>()
-  for (const u of utxos) {
-    const instrumentId: string =
-      (u as { instrumentId?: string }).instrumentId ??
-      ((u as { instrument?: { id?: string } }).instrument?.id ?? 'unknown')
-    const symbol: string =
-      (u as { symbol?: string }).symbol ??
-      ((u as { instrument?: { symbol?: string } }).instrument?.symbol ??
-        instrumentId.split(':').pop() ??
-        'CC')
-    const amount: string =
-      (u as { amount?: string | number }).amount?.toString() ?? '0'
-    const locked: string | undefined = (
-      u as { lockedAmount?: string | number }
-    ).lockedAmount?.toString()
-    const key = `${u.contractId}:${instrumentId}`
-    byInstrument.set(key, {
-      contractId: u.contractId,
-      instrumentId,
-      symbol,
-      amount,
-      lockedAmount: locked,
-    })
+  console.log(TAG, 'wallet loaded:', {
+    hasWallet: !!w,
+    partyId: w?.partyId,
+    partyHint: w?.partyHint,
+  })
+
+
+  if (!w) {
+    console.log(TAG, 'no wallet — returning []')
+    return []
   }
-  return Array.from(byInstrument.values())
+
+  let sdk: Awaited<ReturnType<typeof buildExtendedSdk>>
+  try {
+    sdk = await buildExtendedSdk()
+  } catch (sdkErr) {
+    const msg = sdkErr instanceof Error ? sdkErr.message : String(sdkErr)
+    console.error(TAG, 'buildExtendedSdk failed:', msg)
+    return []
+  }
+
+  console.log(TAG, 'calling sdk.token.utxos.list for party', w.partyId)
+  let utxos: unknown[]
+  try {
+    utxos = (await sdk.token.utxos.list({ partyId: w.partyId })) as unknown[]
+  } catch (utxoErr) {
+    const msg = utxoErr instanceof Error ? utxoErr.message : String(utxoErr)
+    console.error(TAG, 'sdk.token.utxos.list failed:', msg)
+    return []
+  }
+
+  console.log(TAG, 'utxos.list returned', utxos.length, 'contracts')
+
+  // Aggregate by instrumentId — sum amounts across all the UTXOs the
+  // party holds for the same instrument. Canton doesn't expose a
+  // "balance" field; this aggregation IS the balance.
+  type Bucket = {
+    contractId: string // representative (first) contractId, used as React key
+    instrumentId: string
+    symbol: string
+    amount: number
+  }
+  const byInstrument = new Map<string, Bucket>()
+
+  for (const u of utxos) {
+    const utxo = u as {
+      contractId?: string
+      // Canton `Holding` shape: instrumentId is a nested { admin, id }
+      // object (see core-tx-parser/dist/types.d.ts). We only care about
+      // `id` for aggregation. The SDK sometimes nests the view under
+      // `interfaceViewValue` instead of flattening — handle both.
+      instrumentId?: { admin?: string; id?: string } | string
+      interfaceViewValue?: {
+        instrumentId?: { admin?: string; id?: string } | string
+        amount?: string | number
+        meta?: { symbol?: string }
+      }
+      symbol?: string
+      meta?: { symbol?: string }
+      amount?: string | number
+      instrument?: { id?: string; symbol?: string }
+    }
+
+    // Resolve the bare instrument id (e.g. "Amulet") from whichever
+    // shape the SDK returned this batch in.
+    const instrumentIdObj =
+      (typeof utxo.instrumentId === 'object' ? utxo.instrumentId : null) ??
+      (typeof utxo.interfaceViewValue?.instrumentId === 'object'
+        ? utxo.interfaceViewValue.instrumentId
+        : null)
+    const instrumentId: string =
+      instrumentIdObj?.id ??
+      (typeof utxo.instrumentId === 'string' ? utxo.instrumentId : null) ??
+      (typeof utxo.interfaceViewValue?.instrumentId === 'string'
+        ? utxo.interfaceViewValue.instrumentId
+        : null) ??
+      utxo.instrument?.id ??
+      'unknown'
+
+    // Symbol comes from `meta.symbol` (the CIP-0056 metadata view).
+    // The wallet SDK currently doesn't populate this on FiveNorth DevNet
+    // for Amulet, so we fall back to "CC" (the well-known Canton Coin
+    // ticker) when the id looks like an Amulet instrument.
+    const symbol: string =
+      utxo.meta?.symbol ??
+      utxo.interfaceViewValue?.meta?.symbol ??
+      utxo.symbol ??
+      utxo.instrument?.symbol ??
+      (instrumentId.toLowerCase().includes('amulet') ? 'CC' : instrumentId)
+
+    // Amount lives in either top-level `amount` or nested
+    // `interfaceViewValue.amount` (Canton CIP-0056 holding view shape).
+    const rawAmount =
+      utxo.amount ?? utxo.interfaceViewValue?.amount ?? '0'
+    const amount = parseFloat(String(rawAmount))
+    if (!Number.isFinite(amount)) {
+      console.warn(TAG, 'skipping utxo with non-numeric amount', {
+        contractId: utxo.contractId,
+        rawAmount,
+      })
+      continue
+    }
+
+    const existing = byInstrument.get(instrumentId)
+    if (existing) {
+      existing.amount += amount
+    } else {
+      byInstrument.set(instrumentId, {
+        contractId: utxo.contractId ?? '',
+        instrumentId,
+        symbol,
+        amount,
+      })
+    }
+  }
+
+  // Number back to string for the wire shape. We use a fixed-precision
+  // representation so the UI's `formatAmount` sees the same value the
+  // SDK gave us.
+  const result: Holding[] = Array.from(byInstrument.values()).map((b) => ({
+    contractId: b.contractId,
+    instrumentId: b.instrumentId,
+    symbol: b.symbol,
+    amount: b.amount.toString(),
+  }))
+
+  console.log(
+    TAG,
+    'aggregated into',
+    result.length,
+    'instruments:',
+    result.map((r) => `${r.symbol}=${r.amount}`).join(', '),
+  )
+  return result
 }
 
 // ============================================
