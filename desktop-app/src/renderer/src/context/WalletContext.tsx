@@ -23,6 +23,7 @@ interface ModalState {
   faucetOpen: boolean
   exportKeyOpen: boolean
   destroyOpen: boolean
+  receiveOpen: boolean
   exportKeyValue: string | null
 }
 
@@ -51,6 +52,8 @@ interface WalletContextValue {
   closeExportKey: () => void
   openDestroy: () => void
   closeDestroy: () => void
+  openReceive: () => void
+  closeReceive: () => void
   clearError: () => void
 }
 
@@ -64,6 +67,7 @@ const defaultModal: ModalState = {
   faucetOpen: false,
   exportKeyOpen: false,
   destroyOpen: false,
+  receiveOpen: false,
   exportKeyValue: null,
 }
 
@@ -218,6 +222,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     () => setModal((m) => ({ ...m, destroyOpen: false })),
     [],
   )
+  const openReceive = useCallback(
+    () => setModal((m) => ({ ...m, receiveOpen: true })),
+    [],
+  )
+  const closeReceive = useCallback(
+    () => setModal((m) => ({ ...m, receiveOpen: false })),
+    [],
+  )
   const clearError = useCallback(() => setError(null), [])
 
   // Provide safe no-op defaults for the rare Server-Component reach.
@@ -244,6 +256,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     closeExportKey: closeExportKey ?? NOOP,
     openDestroy: openDestroy ?? NOOP,
     closeDestroy: closeDestroy ?? NOOP,
+    openReceive: openReceive ?? NOOP,
+    closeReceive: closeReceive ?? NOOP,
     clearError: clearError ?? NOOP,
   }
 

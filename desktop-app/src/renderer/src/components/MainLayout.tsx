@@ -16,7 +16,7 @@ export default function MainLayout({ onChangeModel }: { onChangeModel: () => voi
     <div className="min-h-screen bg-brand-light flex">
       <Sidebar />
       <div className="flex-1 ml-[200px] flex flex-col min-h-screen">
-        <TopBar onChangeModel={onChangeModel} />
+        <TopBar />
         <main className="flex-1 p-8 overflow-y-auto">
           <Outlet context={{ onChangeModel }} />
         </main>

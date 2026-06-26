@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { useWallet } from '../context/WalletContext'
-import { Info, Droplets } from 'lucide-react'
+import { Info, Droplets, QrCode } from 'lucide-react'
 
 /**
  * Account menu — small popover anchored to the TopBar wallet chip.
- * Two items in order: Account Info, Faucet. Closes on outside click
- * or Escape.
+ * Three items in order: Receive, Account Info, Faucet. Closes on
+ * outside click or Escape.
  */
 interface AccountMenuProps {
   open: boolean
@@ -14,7 +14,7 @@ interface AccountMenuProps {
 
 export default function AccountMenu({ open, onClose }: AccountMenuProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const { openAccountInfo, openFaucet } = useWallet()
+  const { openAccountInfo, openFaucet, openReceive } = useWallet()
 
   useEffect(() => {
     if (!open) return
@@ -34,6 +34,10 @@ export default function AccountMenu({ open, onClose }: AccountMenuProps) {
 
   if (!open) return null
 
+  const handleReceive = () => {
+    openReceive()
+    onClose()
+  }
   const handleAccountInfo = () => {
     openAccountInfo()
     onClose()
@@ -50,6 +54,15 @@ export default function AccountMenu({ open, onClose }: AccountMenuProps) {
       aria-label="Wallet menu"
       className="absolute right-0 top-full mt-1 w-[220px] bg-white border border-brand-border rounded-md shadow-lg py-1 z-[60]"
     >
+      <button
+        type="button"
+        role="menuitem"
+        onClick={handleReceive}
+        className="w-full flex items-center gap-2 px-3 py-2 text-left font-sans text-[13px] text-brand-navy hover:bg-brand-light cursor-pointer bg-transparent border-0"
+      >
+        <QrCode size={14} className="text-brand-muted flex-shrink-0" />
+        Receive
+      </button>
       <button
         type="button"
         role="menuitem"

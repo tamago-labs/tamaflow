@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { useAI } from '../context/AIContext'
 import { useWallet } from '../context/WalletContext'
 import AccountMenu from './AccountMenu'
-import { ChevronRight, ChevronDown, ArrowLeft } from 'lucide-react'
+import NetworkBadge from './NetworkBadge'
+import { ChevronRight, ChevronDown } from 'lucide-react'
 
 /**
  * Sticky 56px top bar:
  *   Left  — breadcrumb (mono, brand-muted) derived from the matched route.
- *   Right — AI status dot + Wallet chip / Setup button.
+ *   Right — Network badge + Wallet chip / Setup button.
  *
- * The breadcrumb is computed from a static route→label map so we don't
- * need a router config to introspect. Dynamic segments (e.g. /flows/:id)
- * are left as "·" for now — the placeholder pages don't generate them.
+ * The "Back to AI Selection" action used to live here too, but it was
+ * redundant with the Dashboard's AI card. The breadcrumb is computed
+ * from a static route→label map so we don't need a router config to
+ * introspect. Dynamic segments (e.g. /flows/:id) are left as "·" for
+ * now — the placeholder pages don't generate them.
  */
 
 interface Crumb {
@@ -61,8 +63,7 @@ function truncateParty(partyId: string | undefined): string {
   return `${hint}::${fingerprint.slice(0, 4)}…${fingerprint.slice(-4)}`
 }
 
-export default function TopBar({ onChangeModel }: { onChangeModel: () => void }) {
-  const { isReady } = useAI()
+export default function TopBar() {
   const { status, openSetup } = useWallet()
   const location = useLocation()
   const crumbs = buildCrumbs(location.pathname)
@@ -114,19 +115,8 @@ export default function TopBar({ onChangeModel }: { onChangeModel: () => void })
 
       {/* Right-side actions */}
       <div className="flex items-center gap-3">
-        {/* "Back to AI Selection" — replaces the old passive AI status
-            dot. Still shows the readiness state via the dot color, but
-            is now actionable: clicking returns the user to the model
-            picker. Sits to the left of the wallet chip. */}
-        <button
-          type="button"
-          onClick={onChangeModel}
-          title={isReady ? 'AI ready — change model' : 'No model loaded'}
-          className="flex items-center gap-1.5 py-1.5 px-3 border border-brand-blue text-brand-blue bg-white rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light"
-        > 
-          <ArrowLeft size={11} />
-          Back to AI Selection
-        </button>
+        {/* Network badge — only shown once the wallet is ready */}
+        {walletPresent && <NetworkBadge />}
 
         {/* Wallet: chip (with dropdown) when set up, Setup button otherwise */}
         {!walletPresent && (
@@ -134,7 +124,7 @@ export default function TopBar({ onChangeModel }: { onChangeModel: () => void })
             type="button"
             onClick={openSetup}
             className="flex items-center gap-1.5 py-1.5 px-3 border border-brand-blue text-brand-blue bg-white rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light"
-          > 
+          >
             Setup Wallet
           </button>
         )}
