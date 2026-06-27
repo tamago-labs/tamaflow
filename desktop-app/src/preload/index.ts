@@ -11,6 +11,8 @@ import type {
   FaucetResult,
   TransferParams,
   TransferResult,
+  PendingTransfer,
+  RecipientResult,
 } from './index.d'
 
 // Custom APIs for renderer
@@ -68,6 +70,12 @@ const api = {
       ipcRenderer.invoke('wallet:faucet', amount),
     transfer: (params: TransferParams): Promise<TransferResult> =>
       ipcRenderer.invoke('wallet:transfer', params),
+    pendingTransfers: (): Promise<PendingTransfer[]> =>
+      ipcRenderer.invoke('wallet:pendingTransfers'),
+    accept: (contractId: string): Promise<RecipientResult> =>
+      ipcRenderer.invoke('wallet:accept', contractId),
+    reject: (contractId: string): Promise<RecipientResult> =>
+      ipcRenderer.invoke('wallet:reject', contractId),
     onChange: (callback: () => void) => {
       const handler = () => callback()
       ipcRenderer.on('wallet:onChange', handler)

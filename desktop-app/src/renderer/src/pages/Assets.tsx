@@ -8,6 +8,7 @@ import {
   Wallet,
   Workflow,
 } from 'lucide-react'
+import PendingTransfersCard from '../components/PendingTransfersCard'
 
 /**
  * Assets — tokenized holdings on Canton, sourced directly from the
@@ -27,11 +28,9 @@ import {
  * available). Symbols without a price entry show "—".
  *
  * No locked column (UTXO locks aren't surfaced), no manual refresh
- * (background 30s auto-refresh), no page header (matches Dashboard).
+ * (auto-refresh is handled centrally by WalletContext's useInterval),
+ * no page header (matches Dashboard).
  */
-
-// Auto-refresh interval (matches the rest of the app).
-const REFRESH_INTERVAL_MS = 30_000
 
 // Pinned symbols appear at the top, in this order.
 const PINNED_SYMBOLS = ['CC']
@@ -93,22 +92,11 @@ export default function Assets() {
     status,
     holdings,
     holdingsLoading,
-    refreshHoldings,
     openSetup,
     openSend,
   } = useWallet()
 
   const walletPresent = !!status?.exists
-
-  // Auto-refresh while the page is mounted and the wallet is up.
-  useEffect(() => {
-    if (!walletPresent) return
-    refreshHoldings()
-    const id = setInterval(() => {
-      refreshHoldings()
-    }, REFRESH_INTERVAL_MS)
-    return () => clearInterval(id)
-  }, [walletPresent, refreshHoldings])
 
   // Sort: pinned first, then alphabetical by symbol.
   const sortedHoldings = useMemo(() => {
@@ -148,9 +136,16 @@ export default function Assets() {
         </div>
       )}
 
-      {/* Wallet present — table */}
+      {/* Wallet present — pending transfers hero card + holdings table */}
       {walletPresent && (
-        <div className="bg-white border border-brand-border rounded-md overflow-hidden">
+        <>
+          {/* Pending transfers — incoming CC offers awaiting accept/reject.
+              Rendered ABOVE the holdings table since recipients look here
+              first when they expect a balance change. Styled to match the
+              Dashboard's AI card (navy + halos). */}
+          <PendingTransfersCard />
+
+          <div className="bg-white border border-brand-border rounded-md overflow-hidden">
           {/* Table header */}
           <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 py-2.5 px-4 border-b border-brand-border bg-brand-light">
             <span className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase font-semibold">
@@ -198,7 +193,8 @@ export default function Assets() {
               ))}
             </ul>
           )}
-        </div>
+          </div>
+        </>
       )}
     </div>
   )

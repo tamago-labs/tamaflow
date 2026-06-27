@@ -125,6 +125,39 @@ export interface TransferResult {
   error?: string
 }
 
+/**
+ * A pending incoming CC transfer visible to the wallet's party.
+ * The `contractId` is the `TransferInstruction` contract id; the wallet
+ * exercises `TransferInstruction_Accept` on it to claim the funds.
+ */
+export interface PendingTransfer {
+  contractId: string
+  sender: string
+  receiver: string
+  /** Numeric(10) decimal string (initial amount). */
+  amount: string
+  /** Instrument id (e.g. "Amulet"). */
+  instrumentId: string
+  /** ISO-8601 expiry — recipient must accept before this time. */
+  executeBefore: string
+  /** Optional reconciliation memo from the sender. */
+  memo?: string
+}
+
+/**
+ * Result of a recipient-side transfer action (accept or reject). Same
+ * shape as `TransferResult` but minimal — only `success` + `updateId` +
+ * the contract id we acted on, plus the human-readable error.
+ */
+export interface RecipientResult {
+  success: boolean
+  /** Ledger updateId of the committed transaction, if successful. */
+  updateId?: string
+  /** The `TransferInstruction` contract id we accepted / rejected. */
+  contractId?: string
+  error?: string
+}
+
 // ============================================
 // Internal: paths + token cache
 // ============================================
@@ -790,6 +823,143 @@ export async function transferAmulet(
 }
 
 // ============================================
+// Recipient-side transfer operations: list / accept / reject.
+//
+// Companion to `transferAmulet` above — Canton defaults Splice transfers
+// to the two-step (offer) mode, where the recipient must explicitly
+// exercise `TransferInstruction_Accept` to claim the locked CC, else the
+// offer expires after `executeBefore` (24h default) and the funds return
+// to the sender. The Loop SDK doesn't expose a recipient-side accept
+// helper, so the desktop wallet's own key must sign the exercise — these
+// three wrappers handle the IPC surface for that flow.
+//
+// All three go through `accept.ts` which builds the ExerciseCommand from
+// scratch (bypassing `sdk.token.transfer.accept()` because the SDK's
+// registry endpoint 404s on FiveNorth; the scan-proxy prefix works).
+// ============================================
+
+/** List all pending incoming `TransferInstruction` contracts for the wallet. */
+export async function listPendingTransfers(): Promise<PendingTransfer[]> {
+  const TAG = '[wallet.listPendingTransfers]'
+  console.log(TAG, 'called')
+
+  const w = await loadWallet()
+  if (!w) {
+    console.log(TAG, 'no wallet — returning []')
+    return []
+  }
+
+  try {
+    // List goes through the SDK's `tokenStandard.listContractsByInterface`
+    // which requires the `token` extension to be attached.
+    const sdk = await buildExtendedSdk()
+    const { listPendingTransferInstructions } = await import('./accept.js')
+    const list = await listPendingTransferInstructions(sdk, w.partyId)
+    console.log(
+      TAG,
+      'list returned',
+      list.length,
+      'pending:',
+      list.map((t) => `${t.amount} ${t.instrumentId} from ${t.sender}`).join(', '),
+    )
+    return list
+  } catch (err) {
+    console.error(TAG, 'failed:', err)
+    return []
+  }
+}
+
+/**
+ * Accept a pending incoming transfer by exercising
+ * `TransferInstruction_Accept` on the given contract id. The wallet's
+ * own key signs the transaction.
+ *
+ * Mirrors `transferAmulet`'s prepare → sign → execute pattern.
+ */
+export async function acceptTransfer(
+  contractId: string,
+): Promise<RecipientResult> {
+  const TAG = '[wallet.acceptTransfer]'
+  console.log(TAG, 'called', { contractId })
+
+  const w = await loadWallet()
+  if (!w) return { success: false, error: 'No wallet loaded' }
+
+  try {
+    // Build extended SDK once — `tokenStandard.transfer.createAcceptTransferInstruction`
+    // needs the `token` extension, and `ledger.prepare/sign/execute` is the
+    // core namespace that comes with the base SDK (also available on the
+    // extended one).
+    const sdk = await buildExtendedSdk()
+    const { buildAcceptCommand } = await import('./accept.js')
+    const [cmd, disclosed] = await buildAcceptCommand(sdk, { contractId })
+
+    const result = await sdk.ledger
+      .prepare({
+        partyId: w.partyId,
+        commands: cmd,
+        disclosedContracts: disclosed,
+      })
+      .sign(w.privateKey)
+      .execute({ partyId: w.partyId })
+
+    const updateId =
+      (result as { updateId?: string }).updateId ??
+      (result as { transactionHash?: string }).transactionHash
+
+    console.log(TAG, 'accept committed', { contractId, updateId })
+    return { success: true, updateId, contractId }
+  } catch (err) {
+    console.error(TAG, 'accept failed:', err)
+    return { success: false, error: errMsg(err), contractId }
+  }
+}
+
+/**
+ * Reject a pending incoming transfer by exercising
+ * `TransferInstruction_Reject` on the given contract id. The wallet's
+ * own key signs the transaction; on-ledger, this returns the locked CC
+ * to the sender and consumes the `TransferInstruction` contract.
+ */
+export async function rejectTransfer(
+  contractId: string,
+): Promise<RecipientResult> {
+  const TAG = '[wallet.rejectTransfer]'
+  console.log(TAG, 'called', { contractId })
+
+  const w = await loadWallet()
+  if (!w) return { success: false, error: 'No wallet loaded' }
+
+  try {
+    // Same pattern as accept — extended SDK for both the
+    // `tokenStandard.transfer.createRejectTransferInstruction` call and the
+    // subsequent `ledger.prepare/sign/execute`.
+    const sdk = await buildExtendedSdk()
+    const { buildRejectCommand } = await import('./accept.js')
+    const [cmd, disclosed] = await buildRejectCommand(sdk, { contractId })
+
+    const result = await sdk.ledger
+      .prepare({
+        partyId: w.partyId,
+        commands: cmd,
+        disclosedContracts: disclosed,
+      })
+      .sign(w.privateKey)
+      .execute({ partyId: w.partyId })
+
+    const updateId =
+      (result as { updateId?: string }).updateId ??
+      (result as { transactionHash?: string }).transactionHash
+
+    console.log(TAG, 'reject committed', { contractId, updateId })
+    return { success: true, updateId, contractId }
+  } catch (err) {
+    console.error(TAG, 'reject failed:', err)
+    return { success: false, error: errMsg(err), contractId }
+  }
+}
+
+// ============================================
 // Change notifications
 // ============================================
 function notifyChange(): void {
@@ -813,6 +983,13 @@ export function registerWalletIpcHandlers(): void {
   ipcMain.handle('wallet:faucet', (_e, amount?: string) => runFaucet(amount))
   ipcMain.handle('wallet:transfer', (_e, params: TransferParams) =>
     transferAmulet(params),
+  )
+  ipcMain.handle('wallet:pendingTransfers', () => listPendingTransfers())
+  ipcMain.handle('wallet:accept', (_e, contractId: string) =>
+    acceptTransfer(contractId),
+  )
+  ipcMain.handle('wallet:reject', (_e, contractId: string) =>
+    rejectTransfer(contractId),
   )
   console.log('[wallet] IPC handlers registered')
 }

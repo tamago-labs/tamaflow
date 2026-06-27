@@ -28,7 +28,8 @@
     "@qvac/sdk": "^0.13.5",
     "lucide-react": "^0.469.0",
     "qrcode": "^1.5.4",
-    "react-router-dom": "^7.1.1"
+    "react-router-dom": "^7.1.1",
+    "usehooks-ts": "^3.1.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

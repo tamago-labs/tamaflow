@@ -1,10 +1,13 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, ReactNode } from 'react'
+import { useInterval } from 'usehooks-ts'
 import type {
   WalletStatus,
   Holding,
   FaucetResult,
   TransferParams,
   TransferResult,
+  PendingTransfer,
+  RecipientResult,
 } from '../../../preload/index.d'
 
 /**
@@ -35,18 +38,23 @@ interface WalletContextValue {
   loadStatus: Status
   holdings: Holding[]
   holdingsLoading: boolean
+  pendingTransfers: PendingTransfer[]
+  pendingTransfersLoading: boolean
   modal: ModalState
   /** Symbol the user is currently sending via the SendModal. */
   openSendSymbol: string | null
   error: string | null
   refreshStatus: () => Promise<void>
   refreshHoldings: () => Promise<void>
+  refreshPendingTransfers: () => Promise<void>
   setup: (
     opts?: { partyHint?: string },
   ) => Promise<FaucetResult['success'] extends true ? void : { error?: string }>
   destroy: () => Promise<void>
   runFaucet: (amount?: string) => Promise<FaucetResult>
   transfer: (params: TransferParams) => Promise<TransferResult>
+  acceptPending: (contractId: string) => Promise<RecipientResult>
+  rejectPending: (contractId: string) => Promise<RecipientResult>
   exportKey: () => Promise<void>
   openSetup: () => void
   closeSetup: () => void
@@ -69,6 +77,9 @@ const WalletContext = createContext<WalletContextValue | null>(null)
 
 const NOOP = () => undefined
 
+/** Auto-refresh cadence for holdings + pending transfers (ms). */
+const REFRESH_INTERVAL_MS = 30_000
+
 const defaultModal: ModalState = {
   setupOpen: false,
   accountInfoOpen: false,
@@ -85,6 +96,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [loadStatus, setLoadStatus] = useState<Status>('absent')
   const [holdings, setHoldings] = useState<Holding[]>([])
   const [holdingsLoading, setHoldingsLoading] = useState(false)
+  const [pendingTransfers, setPendingTransfers] = useState<PendingTransfer[]>([])
+  const [pendingTransfersLoading, setPendingTransfersLoading] = useState(false)
   const [modal, setModal] = useState<ModalState>(defaultModal)
   const [openSendSymbol, setOpenSendSymbol] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -116,6 +129,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const refreshPendingTransfers = useCallback(async () => {
+    if (!window.api?.wallet?.pendingTransfers) return
+    setPendingTransfersLoading(true)
+    try {
+      const list = await window.api.wallet.pendingTransfers()
+      if (!mounted.current) return
+      setPendingTransfers(list)
+    } catch (e) {
+      console.error('[WalletContext] pendingTransfers failed:', e)
+    } finally {
+      if (mounted.current) setPendingTransfersLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     mounted.current = true
     refreshStatus()
@@ -126,20 +153,37 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // After a change, refresh holdings too — destroy clears them,
       // create allows the dashboard to populate after a faucet run.
       refreshHoldings()
+      refreshPendingTransfers()
     })
 
     return () => {
       mounted.current = false
       off()
     }
-  }, [refreshStatus, refreshHoldings])
+  }, [refreshStatus, refreshHoldings, refreshPendingTransfers])
 
   // When a wallet becomes present for the first time, fetch holdings.
   useEffect(() => {
     if (loadStatus === 'present') {
       refreshHoldings()
+      refreshPendingTransfers()
     }
-  }, [loadStatus, refreshHoldings])
+  }, [loadStatus, refreshHoldings, refreshPendingTransfers])
+
+  // Periodic auto-refresh of holdings + pending transfers. The delay is
+  // `null` while the wallet isn't ready, so the timer pauses (and never
+  // fires against a missing wallet). Centralised here so every page that
+  // reads from this context gets fresh data without each mounting its own
+  // setInterval — pages like Assets.tsx and PendingTransfersCard just
+  // consume `holdings` / `pendingTransfers` and render.
+  const walletReady = loadStatus === 'present'
+  useInterval(
+    () => {
+      void refreshHoldings()
+      void refreshPendingTransfers()
+    },
+    walletReady ? REFRESH_INTERVAL_MS : null,
+  )
 
   const setup = useCallback(async (opts?: { partyHint?: string }) => {
     if (!window.api?.wallet?.create) return { error: 'Not available' }
@@ -205,9 +249,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const transfer = useCallback(
     async (params: TransferParams): Promise<TransferResult> => {
-      
+
       console.log("at use context...")
-      
+
       if (!window.api?.wallet?.transfer) {
         return { success: false, error: 'Not available' }
       }
@@ -216,7 +260,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       setError(null)
       const r = await window.api.wallet.transfer(params)
-      
+
       console.log("r:", r)
 
       if (!mounted.current) return r
@@ -224,6 +268,46 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       return r
     },
     [],
+  )
+
+  const acceptPending = useCallback(
+    async (contractId: string): Promise<RecipientResult> => {
+      if (!window.api?.wallet?.accept) {
+        return { success: false, error: 'Not available' }
+      }
+      setError(null)
+      const r = await window.api.wallet.accept(contractId)
+      if (!mounted.current) return r
+      if (!r.success) {
+        setError(r.error ?? 'Accept failed')
+      } else {
+        // Refresh both the pending list (row disappears) and holdings
+        // (the accepted CC lands in the wallet).
+        refreshPendingTransfers()
+        refreshHoldings()
+      }
+      return r
+    },
+    [refreshHoldings, refreshPendingTransfers],
+  )
+
+  const rejectPending = useCallback(
+    async (contractId: string): Promise<RecipientResult> => {
+      if (!window.api?.wallet?.reject) {
+        return { success: false, error: 'Not available' }
+      }
+      setError(null)
+      const r = await window.api.wallet.reject(contractId)
+      if (!mounted.current) return r
+      if (!r.success) {
+        setError(r.error ?? 'Reject failed')
+      } else {
+        // Refresh the pending list only — reject doesn't change our balance.
+        refreshPendingTransfers()
+      }
+      return r
+    },
+    [refreshPendingTransfers],
   )
 
   // Modal helpers
@@ -279,15 +363,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     loadStatus,
     holdings,
     holdingsLoading,
+    pendingTransfers,
+    pendingTransfersLoading,
     modal,
     openSendSymbol,
     error,
     refreshStatus,
     refreshHoldings,
+    refreshPendingTransfers,
     setup,
     destroy,
     runFaucet,
     transfer,
+    acceptPending,
+    rejectPending,
     exportKey,
     openSetup: openSetup ?? NOOP,
     closeSetup: closeSetup ?? NOOP,
