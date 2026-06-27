@@ -12,6 +12,8 @@
     "01": "tsx 01-amulet-faucet.ts",
     "create-wallet": "tsx 02-create-wallet.ts",
     "02": "tsx 02-create-wallet.ts",
+    "transfer-amulet": "tsx 03-transfer-amulet.ts",
+    "03": "tsx 03-transfer-amulet.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
