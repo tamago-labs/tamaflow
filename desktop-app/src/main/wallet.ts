@@ -106,6 +106,25 @@ export interface Holding {
   amount: string
 }
 
+export interface TransferParams {
+  /** Recipient partyId (e.g. "other-party::1220abcd…"). */
+  recipient: string
+  /** Human-readable amount, e.g. "100" (will be padded to 10 decimals). */
+  amount: string
+  /** Optional memo / reconciliation tag. */
+  memo?: string
+}
+
+export interface TransferResult {
+  success: boolean
+  /** Ledger updateId of the committed transaction, if successful. */
+  updateId?: string
+  /** Decimal-string amount that was sent, e.g. "100.0000000000". */
+  amount?: string
+  recipient?: string
+  error?: string
+}
+
 // ============================================
 // Internal: paths + token cache
 // ============================================
@@ -636,6 +655,141 @@ export async function runFaucet(
 }
 
 // ============================================
+// Transfer — send CC to another party.
+//
+// Builds the `TransferFactory_Transfer` ExerciseCommand manually via
+// `transfer.ts::buildTransferCommand`, then pipes it through
+// `sdk.ledger.prepare().sign().execute()` so the wallet signs with
+// its own key (no external signer required).
+//
+// Why bypass `sdk.token.transfer.create(...)`:
+//   The SDK's high-level path calls into the CIP-0056 token-metadata
+//   registry (POST /registry/transfer-instruction/v1/transfer-factory
+//   + GET /registry/metadata/v1/info) to discover the instrument
+//   admin and the TransferFactory contract. FiveNorth's hosted DevNet
+//   validator does not expose those endpoints — it 404s with:
+//     "The requested resource could not be found:
+//      http://.../api/validator/registry/metadata/v1/instruments"
+//   `transfer.ts` builds the command from scratch using scan-proxy +
+//   ledger JSON endpoints that DO work, mirroring how `tap.ts` solves
+//   the parallel problem for the faucet.
+//
+// CC (Canton Coin) is the `Amulet` instrument on this DevNet. We
+// don't take `instrumentId` as a parameter — the on-device employer
+// wallet only ever sends CC today. Multi-instrument support would
+// require a `instrumentId` argument + an instrument-specific admin
+// resolution.
+//
+// Amount is normalised to a 10-decimal string before submission
+// (CC's standard precision). The input "100" → "100.0000000000".
+//
+// This is a TWO-STEP transfer: the recipient must accept the
+// pending `TransferInstruction` via `sdk.token.transfer.accept()`
+// for the funds to land. Payroll runs would need to either rely on
+// recipient-side pre-approval (`sdk.token.transfer.delegatedProxy`)
+// or coordinate acceptance out-of-band.
+// ============================================
+
+/** CC has 10 decimal places — pad / truncate a human string to that. */
+function padCantonCoinAmount(input: string): string {
+  const trimmed = input.trim()
+  if (trimmed === '' || Number.isNaN(parseFloat(trimmed))) {
+    throw new Error(`Invalid amount: ${input}`)
+  }
+  const [whole, frac = ''] = trimmed.split('.')
+  const padded = (frac + '0'.repeat(10)).slice(0, 10)
+  return `${whole}.${padded}`
+}
+
+/** Reject obviously malformed partyIds before we hit the ledger. */
+function validatePartyId(partyId: string): void {
+  // Canton partyId formats observed on DevNet:
+  //   - "hint::fingerprint" (allocated parties)
+  //   - "fingerprint"       (raw fingerprint, 64+ hex chars)
+  if (!partyId || partyId.length < 10) {
+    throw new Error('Recipient partyId is too short')
+  }
+  // Must look like ascii (no whitespace / control chars)
+  if (!/^[\x20-\x7e]+$/.test(partyId)) {
+    throw new Error('Recipient partyId contains invalid characters')
+  }
+}
+
+/** Cache the DSO party for the duration of the wallet process so we
+ *  don't refetch AmuletRules on every transfer. */
+let cachedDsoParty: string | null = null
+
+async function getCachedDsoParty(token: string): Promise<string> {
+  if (cachedDsoParty) return cachedDsoParty
+  const { getAmuletDsoParty } = await import('./transfer.js')
+  cachedDsoParty = await getAmuletDsoParty(token)
+  return cachedDsoParty
+}
+
+export async function transferAmulet(
+  params: TransferParams,
+): Promise<TransferResult> {
+  const TAG = '[wallet.transferAmulet]'
+  console.log(TAG, 'called', {
+    recipient: params.recipient,
+    amount: params.amount,
+  })
+
+  const w = await loadWallet()
+  if (!w) return { success: false, error: 'No wallet loaded' }
+
+  try {
+    validatePartyId(params.recipient)
+    const amount = padCantonCoinAmount(params.amount)
+
+    // 1. Build the transfer command + disclosures manually. We use
+    //    `buildBaseSdk` (no `amulet` / `token` extensions) so the SDK
+    //    doesn't try to initialise the CIP-0056 registry listeners.
+    const token = await getToken()
+    const dsoParty = await getCachedDsoParty(token)
+    const { buildTransferCommand } = await import('./transfer.js')
+    const [transferCommand, disclosedContracts] = await buildTransferCommand(
+      token,
+      {
+        sender: w.partyId,
+        recipient: params.recipient,
+        amount,
+        dsoParty,
+      },
+    )
+
+    const sdk = await buildBaseSdk(token)
+
+    // 2. Prepare → sign → execute. The chain returns the ledger
+    //    updateId on success.
+    const result = await sdk.ledger
+      .prepare({
+        partyId: w.partyId,
+        commands: transferCommand,
+        disclosedContracts,
+      })
+      .sign(w.privateKey)
+      .execute({ partyId: w.partyId })
+
+    const updateId =
+      (result as { updateId?: string }).updateId ??
+      (result as { transactionHash?: string }).transactionHash
+
+    console.log(TAG, 'transfer committed', { updateId, amount })
+
+    return {
+      success: true,
+      updateId,
+      amount,
+      recipient: params.recipient,
+    }
+  } catch (err) {
+    console.error(TAG, 'transfer failed:', err)
+    return { success: false, error: errMsg(err) }
+  }
+}
+
+// ============================================
 // Change notifications
 // ============================================
 function notifyChange(): void {
@@ -657,12 +811,82 @@ export function registerWalletIpcHandlers(): void {
   ipcMain.handle('wallet:exportKey', () => exportPrivateKey())
   ipcMain.handle('wallet:holdings', () => getHoldings())
   ipcMain.handle('wallet:faucet', (_e, amount?: string) => runFaucet(amount))
+  ipcMain.handle('wallet:transfer', (_e, params: TransferParams) =>
+    transferAmulet(params),
+  )
   console.log('[wallet] IPC handlers registered')
 }
 
 // ============================================
 // Utils
 // ============================================
+
+/**
+ * Best-effort extraction of a human-readable message from an `unknown`
+ * thrown value. The Canton SDK and `fetch` failures can surface as:
+ *   - native `Error` instances              → `.message`
+ *   - plain `{ message: string }` objects   → `.message`         (SDK errors)
+ *   - `{ error: { message } }` wrappers     → nested `.message`  (HTTP errors)
+ *   - `Response` objects                    → status + body
+ *   - anything else                         → `JSON.stringify`  (NEVER "[object Object]")
+ */
 function errMsg(err: unknown): string {
-  return err instanceof Error ? err.message : String(err)
+  if (err === null || err === undefined) return String(err)
+  if (err instanceof Error) return err.message
+
+  if (typeof err === 'object') {
+    const obj = err as Record<string, unknown>
+
+    // Nested wrappers — Canton SDK sometimes throws
+    // `{ error: { message, code } }` shapes.
+    const nested =
+      (typeof obj.error === 'object' && obj.error !== null
+        ? (obj.error as Record<string, unknown>)
+        : null) ??
+      (typeof obj.cause === 'object' && obj.cause !== null
+        ? (obj.cause as Record<string, unknown>)
+        : null)
+    if (nested) {
+      const nestedMsg =
+        pickString(nested, 'message') ??
+        pickString(nested, 'description') ??
+        pickString(nested, 'errorMessage') ??
+        pickString(nested, 'reason')
+      if (nestedMsg) return nestedMsg
+    }
+
+    const direct =
+      pickString(obj, 'message') ??
+      pickString(obj, 'errorMessage') ??
+      pickString(obj, 'error_message') ??
+      pickString(obj, 'reason') ??
+      pickString(obj, 'statusText')
+    if (direct) {
+      const status =
+        typeof obj.status === 'number'
+          ? `HTTP ${obj.status}`
+          : typeof obj.statusCode === 'number'
+            ? `HTTP ${obj.statusCode}`
+            : null
+      return status ? `${status} ${direct}` : direct
+    }
+
+    // Body text from a failed fetch (Response.text() payload).
+    if (typeof obj.body === 'string') return obj.body
+
+    // Last resort — JSON-stringify so the UI never gets "[object Object]".
+    try {
+      const json = JSON.stringify(err)
+      if (json && json !== '{}') return json
+    } catch {
+      // circular ref, etc.
+    }
+  }
+
+  return String(err)
+}
+
+function pickString(obj: Record<string, unknown>, key: string): string | null {
+  const v = obj[key]
+  return typeof v === 'string' && v.length > 0 ? v : null
 }

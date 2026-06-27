@@ -1,6 +1,6 @@
 import { useAI } from '../context/AIContext'
 import { Link, useOutletContext } from 'react-router-dom'
-import { ArrowRight, ArrowLeft, Power, RotateCcw, TrendingUp, Coins } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Power, TrendingUp, Coins } from 'lucide-react'
 
 /** Outlet context shape, set by MainLayout. */
 interface OutletCtx {
@@ -113,16 +113,7 @@ export default function Dashboard() {
 
             <div className="flex items-center gap-2 flex-wrap">
               {isReady && activeModel ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={onChangeModel}
-                    title="Open the model picker"
-                    className="flex items-center gap-1.5 py-1.5 px-3 bg-brand-teal text-brand-navy border-0 rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:opacity-90"
-                  >
-                    <RotateCcw size={12} />
-                    Change Model
-                  </button>
+                <> 
                   <button
                     type="button"
                     onClick={() => void unload()}

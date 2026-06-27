@@ -99,7 +99,10 @@ export default function Modal({
             tabIndex={-1}
           />
 
-          {/* Card */}
+          {/* Card — stop click propagation so clicks inside the card
+              (copy buttons, inputs, etc.) don't bubble up to the backdrop's
+              onClose handler. The backdrop button above closes only when
+              the click lands on the backdrop itself. */}
           <motion.div
             initial={{ opacity: 0, scale: 0.94, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -110,6 +113,7 @@ export default function Modal({
               damping: 28,
               mass: 0.9,
             }}
+            onClick={(e) => e.stopPropagation()}
             className={`relative w-full ${maxWidth} bg-white border border-brand-border rounded-lg shadow-[0_30px_80px_-20px_rgba(10,10,92,0.45)] overflow-hidden ${className}`}
           >
             {children}

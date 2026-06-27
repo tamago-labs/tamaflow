@@ -103,6 +103,27 @@ export interface FaucetResult {
   error?: string
 }
 
+/** Parameters for a CC (Canton Coin) transfer. */
+export interface TransferParams {
+  /** Recipient partyId (e.g. "other-party::1220abcd…"). */
+  recipient: string
+  /** Human-readable amount, e.g. "100" (will be padded to 10 decimals). */
+  amount: string
+  /** Optional memo / reconciliation tag. */
+  memo?: string
+}
+
+/** Result of a transfer attempt. */
+export interface TransferResult {
+  success: boolean
+  /** Ledger updateId of the committed transaction, if successful. */
+  updateId?: string
+  /** Decimal-string amount that was sent, e.g. "100.0000000000". */
+  amount?: string
+  recipient?: string
+  error?: string
+}
+
 export interface WalletAPI {
   status: () => Promise<WalletStatus>
   create: (opts?: { partyHint?: string }) => Promise<WalletCreateResult>
@@ -110,6 +131,7 @@ export interface WalletAPI {
   exportKey: () => Promise<{ success: boolean; privateKey?: string; error?: string }>
   holdings: () => Promise<Holding[]>
   faucet: (amount?: string) => Promise<FaucetResult>
+  transfer: (params: TransferParams) => Promise<TransferResult>
   onChange: (callback: () => void) => () => void
 }
 

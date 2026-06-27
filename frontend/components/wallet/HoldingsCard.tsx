@@ -45,6 +45,7 @@ import {
   formatChange,
 } from "@/lib/price/PriceContext";
 import { STYLES } from "@/lib/theme";
+import SendModal from "./SendModal";
 
 /** How often to re-fetch holdings while the wallet is connected. */
 const REFRESH_INTERVAL_MS = 30_000;
@@ -93,6 +94,12 @@ function formatAmount(value: string): string {
 export default function HoldingsTable() {
   const { status, holdings, refreshHoldings, connect } = useWallet();
   const prices = useContext(PriceContext);
+
+  // State for the Send modal. `null` = closed; the symbol is held so
+  // the modal title can show "Send CC" / "Send cBTC" etc.
+  const [sendSymbol, setSendSymbol] = useState<string | null>(null);
+  const openSend = (sym: string) => setSendSymbol(sym);
+  const closeSend = () => setSendSymbol(null);
 
   // Auto-refresh
   useEffect(() => {
@@ -193,11 +200,21 @@ export default function HoldingsTable() {
           </thead>
           <tbody>
             {sortedHoldings.map((h) => (
-              <HoldingRow key={`${h.instrumentId.admin}::${h.instrumentId.id}`} h={h} />
+              <HoldingRow
+                key={`${h.instrumentId.admin}::${h.instrumentId.id}`}
+                h={h}
+                onSend={() => openSend(h.symbol)}
+              />
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Send modal — single instance at the table root, reused for
+          any row's Send button. */}
+      {sendSymbol !== null && (
+        <SendModal symbol={sendSymbol} onClose={closeSend} />
+      )}
     </div>
   );
 }
@@ -214,9 +231,10 @@ interface HoldingRowProps {
     image?: string;
     unlocked: string;
   };
+  onSend: () => void;
 }
 
-function HoldingRow({ h }: HoldingRowProps) {
+function HoldingRow({ h, onSend }: HoldingRowProps) {
   const price = usePrice(h.symbol);
   const amount = parseFloat(h.unlocked.replace(/,/g, ""));
   const usdValue = price && !Number.isNaN(amount) ? amount * price.usd : null;
@@ -259,7 +277,7 @@ function HoldingRow({ h }: HoldingRowProps) {
         )}
       </td>
       <td className="py-3 px-4 text-right">
-        <ActionCell symbol={h.symbol} />
+        <ActionCell symbol={h.symbol} onSend={onSend} />
       </td>
     </tr>
   );
@@ -269,11 +287,18 @@ function HoldingRow({ h }: HoldingRowProps) {
 /* ActionCell — per-row "Send" button + "More ▾" dropdown (Swap / Bridge). */
 /* -------------------------------------------------------------------------- */
 
-function ActionCell({ symbol }: { symbol: string }) {
+function ActionCell({
+  symbol,
+  onSend,
+}: {
+  symbol: string;
+  onSend: () => void;
+}) {
   return (
     <div className="inline-flex items-center gap-1.5 justify-end">
       <button
         type="button"
+        onClick={onSend}
         className="inline-flex items-center gap-1 py-1 px-2.5 bg-brand-blue text-white rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:opacity-90 transition-opacity"
         title={`Send ${symbol}`}
       >

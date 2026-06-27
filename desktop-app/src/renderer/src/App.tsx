@@ -17,6 +17,7 @@ import FaucetModal from './components/FaucetModal'
 import ExportKeyModal from './components/ExportKeyModal'
 import ConfirmDestroyModal from './components/ConfirmDestroyModal'
 import ReceiveModal from './components/ReceiveModal'
+import SendModal from './components/SendModal'
 import { SPLASH_DELAY_MS } from './theme'
 import type { ModelEntry } from '../../preload/index.d'
 
@@ -94,6 +95,7 @@ function App() {
       <ExportKeyModal />
       <ConfirmDestroyModal />
       <ReceiveModal />
+      <SendModal />
     </>
   )
 }

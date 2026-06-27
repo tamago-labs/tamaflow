@@ -95,6 +95,7 @@ export default function Assets() {
     holdingsLoading,
     refreshHoldings,
     openSetup,
+    openSend,
   } = useWallet()
 
   const walletPresent = !!status?.exists
@@ -192,6 +193,7 @@ export default function Assets() {
                   symbol={h.symbol}
                   instrumentId={h.instrumentId}
                   amount={h.amount}
+                  onSend={() => openSend(h.symbol)}
                 />
               ))}
             </ul>
@@ -206,10 +208,12 @@ function AssetRow({
   symbol,
   instrumentId,
   amount,
+  onSend,
 }: {
   symbol: string
   instrumentId: string
   amount: string
+  onSend: () => void
 }) {
   const name = tokenName(symbol, instrumentId)
   const price = TOKEN_PRICES[symbol]
@@ -266,7 +270,7 @@ function AssetRow({
 
       {/* Action — Send button + "More ▾" dropdown */}
       <div className="text-right">
-        <ActionCell symbol={symbol} />
+        <ActionCell symbol={symbol} onSend={onSend} />
       </div>
     </li>
   )
@@ -276,14 +280,14 @@ function AssetRow({
 /* ActionCell — Send button + MoreHorizontal dropdown (Swap / Bridge).       */
 /* -------------------------------------------------------------------------- */
 
-function ActionCell({ symbol }: { symbol: string }) {
+function ActionCell({ symbol, onSend }: { symbol: string; onSend: () => void }) {
   return (
     <div className="inline-flex items-center gap-1.5 justify-end">
       <button
         type="button"
-        disabled
-        title={`Send ${symbol} (coming soon)`}
-        className="inline-flex items-center gap-1 py-1 px-2.5 bg-brand-blue text-white rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase opacity-50 cursor-not-allowed border-0"
+        onClick={onSend}
+        title={`Send ${symbol}`}
+        className="inline-flex items-center gap-1 py-1 px-2.5 bg-brand-blue text-white rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:opacity-90 transition-opacity"
       >
         <Send size={11} />
         Send

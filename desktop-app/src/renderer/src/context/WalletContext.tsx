@@ -3,6 +3,8 @@ import type {
   WalletStatus,
   Holding,
   FaucetResult,
+  TransferParams,
+  TransferResult,
 } from '../../../preload/index.d'
 
 /**
@@ -24,6 +26,7 @@ interface ModalState {
   exportKeyOpen: boolean
   destroyOpen: boolean
   receiveOpen: boolean
+  sendOpen: boolean
   exportKeyValue: string | null
 }
 
@@ -33,6 +36,8 @@ interface WalletContextValue {
   holdings: Holding[]
   holdingsLoading: boolean
   modal: ModalState
+  /** Symbol the user is currently sending via the SendModal. */
+  openSendSymbol: string | null
   error: string | null
   refreshStatus: () => Promise<void>
   refreshHoldings: () => Promise<void>
@@ -41,6 +46,7 @@ interface WalletContextValue {
   ) => Promise<FaucetResult['success'] extends true ? void : { error?: string }>
   destroy: () => Promise<void>
   runFaucet: (amount?: string) => Promise<FaucetResult>
+  transfer: (params: TransferParams) => Promise<TransferResult>
   exportKey: () => Promise<void>
   openSetup: () => void
   closeSetup: () => void
@@ -54,6 +60,8 @@ interface WalletContextValue {
   closeDestroy: () => void
   openReceive: () => void
   closeReceive: () => void
+  openSend: (symbol: string) => void
+  closeSend: () => void
   clearError: () => void
 }
 
@@ -68,6 +76,7 @@ const defaultModal: ModalState = {
   exportKeyOpen: false,
   destroyOpen: false,
   receiveOpen: false,
+  sendOpen: false,
   exportKeyValue: null,
 }
 
@@ -77,6 +86,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [holdings, setHoldings] = useState<Holding[]>([])
   const [holdingsLoading, setHoldingsLoading] = useState(false)
   const [modal, setModal] = useState<ModalState>(defaultModal)
+  const [openSendSymbol, setOpenSendSymbol] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const mounted = useRef(true)
 
@@ -193,6 +203,29 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const transfer = useCallback(
+    async (params: TransferParams): Promise<TransferResult> => {
+      
+      console.log("at use context...")
+      
+      if (!window.api?.wallet?.transfer) {
+        return { success: false, error: 'Not available' }
+      }
+
+       console.log("before api wallet ...")
+
+      setError(null)
+      const r = await window.api.wallet.transfer(params)
+      
+      console.log("r:", r)
+
+      if (!mounted.current) return r
+      if (!r.success) setError(r.error ?? 'Transfer failed')
+      return r
+    },
+    [],
+  )
+
   // Modal helpers
   const openSetup = useCallback(() => setModal((m) => ({ ...m, setupOpen: true })), [])
   const closeSetup = useCallback(() => setModal((m) => ({ ...m, setupOpen: false })), [])
@@ -230,6 +263,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     () => setModal((m) => ({ ...m, receiveOpen: false })),
     [],
   )
+  const openSend = useCallback((symbol: string) => {
+    setOpenSendSymbol(symbol)
+    setModal((m) => ({ ...m, sendOpen: true }))
+  }, [])
+  const closeSend = useCallback(() => {
+    setModal((m) => ({ ...m, sendOpen: false }))
+    setOpenSendSymbol(null)
+  }, [])
   const clearError = useCallback(() => setError(null), [])
 
   // Provide safe no-op defaults for the rare Server-Component reach.
@@ -239,12 +280,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     holdings,
     holdingsLoading,
     modal,
+    openSendSymbol,
     error,
     refreshStatus,
     refreshHoldings,
     setup,
     destroy,
     runFaucet,
+    transfer,
     exportKey,
     openSetup: openSetup ?? NOOP,
     closeSetup: closeSetup ?? NOOP,
@@ -258,6 +301,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     closeDestroy: closeDestroy ?? NOOP,
     openReceive: openReceive ?? NOOP,
     closeReceive: closeReceive ?? NOOP,
+    openSend: openSend ?? NOOP,
+    closeSend: closeSend ?? NOOP,
     clearError: clearError ?? NOOP,
   }
 
