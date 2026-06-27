@@ -169,6 +169,81 @@ export interface WalletAPI {
   onChange: (callback: () => void) => () => void
 }
 
+// ============================================
+// Company profile (employer onboarding)
+// ============================================
+
+/** ISO-like country code for the four supported operating jurisdictions. */
+export type CountryCode = 'JP' | 'TH' | 'US-DE' | 'VG'
+
+/** Accounting / display currency for the company. */
+export type CurrencyCode = 'JPY' | 'THB' | 'USD' | 'EUR'
+
+/** Legal entity classification used for tax form generation downstream. */
+export type LegalEntityType =
+  | 'corporation'
+  | 'limited_company'
+  | 'partnership'
+  | 'non_profit'
+  | 'other'
+
+/** Settlement-currency closed allowlist. MVP is Canton Coin only —
+ *  future options (stablecoins, fiat-backed tokens, etc.) will land here. */
+export type SettlementCurrency = 'CC'
+
+/**
+ * The employer profile. Persisted at `<userData>/company.json` (plain JSON,
+ * NOT encrypted — these are non-secret business metadata).
+ */
+export interface CompanyProfile {
+  companyName: string
+  country: CountryCode
+  baseCurrency: CurrencyCode
+  legalEntityType: LegalEntityType
+  /** Canton Coin in MVP. See `SettlementCurrency` for future expansion. */
+  settlementCurrency: SettlementCurrency
+  /** ISO-8601. */
+  createdAt: string
+  /** ISO-8601. */
+  updatedAt: string
+}
+
+/** Versioned on-disk envelope (mirrors `ModelRegistryFile`). */
+export interface CompanyFile {
+  version: 1
+  profile: CompanyProfile
+}
+
+/** Result of an Export / Import operation. */
+export interface CompanyExportResult {
+  success: boolean
+  canceled?: boolean
+  path?: string
+  error?: string
+}
+
+export interface CompanyImportResult {
+  success: boolean
+  canceled?: boolean
+  file?: CompanyFile
+  error?: string
+}
+
+export interface CompanyAPI {
+  /** Returns the on-disk profile (or `null` if not set up). */
+  get: () => Promise<CompanyFile | null>
+  /** Validates + writes. Throws on validation failure. */
+  save: (profile: CompanyProfile) => Promise<CompanyFile>
+  /** Opens an OS save dialog and writes the profile JSON. */
+  exportJson: () => Promise<CompanyExportResult>
+  /** Opens an OS open dialog and parses the file (does NOT save). */
+  importJson: () => Promise<CompanyImportResult>
+  /** Recovery hatch for corrupt files — deletes the on-disk profile. */
+  reset: () => Promise<{ success: boolean }>
+  /** Fires after every `save` and `reset`. Returns an unsubscribe fn. */
+  onChange: (callback: (file: CompanyFile | null) => void) => () => void
+}
+
 export interface TamaflowAPI {
   models: ModelsAPI
   ai: {
@@ -176,6 +251,7 @@ export interface TamaflowAPI {
     unload: () => Promise<{ success: boolean; error?: string }>
   }
   wallet: WalletAPI
+  company: CompanyAPI
 }
 
 declare global {

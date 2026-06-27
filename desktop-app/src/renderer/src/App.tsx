@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAI } from './context/AIContext'
+import { WalletProvider } from './context/WalletContext'
 import ModelSelector from './pages/ModelSelector'
 import LoadingScreen from './pages/LoadingScreen'
+import CompanyGate from './pages/CompanyGate'
 import MainLayout from './components/MainLayout'
 import Dashboard from './pages/Dashboard'
 import Employees from './pages/Employees'
@@ -11,6 +13,7 @@ import ActiveFlows from './pages/ActiveFlows'
 import Settlements from './pages/Settlements'
 import Assets from './pages/Assets'
 import Settings from './pages/Settings'
+import CompanyProfile from './pages/CompanyProfile'
 import SetupWalletModal from './components/SetupWalletModal'
 import AccountInfoModal from './components/AccountInfoModal'
 import FaucetModal from './components/FaucetModal'
@@ -21,12 +24,14 @@ import SendModal from './components/SendModal'
 import { SPLASH_DELAY_MS } from './theme'
 import type { ModelEntry } from '../../preload/index.d'
 
-type AppState = 'loading' | 'model' | 'model-loading' | 'app'
+type AppState = 'loading' | 'company' | 'model' | 'model-loading' | 'app'
 
 /**
  * Boot flow:
  *   loading        (brief splash — gives the renderer time to mount
  *                  the wordmark before the picker slides in)
+ *   company        employer profile gate — wizard (absent), summary
+ *                  card (present), or error recovery
  *   model          user picks a model in ModelSelector
  *   model-loading  LoadingScreen tracks the in-flight load via useAI();
  *                  advances on its own when isReady
@@ -44,7 +49,10 @@ function App() {
 
   // Brief splash so the wordmark fades in gracefully.
   useEffect(() => {
-    const t = setTimeout(() => setAppState((s) => (s === 'loading' ? 'model' : s)), SPLASH_DELAY_MS)
+    const t = setTimeout(
+      () => setAppState((s) => (s === 'loading' ? 'company' : s)),
+      SPLASH_DELAY_MS,
+    )
     return () => clearTimeout(t)
   }, [])
 
@@ -53,6 +61,10 @@ function App() {
   useEffect(() => {
     if (appState === 'app') void refresh()
   }, [appState, refresh])
+
+  const handleCompanyContinue = () => {
+    setAppState('model')
+  }
 
   const handleModelSelect = (_entry: ModelEntry) => {
     setAppState('model-loading')
@@ -70,9 +82,24 @@ function App() {
     setAppState('model')
   }
 
+  // After the user destroys the company profile on the Company Profile
+  // page, route them back to the company gate (wizard). The CompanyGate
+  // auto-advances when a profile is `present`, so once they re-create /
+  // import, the boot flow resumes normally.
+  const handleCompanyDestroyed = () => {
+    setAppState('company')
+  }
+
   return (
-    <>
+    // `enabled` gates the wallet's auto-fetch of holdings + pending
+    // transfers. Before `appState === 'app'`, only the cheap wallet
+    // status IPC runs — the Canton SDK isn't initialised and no
+    // validator round-trip is made. Once we're in the routed app,
+    // polling kicks in normally.
+    <WalletProvider enabled={appState === 'app'}>
       {appState === 'loading' && <Splash />}
+
+      {appState === 'company' && <CompanyGate onContinue={handleCompanyContinue} />}
 
       {appState === 'model' && (
         <ModelSelectorGate
@@ -85,10 +112,16 @@ function App() {
 
       {appState === 'model-loading' && <LoadingScreen onComplete={handleLoadingComplete} />}
 
-      {appState === 'app' && <AppRouter onChangeModel={handleBackToPicker} />}
+      {appState === 'app' && (
+        <AppRouter
+          onChangeModel={handleBackToPicker}
+          onCompanyDestroyed={handleCompanyDestroyed}
+        />
+      )}
 
       {/* Wallet modals — rendered at the top of the tree so they're
-          available from every route once we're in the app. */}
+          available from every route once we're in the app. They live
+          INSIDE `<WalletProvider>` so they can read wallet state. */}
       <SetupWalletModal />
       <AccountInfoModal />
       <FaucetModal />
@@ -96,27 +129,42 @@ function App() {
       <ConfirmDestroyModal />
       <ReceiveModal />
       <SendModal />
-    </>
+    </WalletProvider>
   )
 }
 
 /**
- * HashRouter wrapper. Passes `onChangeModel` to MainLayout, which
- * forwards it to child routes via Outlet context. That way Settings >
- * AI Model can navigate the user back to the model picker without
- * prop-drilling through Sidebar/TopBar.
+ * HashRouter wrapper. Passes App-level callbacks to MainLayout, which
+ * forwards them to child routes via Outlet context. That way Settings >
+ * AI Model can navigate the user back to the model picker, and
+ * CompanyProfile can route the user back to the company gate after a
+ * destroy — both without prop-drilling through Sidebar/TopBar.
  */
-function AppRouter({ onChangeModel }: { onChangeModel: () => void }) {
+function AppRouter({
+  onChangeModel,
+  onCompanyDestroyed
+}: {
+  onChangeModel: () => void
+  onCompanyDestroyed: () => void
+}) {
   return (
     <HashRouter>
       <Routes>
-        <Route element={<MainLayout onChangeModel={onChangeModel} />}>
+        <Route
+          element={
+            <MainLayout
+              onChangeModel={onChangeModel}
+              onCompanyDestroyed={onCompanyDestroyed}
+            />
+          }
+        >
           <Route path="/" element={<Dashboard />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/flows" element={<ActiveFlows />} />
           <Route path="/flows/new" element={<NewFlow />} />
           <Route path="/settlements" element={<Settlements />} />
           <Route path="/assets" element={<Assets />} />
+          <Route path="/company-profile" element={<CompanyProfile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

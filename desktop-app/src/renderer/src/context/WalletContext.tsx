@@ -91,7 +91,13 @@ const defaultModal: ModalState = {
   exportKeyValue: null,
 }
 
-export function WalletProvider({ children }: { children: ReactNode }) {
+export function WalletProvider({
+  children,
+  enabled = true
+}: {
+  children: ReactNode
+  enabled?: boolean
+}) {
   const [status, setStatus] = useState<WalletStatus | null>(null)
   const [loadStatus, setLoadStatus] = useState<Status>('absent')
   const [holdings, setHoldings] = useState<Holding[]>([])
@@ -150,33 +156,38 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const off = window.api.wallet.onChange(() => {
       if (!mounted.current) return
       refreshStatus()
-      // After a change, refresh holdings too — destroy clears them,
-      // create allows the dashboard to populate after a faucet run.
-      refreshHoldings()
-      refreshPendingTransfers()
+      // Holdings + pending transfers only need to be in sync while the
+      // app is mounted (i.e. past the company / model gates). Skipping
+      // them here avoids burning Canton SDK round-trips during boot.
+      if (enabled) {
+        refreshHoldings()
+        refreshPendingTransfers()
+      }
     })
 
     return () => {
       mounted.current = false
       off()
     }
-  }, [refreshStatus, refreshHoldings, refreshPendingTransfers])
+  }, [refreshStatus, refreshHoldings, refreshPendingTransfers, enabled])
 
-  // When a wallet becomes present for the first time, fetch holdings.
+  // When a wallet becomes present for the first time AND we're in the
+  // routed app, fetch holdings. Skipping the fetch during boot avoids
+  // initialising the Canton SDK (network round-trip to the validator)
+  // before the user is even past the company / model gates.
   useEffect(() => {
-    if (loadStatus === 'present') {
+    if (loadStatus === 'present' && enabled) {
       refreshHoldings()
       refreshPendingTransfers()
     }
-  }, [loadStatus, refreshHoldings, refreshPendingTransfers])
+  }, [loadStatus, enabled, refreshHoldings, refreshPendingTransfers])
 
   // Periodic auto-refresh of holdings + pending transfers. The delay is
-  // `null` while the wallet isn't ready, so the timer pauses (and never
-  // fires against a missing wallet). Centralised here so every page that
-  // reads from this context gets fresh data without each mounting its own
-  // setInterval — pages like Assets.tsx and PendingTransfersCard just
-  // consume `holdings` / `pendingTransfers` and render.
-  const walletReady = loadStatus === 'present'
+  // `null` while the wallet isn't ready OR the app isn't mounted, so
+  // the timer pauses — never fires during the boot gates. Centralised
+  // here so every page that reads from this context gets fresh data
+  // without each mounting its own setInterval.
+  const walletReady = loadStatus === 'present' && enabled
   useInterval(
     () => {
       void refreshHoldings()

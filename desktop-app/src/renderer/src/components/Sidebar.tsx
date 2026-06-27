@@ -7,9 +7,12 @@ import {
   Receipt,
   ListTodo,
   Settings as SettingsIcon,
+  Building2
 } from 'lucide-react'
-import { WORDMARK, APP_VERSION } from '../theme'
+import { WORDMARK } from '../theme'
 import Logomark from './Logomark'
+import { useCompany } from '../context/CompanyContext'
+import { COUNTRIES } from '../lib/countries'
 
 /**
  * Fixed 200px left navigation. Grouped into two sections:
@@ -48,8 +51,8 @@ const navCategories: NavCategory[] = [
       { path: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
       { path: '/employees', label: 'Employees', icon: Users },
       { path: '/flows/new', label: 'Flow Builder', icon: Plus },
-      { path: '/flows', label: 'Active Flows', icon: ListTodo, end: true },
-    ],
+      { path: '/flows', label: 'Active Flows', icon: ListTodo, end: true }
+    ]
   },
   {
     key: 'account',
@@ -57,9 +60,9 @@ const navCategories: NavCategory[] = [
     items: [
       { path: '/assets', label: 'Assets', icon: Wallet },
       { path: '/settlements', label: 'Settlements', icon: Receipt },
-      { path: '/settings', label: 'Settings', icon: SettingsIcon },
-    ],
-  },
+      { path: '/settings', label: 'Settings', icon: SettingsIcon }
+    ]
+  }
 ]
 
 function Wordmark() {
@@ -75,6 +78,12 @@ function Wordmark() {
 }
 
 export default function Sidebar() {
+  const { profile, loadStatus } = useCompany()
+  const country = profile ? COUNTRIES.find((c) => c.code === profile.country) : undefined
+  const flag = country?.flag ?? null
+  const displayName = profile?.companyName ?? 'Set up company…'
+  const isPlaceholder = !profile || loadStatus !== 'present'
+
   return (
     <aside
       className="fixed top-0 left-0 w-[200px] h-screen bg-white border-r border-brand-border flex flex-col z-[100] box-border"
@@ -121,14 +130,37 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Bottom footer — makes it obvious this is the Employer (HR /
-       payroll-runner) client, plus the app version (kept in sync with
-       package.json via APP_VERSION in theme.ts). */}
-      <div className="pt-4 mt-2 border-t border-brand-border">
-        <p className="font-mono text-[9px] text-brand-muted tracking-wider2 uppercase m-0">
-          Employer Client · v{APP_VERSION}
+      {/* Bottom employer block — clickable, opens the Company Profile
+          page. Surfaces the active company name + country flag so the
+          user always knows which employer context they're in. When no
+          profile exists yet, shows a "Set up company…" prompt. */}
+      <NavLink
+        to="/company-profile"
+        className={({ isActive }) =>
+          `block pt-3 mt-2 border-t border-brand-border px-3 py-2.5 rounded-md no-underline transition-colors ${
+            isActive ? 'bg-brand-light' : 'hover:bg-brand-light'
+          }`
+        }
+        title="Open Company Profile"
+      >
+        <div className="flex items-center gap-2 mb-1">
+          <Building2
+            size={11}
+            className={`flex-shrink-0 ${isPlaceholder ? 'text-brand-muted' : 'text-brand-blue'}`}
+          />
+          <p className="font-mono text-[9px] text-brand-muted tracking-wider2 uppercase m-0">
+            Employer Client
+          </p>
+        </div>
+        <p
+          className={`font-sans text-[13px] m-0 truncate ${
+            isPlaceholder ? 'text-brand-muted italic' : 'text-brand-navy font-medium'
+          }`}
+        >
+          {flag && <span className="mr-1">{flag}</span>}
+          {displayName}
         </p>
-      </div>
+      </NavLink>
     </aside>
   )
 }

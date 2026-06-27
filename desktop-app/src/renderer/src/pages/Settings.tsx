@@ -4,16 +4,7 @@ import PageHeader from '../components/PageHeader'
 import { useAI } from '../context/AIContext'
 import { useWallet } from '../context/WalletContext'
 import { formatSize } from '../utils/modelDisplay'
-import {
-  Cpu,
-  Wallet,
-  User,
-  GitBranch,
-  RotateCcw,
-  Power,
-  KeyRound,
-  Trash2,
-} from 'lucide-react'
+import { Cpu, Wallet, GitBranch, RotateCcw, Power, KeyRound, Trash2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 /**
@@ -25,14 +16,16 @@ interface OutletCtx {
 }
 
 /**
- * Settings placeholder — four sub-tabs:
+ * Settings — three sub-tabs:
  *   • AI Model  — old Ready card (active model + Change / Unload)
  *   • Wallet    — Connect Wallet (Canton)
- *   • Profile   — company / employer info
  *   • Netting   — netting rules / preferences (lives here per your call)
+ *
+ * The Company Profile has moved to its own page (linked from the
+ * sidebar footer).
  */
 
-type Tab = 'ai' | 'wallet' | 'profile' | 'netting'
+type Tab = 'ai' | 'wallet' | 'netting'
 
 interface TabDef {
   key: Tab
@@ -43,20 +36,13 @@ interface TabDef {
 const TABS: TabDef[] = [
   { key: 'ai', label: 'AI Model', icon: <Cpu size={12} /> },
   { key: 'wallet', label: 'Wallet', icon: <Wallet size={12} /> },
-  { key: 'profile', label: 'Profile', icon: <User size={12} /> },
-  { key: 'netting', label: 'Netting', icon: <GitBranch size={12} /> },
+  { key: 'netting', label: 'Netting', icon: <GitBranch size={12} /> }
 ]
 
 export default function Settings() {
   const [tab, setTab] = useState<Tab>('ai')
   const { activeModel, reload, unload, resetCache, setError } = useAI()
-  const {
-    status,
-    openSetup,
-    openExportKey,
-    openDestroy,
-    openAccountInfo,
-  } = useWallet()
+  const { status, openSetup, openExportKey, openDestroy, openAccountInfo } = useWallet()
   const { onChangeModel } = useOutletContext<OutletCtx>()
 
   return (
@@ -136,7 +122,7 @@ export default function Settings() {
                         setError({
                           code: 'RESET_CACHE_FAILED',
                           message: r.error ?? 'Failed to clear cache',
-                          retryable: true,
+                          retryable: true
                         })
                       }
                     }}
@@ -149,9 +135,7 @@ export default function Settings() {
             </>
           ) : (
             <div className="flex items-center gap-3 flex-wrap">
-              <p className="font-sans text-sm text-brand-muted m-0">
-                No model loaded.
-              </p>
+              <p className="font-sans text-sm text-brand-muted m-0">No model loaded.</p>
               <button
                 type="button"
                 onClick={onChangeModel}
@@ -173,8 +157,8 @@ export default function Settings() {
           {!status?.exists ? (
             <>
               <p className="font-sans text-sm text-brand-muted m-0 mb-4">
-                Set up a Canton wallet to enable settlement. The wallet
-                is generated locally and stored encrypted on this machine.
+                Set up a Canton wallet to enable settlement. The wallet is generated locally and
+                stored encrypted on this machine.
               </p>
               <button
                 type="button"
@@ -246,17 +230,6 @@ export default function Settings() {
               </div>
             </>
           )}
-        </div>
-      )}
-
-      {tab === 'profile' && (
-        <div className="bg-white border border-brand-border rounded-md p-6 max-w-2xl">
-          <p className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase mb-3 m-0">
-            Employer Profile
-          </p>
-          <p className="font-sans text-sm text-brand-muted m-0">
-            Company name, base country, and default currency will live here.
-          </p>
         </div>
       )}
 

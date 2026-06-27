@@ -13,6 +13,10 @@ import type {
   TransferResult,
   PendingTransfer,
   RecipientResult,
+  CompanyProfile,
+  CompanyFile,
+  CompanyExportResult,
+  CompanyImportResult,
 } from './index.d'
 
 // Custom APIs for renderer
@@ -80,6 +84,20 @@ const api = {
       const handler = () => callback()
       ipcRenderer.on('wallet:onChange', handler)
       return () => ipcRenderer.removeListener('wallet:onChange', handler)
+    },
+  },
+
+  company: {
+    get: (): Promise<CompanyFile | null> => ipcRenderer.invoke('company:get'),
+    save: (profile: CompanyProfile): Promise<CompanyFile> =>
+      ipcRenderer.invoke('company:save', profile),
+    exportJson: (): Promise<CompanyExportResult> => ipcRenderer.invoke('company:export'),
+    importJson: (): Promise<CompanyImportResult> => ipcRenderer.invoke('company:import'),
+    reset: (): Promise<{ success: boolean }> => ipcRenderer.invoke('company:reset'),
+    onChange: (callback: (file: CompanyFile | null) => void) => {
+      const handler = (_: unknown, file: CompanyFile | null) => callback(file)
+      ipcRenderer.on('company:onChange', handler)
+      return () => ipcRenderer.removeListener('company:onChange', handler)
     },
   },
 }
