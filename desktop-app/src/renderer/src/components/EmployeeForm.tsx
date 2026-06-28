@@ -1,15 +1,13 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2, HelpCircle } from 'lucide-react'
 import type {
   Employee,
   EmployeeType,
   EmployeeStatus,
   PayFrequency,
-  EmploymentLocation,
-  CountryCode,
   CurrencyCode
 } from '../../../preload/index.d'
-import { COUNTRIES, CURRENCIES } from '../lib/countries'
+import { CURRENCIES } from '../lib/countries'
 import { WORLD_COUNTRIES, worldCountryLabel } from '../lib/worldCountries'
 import {
   EMPLOYEE_TYPES,
@@ -17,7 +15,6 @@ import {
   EMPLOYEE_STATUSES,
   frequencyRequiresHourly
 } from '../lib/employees'
-import { useCompany } from '../context/CompanyContext'
 
 /**
  * Shared employee form.
@@ -69,22 +66,13 @@ export default function EmployeeForm({
   submitting,
   compactActions = false
 }: EmployeeFormProps) {
-  const { profile: company } = useCompany()
-  const companyCountry = company?.country
-  const companyCurrency = company?.baseCurrency
-
   const [displayName, setDisplayName] = useState(initial?.displayName ?? '')
   const [email, setEmail] = useState(initial?.email ?? '')
   const [type, setType] = useState<EmployeeType>(initial?.type ?? 'employee')
   const [role, setRole] = useState(initial?.role ?? '')
-  const [employmentLocation, setEmploymentLocation] = useState<EmploymentLocation>(
-    initial?.employmentLocation ?? 'inside_jurisdiction'
-  )
-  const [country, setCountry] = useState<string>(
-    initial?.country ?? companyCountry ?? 'JP'
-  )
+  const [country, setCountry] = useState<string>(initial?.country ?? 'JP')
   const [payCurrency, setPayCurrency] = useState<CurrencyCode>(
-    initial?.payCurrency ?? companyCurrency ?? 'JPY'
+    initial?.payCurrency ?? 'JPY'
   )
   const [payFrequency, setPayFrequency] = useState<PayFrequency>(
     initial?.payFrequency ?? 'monthly'
@@ -108,9 +96,8 @@ export default function EmployeeForm({
     setEmail(initial.email ?? '')
     setType(initial.type)
     setRole(initial.role ?? '')
-    setEmploymentLocation(initial.employmentLocation)
-    setCountry(initial.country ?? companyCountry ?? 'JP')
-    setPayCurrency(initial.payCurrency ?? companyCurrency ?? 'JPY')
+    setCountry(initial.country ?? 'JP')
+    setPayCurrency(initial.payCurrency ?? 'JPY')
     setPayFrequency(initial.payFrequency)
     setSalaryAmount(initial.salaryAmount ?? '')
     setHourlyRate(initial.hourlyRate ?? '')
@@ -121,18 +108,7 @@ export default function EmployeeForm({
     setNote(initial.note ?? '')
     setTouched({})
     setSubmitError(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial?.id])
-
-  const handleLocationChange = (next: EmploymentLocation) => {
-    setEmploymentLocation(next)
-    // Re-seed the country/currency pickers with the company defaults
-    // so the user has a sensible starting point when switching modes.
-    // (For inside-mode these values are unused — they get re-derived
-    // from the company profile at display time.)
-    setCountry(companyCountry ?? 'JP')
-    setPayCurrency(companyCurrency ?? 'JPY')
-  }
 
   const handleFrequencyChange = (next: PayFrequency) => {
     setPayFrequency(next)
@@ -151,14 +127,6 @@ export default function EmployeeForm({
     // (We don't auto-clear; if the user set a date they probably want it.)
   }
 
-  // The effective country/currency at submit time:
-  //   - inside → derived from the company profile
-  //   - outside → whatever the user picked
-  const effectiveCountry =
-    employmentLocation === 'inside_jurisdiction' ? companyCountry : country
-  const effectiveCurrency =
-    employmentLocation === 'inside_jurisdiction' ? companyCurrency : payCurrency
-
   // ── Validation ──────────────────────────────────────────────────────
   const trimmedName = displayName.trim()
   const nameValid = trimmedName.length >= 1 && trimmedName.length <= 200
@@ -171,15 +139,10 @@ export default function EmployeeForm({
     : isOneOff
       ? true // one-off accepts missing amount; row can be informational
       : /^\d+(\.\d{1,2})?$/.test(salaryAmount.trim()) && parseFloat(salaryAmount) > 0
-  // Country is only required when employmentLocation === outside
-  const countryValid =
-    employmentLocation === 'inside_jurisdiction' ||
-    (!!effectiveCountry && effectiveCountry.length <= 64)
-  // Currency is only required when employmentLocation === outside
-  const currencyValid =
-    employmentLocation === 'inside_jurisdiction' ||
-    (!!effectiveCurrency &&
-      (CURRENCIES as ReadonlyArray<string>).includes(effectiveCurrency))
+  // Country and currency are both required on every employee row —
+  // no inside/outside inheritance from the company profile.
+  const countryValid = country.trim().length > 0 && country.trim().length <= 64
+  const currencyValid = (CURRENCIES as ReadonlyArray<string>).includes(payCurrency)
   const partyIdValid =
     cantonPartyId.trim().length === 0 ||
     (cantonPartyId.trim().length >= 10 &&
@@ -238,13 +201,8 @@ export default function EmployeeForm({
         email: email.trim() || undefined,
         type,
         role: role.trim() || undefined,
-        employmentLocation,
-        // When inside, don't store country/payCurrency — they'll be
-        // re-derived from the company profile at display time.
-        country:
-          employmentLocation === 'outside_jurisdiction' ? effectiveCountry : undefined,
-        payCurrency:
-          employmentLocation === 'outside_jurisdiction' ? effectiveCurrency : undefined,
+        country: country.trim(),
+        payCurrency,
         salaryAmount: !isHourly && salaryAmount.trim() ? salaryAmount.trim() : undefined,
         payFrequency,
         hourlyRate: isHourly && hourlyRate.trim() ? hourlyRate.trim() : undefined,
@@ -368,83 +326,72 @@ export default function EmployeeForm({
           )}
         </div>
 
-        {/* Jurisdiction — radio + inherited/derived summary */}
-        <LocationSection
-          value={employmentLocation}
-          onChange={handleLocationChange}
-          companyCountry={companyCountry}
-          companyCurrency={companyCurrency}
-          disabled={disabled}
-        />
-
-        {/* Country + Compensation currency — 2-col, only when outside */}
-        {employmentLocation === 'outside_jurisdiction' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="emp-country"
-                className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5"
-              >
-                Country
-              </label>
-              <select
-                id="emp-country"
-                value={country}
-                onChange={(e) => {
-                  setCountry(e.target.value)
-                  setTouched((t) => ({ ...t, country: true }))
-                }}
-                onBlur={() => setTouched((t) => ({ ...t, country: true }))}
-                disabled={disabled}
-                className="w-full px-3 py-2 bg-white border border-brand-border rounded-md font-sans text-sm text-brand-navy focus:outline-none focus:border-brand-blue transition-colors disabled:opacity-60"
-              >
-                {WORLD_COUNTRIES.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.flag} {c.label}
-                  </option>
-                ))}
-              </select>
-              {show('country') && !countryValid && (
-                <p className="font-sans text-xs text-brand-err mt-1 m-0">Country is required.</p>
-              )}
-            </div>
-
-            <div>
-              <label
-                htmlFor="emp-currency"
-                className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5"
-              >
-                Compensation currency
-              </label>
-              <select
-                id="emp-currency"
-                value={payCurrency}
-                onChange={(e) => {
-                  setPayCurrency(e.target.value as CurrencyCode)
-                  setTouched((t) => ({ ...t, payCurrency: true }))
-                }}
-                onBlur={() => setTouched((t) => ({ ...t, payCurrency: true }))}
-                disabled={disabled}
-                className="w-full px-3 py-2 bg-white border border-brand-border rounded-md font-sans text-sm text-brand-navy focus:outline-none focus:border-brand-blue transition-colors disabled:opacity-60"
-              >
-                {CURRENCIES.map((code) => (
-                  <option key={code} value={code}>
-                    {code}
-                  </option>
-                ))}
-              </select>
-              <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted mt-1.5 m-0">
-                What the employment contract specifies. Payroll is paid in CC and
-                converted at payment time.
-              </p>
-              {show('payCurrency') && !currencyValid && (
-                <p className="font-sans text-xs text-brand-err mt-1 m-0">
-                  Compensation currency is required.
-                </p>
-              )}
-            </div>
+        {/* Country + Compensation currency — 2-col, always required */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label
+              htmlFor="emp-country"
+              className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5"
+            >
+              Country
+            </label>
+            <select
+              id="emp-country"
+              value={country}
+              onChange={(e) => {
+                setCountry(e.target.value)
+                setTouched((t) => ({ ...t, country: true }))
+              }}
+              onBlur={() => setTouched((t) => ({ ...t, country: true }))}
+              disabled={disabled}
+              className="w-full px-3 py-2 bg-white border border-brand-border rounded-md font-sans text-sm text-brand-navy focus:outline-none focus:border-brand-blue transition-colors disabled:opacity-60"
+            >
+              {WORLD_COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.flag} {c.label}
+                </option>
+              ))}
+            </select>
+            {show('country') && !countryValid && (
+              <p className="font-sans text-xs text-brand-err mt-1 m-0">Country is required.</p>
+            )}
           </div>
-        )}
+
+          <div>
+            <label
+              htmlFor="emp-currency"
+              className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5"
+            >
+              Compensation currency
+            </label>
+            <select
+              id="emp-currency"
+              value={payCurrency}
+              onChange={(e) => {
+                setPayCurrency(e.target.value as CurrencyCode)
+                setTouched((t) => ({ ...t, payCurrency: true }))
+              }}
+              onBlur={() => setTouched((t) => ({ ...t, payCurrency: true }))}
+              disabled={disabled}
+              className="w-full px-3 py-2 bg-white border border-brand-border rounded-md font-sans text-sm text-brand-navy focus:outline-none focus:border-brand-blue transition-colors disabled:opacity-60"
+            >
+              {CURRENCIES.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </select>
+            <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted mt-1.5 m-0">
+              What the employment contract specifies. Payroll is paid in CC and
+              converted at payment time.
+            </p>
+            {show('payCurrency') && !currencyValid && (
+              <p className="font-sans text-xs text-brand-err mt-1 m-0">
+                Compensation currency is required.
+              </p>
+            )}
+          </div>
+        </div>
 
         {/* Pay frequency — full width */}
         <div>
@@ -713,122 +660,6 @@ export default function EmployeeForm({
         </button>
       </div>
     </form>
-  )
-}
-
-/* -------------------------------------------------------------------------- */
-/* LocationSection — radio + inherited/derived summary                          */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Radio-button group that picks "inside" vs "outside" jurisdiction. When
- * inside, shows the inherited company country + currency in a read-only
- * summary block so the user sees what they're inheriting. When outside,
- * the parent renders its own country + currency pickers.
- */
-function LocationSection({
-  value,
-  onChange,
-  companyCountry,
-  companyCurrency,
-  disabled
-}: {
-  value: EmploymentLocation
-  onChange: (next: EmploymentLocation) => void
-  companyCountry: CountryCode | undefined
-  companyCurrency: CurrencyCode | undefined
-  disabled: boolean
-}) {
-  const inheritedSummary = useMemo(() => {
-    if (!companyCountry || !companyCurrency) {
-      return 'Set up your company profile first.'
-    }
-    const country = COUNTRIES.find((c) => c.code === companyCountry)
-    const flag = country?.flag ?? '🏳️'
-    const label = country?.label ?? companyCountry
-    return `${flag} ${label} · ${companyCurrency}`
-  }, [companyCountry, companyCurrency])
-
-  return (
-    <div>
-      <label className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5">
-        Jurisdiction
-      </label>
-      <div
-        className="grid grid-cols-1 sm:grid-cols-2 gap-2"
-        role="radiogroup"
-        aria-label="Jurisdiction"
-      >
-        <RadioCard
-          checked={value === 'inside_jurisdiction'}
-          onChange={() => onChange('inside_jurisdiction')}
-          disabled={disabled}
-          title="Same as my company"
-          description="Lives in the same country as my company. Their country + currency follow the company profile."
-        />
-        <RadioCard
-          checked={value === 'outside_jurisdiction'}
-          onChange={() => onChange('outside_jurisdiction')}
-          disabled={disabled}
-          title="Different country"
-          description="Lives abroad. I pick their country + compensation currency manually."
-        />
-      </div>
-      {value === 'inside_jurisdiction' && (
-        <div className="mt-2 p-2.5 bg-brand-light border border-brand-border rounded-md flex items-center justify-between gap-3">
-          <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted m-0">
-            Inheriting from company
-          </p>
-          <p className="font-sans text-xs font-medium text-brand-navy m-0 whitespace-nowrap">
-            {inheritedSummary}
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function RadioCard({
-  checked,
-  onChange,
-  disabled,
-  title,
-  description
-}: {
-  checked: boolean
-  onChange: () => void
-  disabled: boolean
-  title: string
-  description: string
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={checked}
-      onClick={onChange}
-      disabled={disabled}
-      className={`text-left p-3 rounded-md border transition-colors cursor-pointer disabled:opacity-60 ${
-        checked
-          ? 'bg-brand-blue/10 border-brand-blue'
-          : 'bg-white border-brand-border hover:bg-brand-light'
-      }`}
-    >
-      <div className="flex items-center gap-2">
-        <span
-          aria-hidden="true"
-          className={`w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 ${
-            checked ? 'border-brand-blue bg-brand-blue' : 'border-brand-border bg-white'
-          }`}
-        >
-          {checked && <span className="block w-full h-full rounded-full bg-white scale-[0.4]" />}
-        </span>
-        <span className="font-sans text-xs font-semibold text-brand-navy">{title}</span>
-      </div>
-      <p className="font-sans text-[11px] text-brand-muted m-0 mt-1 leading-snug">
-        {description}
-      </p>
-    </button>
   )
 }
 

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Loader2, FileJson } from 'lucide-react'
 import WalletModal from './WalletModal'
 import { useEmployees } from '../context/EmployeeContext'
-import { useCompany } from '../context/CompanyContext'
 import { employeeTypeLabel, payFrequencyLabel, employeeStatusLabel } from '../lib/employees'
 import { worldCountryLabel } from '../lib/worldCountries'
 import type {
@@ -260,16 +259,8 @@ function DiffSummary({
 }
 
 function EmployeeSummaryRow({ employee }: { employee: Employee }) {
-  const { profile: company } = useCompany()
-  const isInside = employee.employmentLocation === 'inside_jurisdiction'
-  // Inside → inherit from company profile (preview only; not stored on
-  // the row at apply time). Outside → use the row's stored values.
-  const effectiveCountry =
-    isInside ? company?.country ?? null : employee.country ?? null
-  const effectiveCurrency =
-    isInside ? company?.baseCurrency ?? null : employee.payCurrency ?? null
-  const countryDisplay = effectiveCountry ? worldCountryLabel(effectiveCountry) : '—'
-  const currencyDisplay = effectiveCurrency ?? '—'
+  const countryDisplay = employee.country ? worldCountryLabel(employee.country) : '—'
+  const currencyDisplay = employee.payCurrency ?? '—'
   const pay =
     employee.payFrequency === 'hourly'
       ? `${employee.hourlyRate ?? '—'} ${currencyDisplay} / hr`
@@ -283,7 +274,7 @@ function EmployeeSummaryRow({ employee }: { employee: Employee }) {
           {employee.displayName}
         </p>
         <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted m-0 mt-0.5">
-          {employeeTypeLabel(employee.type)} · {countryDisplay} ({isInside ? 'inside' : 'outside'}) · {pay}
+          {employeeTypeLabel(employee.type)} · {countryDisplay} · {pay}
         </p>
       </div>
       <span className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted whitespace-nowrap">

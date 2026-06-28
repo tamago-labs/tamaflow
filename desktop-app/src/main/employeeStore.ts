@@ -7,7 +7,6 @@ import type {
   EmployeeType,
   PayFrequency,
   EmployeeStatus,
-  EmploymentLocation,
   CurrencyCode
 } from '../preload/index.d'
 
@@ -43,10 +42,6 @@ const VALID_STATUSES: ReadonlySet<EmployeeStatus> = new Set<EmployeeStatus>([
   'active',
   'paused',
   'terminated'
-])
-const VALID_EMPLOYMENT_LOCATIONS: ReadonlySet<EmploymentLocation> = new Set<EmploymentLocation>([
-  'inside_jurisdiction',
-  'outside_jurisdiction'
 ])
 const VALID_CURRENCIES: ReadonlySet<CurrencyCode> = new Set<CurrencyCode>([
   'JPY',
@@ -254,25 +249,13 @@ export class EmployeeStore {
       role = v
     }
 
-    // employmentLocation — closed allowlist. Legacy rows (pre-radio-button)
-    // default to 'outside_jurisdiction' so the old "country + payCurrency
-    // stored on every row" semantics survive the migration.
-    let employmentLocation: EmploymentLocation
-    if (typeof e.employmentLocation === 'string') {
-      if (!VALID_EMPLOYMENT_LOCATIONS.has(e.employmentLocation as EmploymentLocation)) {
-        throw new Error(
-          `Invalid employment location: ${String(e.employmentLocation)}`
-        )
-      }
-      employmentLocation = e.employmentLocation as EmploymentLocation
-    } else {
-      employmentLocation = 'outside_jurisdiction'
-    }
+    // employmentLocation was removed in the simplification; legacy rows
+    // that still have it are accepted but the field is dropped. The
+    // compute layer derives the inside/outside branch from a country
+    // comparison at runtime — see `shared/flowPaths.ts`.
 
-    // country — open-ended ISO 3166-1 alpha-2. ONLY set when
-    // employmentLocation === 'outside_jurisdiction'; for inside-jurisdiction
-    // employees the country is derived from the company profile at display
-    // time. The renderer ships a full ISO list for the picker; this is the
+    // country — REQUIRED on every row. Open-ended ISO 3166-1 alpha-2.
+    // The renderer ships a full ISO list for the picker; this is the
     // last-line-of-defence check (non-empty, <=64 chars).
     let country: string | undefined
     if (typeof e.country === 'string' && e.country.trim().length > 0) {
@@ -282,14 +265,11 @@ export class EmployeeStore {
       }
       country = v
     }
-    if (employmentLocation === 'outside_jurisdiction' && !country) {
-      throw new Error('Country is required for outside-jurisdiction employees')
+    if (!country) {
+      throw new Error('Country is required')
     }
 
-    // payCurrency — closed allowlist. ONLY required when
-    // employmentLocation === 'outside_jurisdiction'; for inside-jurisdiction
-    // employees the compensation currency is derived from the company
-    // profile at display time and not stored.
+    // payCurrency — REQUIRED on every row. Closed allowlist.
     let payCurrency: CurrencyCode | undefined
     if (typeof e.payCurrency === 'string') {
       if (!VALID_CURRENCIES.has(e.payCurrency as CurrencyCode)) {
@@ -297,10 +277,8 @@ export class EmployeeStore {
       }
       payCurrency = e.payCurrency as CurrencyCode
     }
-    if (employmentLocation === 'outside_jurisdiction' && !payCurrency) {
-      throw new Error(
-        'Compensation currency is required for outside-jurisdiction employees'
-      )
+    if (!payCurrency) {
+      throw new Error('Compensation currency is required')
     }
 
     // payFrequency — closed allowlist
@@ -389,9 +367,8 @@ export class EmployeeStore {
       email,
       type,
       role,
-      employmentLocation,
-      country,
-      payCurrency,
+      country: country!,
+      payCurrency: payCurrency!,
       salaryAmount,
       payFrequency,
       hourlyRate,

@@ -266,22 +266,6 @@ export type PayFrequency = 'monthly' | 'biweekly' | 'weekly' | 'hourly' | 'one-o
 export type EmployeeStatus = 'active' | 'paused' | 'terminated'
 
 /**
- * Whether the employee is paid under the company's home jurisdiction
- * ("inside") or somewhere else ("outside").
- *
- *   - **inside_jurisdiction** — the employee is treated as part of the
- *     company's home country for tax / compliance purposes. Their country
- *     and compensation currency are inherited from the company profile
- *     at display time and are NOT stored on the employee. If the company
- *     later moves jurisdiction, all "inside" employees move with it.
- *
- *   - **outside_jurisdiction** — the employee is paid cross-border. Both
- *     `country` and `payCurrency` are required and stored on the
- *     employee; they do NOT track the company's home country.
- */
-export type EmploymentLocation = 'inside_jurisdiction' | 'outside_jurisdiction'
-
-/**
  * One person in the employer roster. Persisted at `<userData>/employees.json`
  * as part of an `EmployeeFile` envelope (plain JSON, NOT encrypted — these
  * are non-secret business records, same policy as the company profile).
@@ -297,31 +281,26 @@ export interface Employee {
   /** Optional free-text role (e.g. "Senior Engineer"), <=100 chars. */
   role?: string
   /**
-   * Whether the employee is paid under the company's home jurisdiction
-   * (country + base currency inherited from the company profile) or
-   * cross-border (country + compensation currency set explicitly).
-   */
-  employmentLocation: EmploymentLocation
-  /**
    * ISO 3166-1 alpha-2 country code (e.g. "JP", "TH", "US", "GB") where the
-   * employee resides / works. ONLY set when `employmentLocation ===
-   * 'outside_jurisdiction'`. For inside-jurisdiction employees the country
-   * is derived from the company profile at display time. Open-ended on
-   * purpose — the company may pay people anywhere in the world. The
-   * renderer ships a full ISO list for the picker; the store accepts any
-   * non-empty string <=64 chars.
+   * employee resides / works. Always set — required on every row, regardless
+   * of whether the employee lives in the same country as the company.
+   * Open-ended on purpose — the company may pay people anywhere in the
+   * world. The renderer ships a full ISO list for the picker; the store
+   * accepts any non-empty string <=64 chars.
    */
-  country?: string
+  country: string
   /**
    * Contractual compensation currency (e.g. "JPY" for 250,000 JPY / month).
-   * ONLY set when `employmentLocation === 'outside_jurisdiction'`; for
-   * inside-jurisdiction employees it's inherited from `company.baseCurrency`
-   * at display time. Independent of where the employee lives and of the
-   * settlement currency (always CC) — payroll is converted from this amount
-   * to CC at payment time. Closed allowlist in MVP; will open up alongside
-   * multi-currency wallet support.
+   * Always set — required on every row. Independent of where the employee
+   * lives and of the settlement currency (always CC) — payroll is converted
+   * from this amount to CC at payment time. Closed allowlist in MVP; will
+   * open up alongside multi-currency wallet support.
+   *
+   * For the "is this employee cross-border?" question (drives whether
+   * Employee Transfer applies withholding + SS), compare `country` against
+   * `company.country` at compute time rather than reading a stored flag.
    */
-  payCurrency?: CurrencyCode
+  payCurrency: CurrencyCode
   /** Decimal string ("5000.00"). Required unless `payFrequency === 'hourly'`. */
   salaryAmount?: string
   payFrequency: PayFrequency
@@ -480,6 +459,13 @@ export interface FlowOutcome {
   // Computed per outcome (pre-execution):
   grossPay: string
   payCurrency: 'JPY' | 'THB' | 'USD' | 'EUR'
+  /**
+   * Derived per outcome from `employee.country` vs `company.country` —
+   * `inside_jurisdiction` when they match (withholding + SS apply for
+   * Employee Transfer), `outside_jurisdiction` when they don't (withhold
+   * + SS are skipped). Not stored on the employee; computed by
+   * `shared/flowPaths.ts` at enumeration time.
+   */
   jurisdiction: 'inside_jurisdiction' | 'outside_jurisdiction'
 
   // Withholding applied (Employee variant + inside only):

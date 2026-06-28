@@ -5,7 +5,6 @@ import EmployeeFormDrawer from '../components/EmployeeFormDrawer'
 import EmployeeImportModal from '../components/EmployeeImportModal'
 import ConfirmDeleteEmployeeModal from '../components/ConfirmDeleteEmployeeModal'
 import { useEmployees } from '../context/EmployeeContext'
-import { useCompany } from '../context/CompanyContext'
 import { worldCountryLabel } from '../lib/worldCountries'
 import {
   EMPLOYEE_TYPES,
@@ -18,9 +17,7 @@ import {
 import type {
   Employee,
   EmployeeType,
-  EmployeeStatus,
-  CountryCode,
-  CurrencyCode
+  EmployeeStatus
 } from '../../../preload/index.d'
 
 /**
@@ -38,9 +35,6 @@ import type {
  */
 export default function Employees() {
   const { employees, exportJson } = useEmployees()
-  const { profile: company } = useCompany()
-  const companyCountry = company?.country
-  const companyCurrency = company?.baseCurrency
 
   const [addOpen, setAddOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Employee | null>(null)
@@ -157,7 +151,7 @@ export default function Employees() {
               Employee
             </span>
             <span className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase font-semibold">
-              Jurisdiction
+              Country
             </span>
             <span className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase font-semibold">
               Compensation
@@ -222,8 +216,6 @@ export default function Employees() {
               <EmployeeRow
                 key={e.id}
                 employee={e}
-                companyCountry={companyCountry}
-                companyCurrency={companyCurrency}
                 onEdit={() => setEditTarget(e)}
                 onDelete={() => setDeleteTarget(e)}
               />
@@ -250,34 +242,20 @@ export default function Employees() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* EmployeeRow                                                                 */
+/* Avatar — initials chip                                                     */
 /* -------------------------------------------------------------------------- */
 
 function EmployeeRow({
   employee,
-  companyCountry,
-  companyCurrency,
   onEdit,
   onDelete
 }: {
   employee: Employee
-  companyCountry: CountryCode | undefined
-  companyCurrency: CurrencyCode | undefined
   onEdit: () => void
   onDelete: () => void
 }) {
-  // Resolve the country + currency the row actually displays:
-  //   - inside → inherited from the company profile (or "—" if no profile)
-  //   - outside → stored on the employee
-  const effectiveCountry =
-    employee.employmentLocation === 'inside_jurisdiction' ? companyCountry : employee.country
-  const effectiveCurrency =
-    employee.employmentLocation === 'inside_jurisdiction' ? companyCurrency : employee.payCurrency
-
-  const isInside = employee.employmentLocation === 'inside_jurisdiction'
-
-  const countryDisplay = effectiveCountry ? worldCountryLabel(effectiveCountry) : '—'
-  const currencyDisplay = effectiveCurrency ?? '—'
+  const countryDisplay = employee.country ? worldCountryLabel(employee.country) : '—'
+  const currencyDisplay = employee.payCurrency ?? '—'
 
   const compensation =
     employee.payFrequency === 'hourly'
@@ -321,20 +299,16 @@ function EmployeeRow({
         </div>
       </div>
 
-      {/* Jurisdiction — country + In/Out chip */}
+      {/* Country */}
       <div>
         <p className="font-mono text-xs text-brand-navy m-0">{countryDisplay}</p>
-        <JurisdictionChip
-          inside={isInside}
-          isCompanySet={!!companyCountry}
-        />
       </div>
 
       {/* Compensation — currency + frequency */}
       <div>
         <p className="font-mono text-xs text-brand-navy m-0 whitespace-nowrap">{compensation}</p>
         <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted/70 m-0 mt-0.5 whitespace-nowrap">
-          {isInside ? 'Inherited from company' : 'Contract currency'}
+          Contract currency
         </p>
       </div>
 
