@@ -1,49 +1,34 @@
 // Flow builder card catalog and connection rules.
 //
-// Three categories: source / payee / transfer.
-// Transfer has two variants: contractor / employee.
-//
-// Connection rules form a strict linear pipeline:
-//   source  → payee
-//   payee   → transfer
-//   transfer (terminal)
+// Two categories only — `source` (treasury wallet) and `payee`
+// (employee to be paid). Source connects directly to Payee; Payee
+// is terminal. The compute step derives gross pay from the employee
+// roster and converts to CC via the FX rate stamped on the Payee.
 //
 // Each card on the canvas is a `PlacedCard` — a `SimCardTemplate` with
 // a unique `placementId` and a `tone` chosen at placement time.
 
-import type { PlacedCard, SimCardTemplate, SimCategory, SimTone, TransferVariant } from '../flow/types'
+import type { PlacedCard, SimCardTemplate, SimCategory, SimTone } from '../flow/types'
 import type { Employee } from '../../../preload/index.d'
 
-export const CATEGORY_ORDER: SimCategory[] = ['source', 'payee', 'transfer']
+export const CATEGORY_ORDER: SimCategory[] = ['source', 'payee']
 
 export const CATEGORY_LABELS: Record<SimCategory, string> = {
   source: 'Source',
   payee: 'Payee',
-  transfer: 'Transfer',
 }
 
 export const CATEGORY_PREFIX: Record<SimCategory, string> = {
-  source: 'SRC',
-  payee: 'PAY',
-  transfer: 'XFR',
-}
-
-export const TRANSFER_VARIANT_LABELS: Record<TransferVariant, string> = {
-  contractor: 'Contractor',
-  employee: 'Employee',
-}
-
-export const TRANSFER_VARIANT_PREFIX: Record<TransferVariant, string> = {
-  contractor: 'CTR',
-  employee: 'EMP',
+  source: 'SOURCE',
+  payee: 'PAYEE',
 }
 
 // Palette entries — the user picks one of these from the popover to add
-// a card to the canvas. Source has 1, Transfer has 2 (one per variant).
-// Payee is NOT here — tiles are generated per-employee at popover render
-// time (see `payeeTemplatesFor`) so the user picks the specific employee
-// from the palette rather than dropping a generic "Payee" card and binding
-// it later.
+// a card to the canvas. Source has 1 static tile; Payee is NOT here —
+// tiles are generated per-employee at popover render time (see
+// `payeeTemplatesFor`) so the user picks the specific employee from the
+// palette rather than dropping a generic "Payee" card and binding it
+// later.
 //
 // The Source template's title is intentionally left empty: FlowBuilder
 // fills it in from the live wallet partyId at the moment the card is
@@ -63,29 +48,6 @@ export const PALETTE_CARDS: SimCardTemplate[] = [
       // dropped on the canvas. Leaving it empty here keeps this catalog
       // module pure (no React context).
       partyId: '',
-      memo: 'Payroll batch',
-    },
-  },
-  {
-    id: 'xfr-contractor',
-    category: 'transfer',
-    transferVariant: 'contractor',
-    title: 'Contractor Transfer',
-    contractorTransferFields: {
-      variant: 'contractor',
-      fxRate: '',
-    },
-  },
-  {
-    id: 'xfr-employee',
-    category: 'transfer',
-    transferVariant: 'employee',
-    title: 'Employee Transfer',
-    employeeTransferFields: {
-      variant: 'employee',
-      withholdingRate: '',
-      socialSecurityRate: '',
-      fxRate: '',
     },
   },
 ]
@@ -131,7 +93,7 @@ const TONE_VALUES: SimTone[] = ['blue', 'teal', 'navy', 'muted']
 
 /**
  * Pick a stable tone per category. Keeps the canvas visually consistent
- * — Source → blue, Payee → teal, Transfer → navy. No random hashing.
+ * — Source → blue, Payee → teal. No random hashing.
  */
 export function toneForCategory(category: SimCategory): SimTone {
   switch (category) {
@@ -139,8 +101,6 @@ export function toneForCategory(category: SimCategory): SimTone {
       return 'blue'
     case 'payee':
       return 'teal'
-    case 'transfer':
-      return 'navy'
   }
 }
 
@@ -158,11 +118,10 @@ export function randomToneForTile(seed: string): SimTone {
   return TONE_VALUES[Math.abs(hash) % TONE_VALUES.length]
 }
 
-/** Connection rules (strict linear pipeline). */
+/** Connection rules (Source → Payee; Payee is terminal). */
 const VALID_CONNECTIONS: Record<SimCategory, SimCategory[]> = {
   source: ['payee'],
-  payee: ['transfer'],
-  transfer: [],
+  payee: [],
 }
 
 export function canConnect(from: SimCategory, to: SimCategory): boolean {
@@ -183,9 +142,12 @@ export function toPlacedCard(template: SimCardTemplate, placementId: string): Pl
 }
 
 export function cardHasInput(category: SimCategory): boolean {
-  return category !== 'source'
+  // Only Payee accepts a connection from Source. Source is the head of
+  // the pipeline.
+  return category === 'payee'
 }
 
 export function cardHasOutput(category: SimCategory): boolean {
-  return category !== 'transfer'
+  // Only Source has an output port (it connects downstream to Payees).
+  return category === 'source'
 }

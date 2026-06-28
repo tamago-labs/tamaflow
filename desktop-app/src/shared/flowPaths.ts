@@ -5,14 +5,12 @@
 // Connection rules (declarative, single source of truth in flowCards.ts):
 //
 //   source  → payee
-//   payee   → transfer
-//   transfer (terminal)
+//   payee   (terminal)
 //
-// One outcome per Payee. The Payee inherits rules from the Transfer
-// card it's connected to (1:1 — a Payee can only have one Transfer
-// input in MVP since the connection rules are strict). The Transfer
-// card is a shared "rules provider" — multiple Payees can connect to
-// the same Transfer to apply identical rules.
+// One outcome per Payee. The Payee inherits its FX rate (and any
+// amount override) from itself; the upstream Source card contributes
+// only its wallet party id (snapshotted into `sourceFields.partyId`
+// at creation time — used by the worker to fund the transfer).
 //
 // Phase 3 — read-only enumeration + per-outcome math. Phase 4 will
 // persist each outcome to disk and walk it through the worker.
@@ -22,15 +20,18 @@ import type {
   CompanyProfile,
   Connection,
   Employee,
-  EmployeeTransferFields,
-  ContractorTransferFields,
   FlowOutcome,
   FlowOutcomeStatus,
 } from '../preload/index.d'
-import { computeOutcome, type ComputeInput, type PayCurrency } from './computeOutcome'
+import {
+  computeOutcome,
+  type ComputeInput,
+  type PayCurrency,
+} from './computeOutcome'
+import type { PayeeFields } from '../renderer/src/flow/types'
 
 /** Inputs to the enumeration — the canvas content + the people to pay
- *  + the company profile (for inside-jurisdiction payCurrency). */
+ *  + the company profile (kept for future inside-jurisdiction use). */
 export interface EnumerateInput {
   flowId: string
   cards: CanvasCard[]
@@ -73,7 +74,7 @@ function resolveGrossPay(
 ): { value: string; payCurrency: PayCurrency } | { error: string } {
   const payCurrency = resolvePayCurrency(employee)
   if (!payCurrency) {
-    return { error: 'payCurrency not set and no company profile to inherit from' }
+    return { error: 'payCurrency not set' }
   }
 
   switch (employee.payFrequency) {
@@ -127,22 +128,6 @@ function resolvePayCurrency(employee: Employee): PayCurrency | null {
   return null
 }
 
-/**
- * Whether the employee is paid under the company's home jurisdiction.
- * Derived from country comparison — there's no longer a stored flag on
- * the employee. When `companyProfile` is null we fall back to
- * `outside_jurisdiction` (no company → no home jurisdiction to match).
- */
-function resolveJurisdiction(
-  employee: Employee,
-  companyProfile: CompanyProfile | null
-): 'inside_jurisdiction' | 'outside_jurisdiction' {
-  if (!companyProfile) return 'outside_jurisdiction'
-  return employee.country === companyProfile.country
-    ? 'inside_jurisdiction'
-    : 'outside_jurisdiction'
-}
-
 /** Tolerant decimal parser used only for the gross-pay resolution
  *  above (where we're not touching ledger values). Returns null on
  *  parse failure — ledger-grade math is handled by computeOutcome. */
@@ -152,38 +137,16 @@ function parseDecimal(s: string): number | null {
   return Number(trimmed)
 }
 
-// ─── Transfer card → typed field shape ────────────────────────────
+// ─── Payee card → typed field shape ────────────────────────────
 
-/** The renderer stores transfer field envelopes loosely on the wire
- *  (`Record<string, unknown>`) for forward-compat. Re-narrow them to
- *  the typed shapes here so computeOutcome sees a clean input. */
-function readTransferFields(
-  card: CanvasCard,
-): { variant: 'contractor'; fields: ContractorTransferFields } | { variant: 'employee'; fields: EmployeeTransferFields } | null {
-  if (card.category !== 'transfer') return null
-  if (card.transferVariant === 'contractor') {
-    return {
-      variant: 'contractor',
-      fields: {
-        variant: 'contractor',
-        fxRate: (card.contractorTransferFields?.fxRate as string) || undefined,
-      },
-    }
-  }
-  if (card.transferVariant === 'employee') {
-    return {
-      variant: 'employee',
-      fields: {
-        variant: 'employee',
-        withholdingRate:
-          ((card.employeeTransferFields?.withholdingRate as string) ?? '') || '0',
-        socialSecurityRate:
-          ((card.employeeTransferFields?.socialSecurityRate as string) ?? '') || undefined,
-        fxRate: (card.employeeTransferFields?.fxRate as string) || undefined,
-      },
-    }
-  }
-  return null
+/**
+ * Read the Payee field shape off a CanvasCard. Returns `null` when the
+ * card is not a Payee or carries no fields.
+ */
+function readPayeeFields(card: CanvasCard): PayeeFields | null {
+  if (card.category !== 'payee') return null
+  if (!card.payeeFields) return null
+  return card.payeeFields as unknown as PayeeFields
 }
 
 // ─── Enumeration ──────────────────────────────────────────────────
@@ -195,25 +158,25 @@ function readTransferFields(
  * both the renderer (preview) and main (worker, Phase 4).
  *
  * Returns both the outcomes and a list of warnings — Payee cards that
- * couldn't be turned into outcomes (missing employee, no transfer
- * connection, missing payCurrency, etc.) are surfaced here so the
- * UI can show the user exactly which row needs attention.
+ * couldn't be turned into outcomes (missing employee, no source
+ * connection, missing FX rate, etc.) are surfaced here so the UI can
+ * show the user exactly which row needs attention.
  */
 export function enumerateOutcomes(input: EnumerateInput): EnumerationResult {
   const { flowId, cards, connections, employees } = input
 
   const payees = cards.filter((c) => c.category === 'payee')
-  const transfersById = new Map(
-    cards.filter((c) => c.category === 'transfer').map((c) => [c.placementId, c]),
+  const sourcesById = new Map(
+    cards.filter((c) => c.category === 'source').map((c) => [c.placementId, c]),
   )
 
-  // Index connections by `from` so we can look up "what's downstream
+  // Index incoming connections by `to` so we can look up "what's upstream
   // of this Payee" in O(1) instead of scanning all connections per row.
-  const outgoing = new Map<string, string[]>()
+  const incoming = new Map<string, string[]>()
   for (const conn of connections) {
-    const arr = outgoing.get(conn.from) ?? []
-    arr.push(conn.to)
-    outgoing.set(conn.from, arr)
+    const arr = incoming.get(conn.to) ?? []
+    arr.push(conn.from)
+    incoming.set(conn.to, arr)
   }
 
   const employeeById = new Map(employees.map((e) => [e.id, e]))
@@ -246,33 +209,42 @@ export function enumerateOutcomes(input: EnumerateInput): EnumerationResult {
       continue
     }
 
-    // Find the downstream Transfer card (Payee's only outgoing edge in MVP).
-    const downstreamIds = outgoing.get(payee.placementId) ?? []
-    if (downstreamIds.length === 0) {
+    // Find the upstream Source card (Payee's only incoming edge in MVP).
+    const upstreamIds = incoming.get(payee.placementId) ?? []
+    if (upstreamIds.length === 0) {
       warnings.push({
         payeePlacementId: payee.placementId,
-        message: `${employee.displayName}: Payee card has no connected Transfer — choose a Contractor or Employee Transfer.`,
+        message: `${employee.displayName}: Payee card has no connected Source — pick one from the palette.`,
       })
       continue
     }
-    const transferCard = transfersById.get(downstreamIds[0])
-    if (!transferCard) {
+    const sourceCard = sourcesById.get(upstreamIds[0])
+    if (!sourceCard) {
       warnings.push({
         payeePlacementId: payee.placementId,
-        message: `${employee.displayName}: connected Transfer card not found on canvas.`,
-      })
-      continue
-    }
-    const transfer = readTransferFields(transferCard)
-    if (!transfer) {
-      warnings.push({
-        payeePlacementId: payee.placementId,
-        message: `${employee.displayName}: Transfer card is missing its variant — re-add it from the palette.`,
+        message: `${employee.displayName}: connected Source card not found on canvas.`,
       })
       continue
     }
 
-    const gross = resolveGrossPay(employee)
+    const payeeFields = readPayeeFields(payee)
+    const override =
+      payeeFields?.amountOverride?.trim() ?? ''
+
+    // Resolve the gross pay. A Payee card with an `amountOverride`
+    // set bypasses the employee-derived value so the user can pay a
+    // one-off without editing the employee record.
+    let gross: { value: string; payCurrency: PayCurrency } | { error: string }
+    if (override !== '') {
+      const payCurrency = resolvePayCurrency(employee)
+      if (!payCurrency) {
+        gross = { error: 'payCurrency not set on employee' }
+      } else {
+        gross = { value: override, payCurrency }
+      }
+    } else {
+      gross = resolveGrossPay(employee)
+    }
     if ('error' in gross) {
       warnings.push({
         payeePlacementId: payee.placementId,
@@ -281,21 +253,12 @@ export function enumerateOutcomes(input: EnumerateInput): EnumerationResult {
       continue
     }
 
+    const fxRate = payeeFields?.fxRate?.trim() ?? ''
+
     const computeInput: ComputeInput = {
-      transferVariant: transfer.variant,
       grossPay: gross.value,
       payCurrency: gross.payCurrency,
-      jurisdiction: resolveJurisdiction(employee, input.companyProfile),
-      fxRate:
-        transfer.variant === 'contractor'
-          ? transfer.fields.fxRate
-          : transfer.fields.fxRate,
-      withholdingRate:
-        transfer.variant === 'employee' ? transfer.fields.withholdingRate : undefined,
-      socialSecurityRate:
-        transfer.variant === 'employee' ? transfer.fields.socialSecurityRate : undefined,
-      contractorFields: transfer.variant === 'contractor' ? transfer.fields : undefined,
-      employeeFields: transfer.variant === 'employee' ? transfer.fields : undefined,
+      fxRate: fxRate !== '' ? fxRate : undefined,
     }
 
     let computed
@@ -310,39 +273,20 @@ export function enumerateOutcomes(input: EnumerateInput): EnumerationResult {
       continue
     }
 
-    // Narrow the transfer field shape so the conditional spread
-    // below can read `withholdingRate` / `socialSecurityRate` safely.
-    const employeeFields =
-      transfer.variant === 'employee' ? transfer.fields : null
-
     const outcome: FlowOutcome = {
       id: freshOutcomeId(),
       flowId,
       employeeId,
       payeePlacementId: payee.placementId,
-      transferPlacementId: transferCard.placementId,
-      transferVariant: transfer.variant,
+      sourcePlacementId: sourceCard.placementId,
       status: 'pending' satisfies FlowOutcomeStatus,
       grossPay: computed.grossPay,
+      // Echo the override (if any) so the preview modal can show
+      // "override $1000" distinctly from the employee's regular salary.
+      ...(override !== '' && { effectiveGrossPay: override }),
       payCurrency: computed.payCurrency,
-      jurisdiction: resolveJurisdiction(employee, input.companyProfile),
       amountCC: computed.amountCC,
       recipientPartyId: employee.cantonPartyId ?? '',
-      ...(computed.withholdingAmount !== undefined && {
-        withholdingAmount: computed.withholdingAmount,
-      }),
-      ...(computed.withholdingAmount !== undefined &&
-        employeeFields !== null && {
-          withholdingRate: employeeFields.withholdingRate,
-        }),
-      ...(computed.socialSecurityAmount !== undefined && {
-        socialSecurityAmount: computed.socialSecurityAmount,
-      }),
-      ...(computed.socialSecurityAmount !== undefined &&
-        employeeFields !== null &&
-        employeeFields.socialSecurityRate !== undefined && {
-          socialSecurityRate: employeeFields.socialSecurityRate,
-        }),
       ...(computed.fxRateApplied !== undefined && {
         fxRate: computed.fxRateApplied,
       }),

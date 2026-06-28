@@ -31,15 +31,14 @@ import type {
  *   JSON here would silently lose a flow's draft on the next load.
  * - **Strict validation** — incoming flows are run through
  *   `validate()` against the same allowlists as the renderer
- *   (categories, transfer variants, tones, schedule mode).
+ *   (categories, tones, schedule mode).
  * - **Not secret** — flow definitions are non-confidential
  *   business records. No `safeStorage` wrapping.
  */
 const FLOWS_DIR = 'flows'
 const FILE_VERSION = 1
 
-const VALID_CATEGORIES = new Set(['source', 'payee', 'transfer'])
-const VALID_TRANSFER_VARIANTS = new Set(['contractor', 'employee'])
+const VALID_CATEGORIES = new Set(['source', 'payee'])
 const VALID_TONES = new Set(['blue', 'teal', 'navy', 'muted'])
 const VALID_SCHEDULE_MODES = new Set(['manual', 'scheduled'])
 
@@ -255,18 +254,6 @@ export class FlowStore {
       throw new Error(`Invalid category: ${String(c.category)}`)
     }
 
-    let transferVariant: CanvasCard['transferVariant']
-    if (c.transferVariant !== undefined) {
-      const v = String(c.transferVariant)
-      if (!VALID_TRANSFER_VARIANTS.has(v)) {
-        throw new Error(`Invalid transfer variant: ${v}`)
-      }
-      if (category !== 'transfer') {
-        throw new Error('transferVariant is only valid on transfer cards')
-      }
-      transferVariant = v as CanvasCard['transferVariant']
-    }
-
     const title = String(c.title ?? '').trim()
     if (!title) throw new Error('Card title is required')
     if (title.length > 200) {
@@ -289,19 +276,10 @@ export class FlowStore {
     // they be plain objects (so JSON.stringify won't blow up later).
     const sourceFields = FlowStore.validateFields(c.sourceFields, 'sourceFields')
     const payeeFields = FlowStore.validateFields(c.payeeFields, 'payeeFields')
-    const contractorTransferFields = FlowStore.validateFields(
-      c.contractorTransferFields,
-      'contractorTransferFields',
-    )
-    const employeeTransferFields = FlowStore.validateFields(
-      c.employeeTransferFields,
-      'employeeTransferFields',
-    )
 
     return {
       placementId,
       category,
-      transferVariant,
       title,
       tone,
       x,
@@ -309,8 +287,6 @@ export class FlowStore {
       collapsed,
       sourceFields,
       payeeFields,
-      contractorTransferFields,
-      employeeTransferFields,
     }
   }
 
@@ -384,17 +360,14 @@ export class FlowStore {
 /** Reduce a `FlowDefinition` to a `FlowSummary` (Active Flows list). */
 function toSummary(flow: FlowDefinition): FlowSummary {
   let payeeCount = 0
-  let transferCount = 0
   for (const card of flow.cards) {
     if (card.category === 'payee') payeeCount++
-    else if (card.category === 'transfer') transferCount++
   }
   return {
     id: flow.id,
     name: flow.name,
     cardCount: flow.cards.length,
     payeeCount,
-    transferCount,
     schedule: flow.schedule,
     createdAt: flow.createdAt,
     updatedAt: flow.updatedAt,

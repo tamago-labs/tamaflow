@@ -3,7 +3,7 @@
 //
 // Mirrors the reference AddCardPopover pattern:
 //   • Live search input at the top filters every group
-//   • Cards are grouped by category (Source / Payee / Transfer)
+//   • Cards are grouped by category (Source / Payee)
 //   • Click a tile to pick — parent closes the popover and adds the card
 //   • Click-outside or Escape closes
 //
@@ -23,7 +23,6 @@ import {
   CATEGORY_LABELS,
   CATEGORY_ORDER,
   PALETTE_CARDS,
-  TRANSFER_VARIANT_LABELS,
   TONE_COLORS,
   payeeTemplatesFor,
   shortPartyId,
@@ -57,7 +56,6 @@ interface AddCardPopoverProps {
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   source: 'Where funds originate',
   payee: 'Who gets paid (employee / contractor)',
-  transfer: 'How the payment is executed',
 }
 
 export default function AddCardPopover({
@@ -115,7 +113,6 @@ export default function AddCardPopover({
     const catAvailable: Record<string, boolean> = {
       source: hasWallet,
       payee: hasEmployees,
-      transfer: true,
     }
     const out: Record<string, SimCardTemplate[]> = {}
     for (const cat of CATEGORY_ORDER) {
@@ -123,8 +120,8 @@ export default function AddCardPopover({
         out[cat] = []
         continue
       }
-      // Payee section is dynamic — one tile per employee. Source and
-      // Transfer come from the static palette catalog.
+      // Payee section is dynamic — one tile per employee. Source comes
+      // from the static palette catalog.
       const all = cat === 'payee'
         ? payeeTemplatesFor(employees)
         : PALETTE_CARDS.filter((c) => c.category === cat)
@@ -200,7 +197,6 @@ export default function AddCardPopover({
           const catAvailable: Record<string, boolean> = {
             source: hasWallet,
             payee: hasEmployees,
-            transfer: true,
           }
           const prereqMissing = !catAvailable[cat]
           if ((!items || items.length === 0) && !prereqMissing) return null
@@ -315,14 +311,10 @@ function PopoverTile({
 
   // One-line subtitle per category — short context about what this card
   // represents. For Payee, look up the bound employee to show their
-  // jurisdiction + pay currency (e.g. "Inside · CC" / "Outside · US · USD").
+  // country + pay currency (e.g. "US · USD"). For Source, just label
+  // it as the treasury wallet.
   const subtitle = (() => {
     if (template.category === 'source') return 'Treasury wallet'
-    if (template.category === 'transfer') {
-      return template.transferVariant
-        ? TRANSFER_VARIANT_LABELS[template.transferVariant] + ' payment'
-        : ''
-    }
     if (template.category === 'payee') {
       const employeeId = template.payeeFields?.employeeId
       if (!employeeId) return 'Payee'

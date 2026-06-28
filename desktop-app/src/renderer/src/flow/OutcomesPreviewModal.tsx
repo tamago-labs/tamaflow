@@ -7,15 +7,14 @@
 // (Phase 4) so surprises don't show up on Canton.
 //
 // Centered modal — backdrop click closes. Width is generous — the
-// table needs ~7 columns to show the variant × jurisdiction breakdown
-// clearly.
+// table needs ~5 columns to show the per-Payee breakdown clearly.
 
 import { useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import type { CanvasCard as PreloadCanvasCard, Employee, CompanyProfile } from '../../../preload/index.d'
 import type { CanvasState } from './types'
 import { enumerateOutcomes } from '../../../shared/flowPaths'
-import { describeRule, type PayCurrency } from '../../../shared/computeOutcome'
+import { type PayCurrency } from '../../../shared/computeOutcome'
 import { BLUE, MUTED, NAVY, monoFont, sansFont } from './theme'
 
 interface OutcomesPreviewModalProps {
@@ -88,7 +87,7 @@ export default function OutcomesPreviewModal({
               position: 'fixed',
               top: '50%',
               left: '50%',
-              width: 920,
+              width: 760,
               maxHeight: '85vh',
               background: '#fff',
               borderRadius: 8,
@@ -140,9 +139,9 @@ export default function OutcomesPreviewModal({
                   lineHeight: 1.4,
                 }}
               >
-                One row per Payee. Each row shows the gross amount, any
-                withholding / social security applied, and the final on-ledger
-                amount in CC.
+                One row per Payee. Each row shows the gross amount in the
+                employee's pay currency, the FX rate used, and the final
+                on-ledger amount in CC.
               </p>
             </div>
 
@@ -206,20 +205,17 @@ export default function OutcomesPreviewModal({
                     }}
                   >
                     <th style={thStyle}>Payee</th>
-                    <th style={thStyle}>Type</th>
                     <th style={thStyle}>Country</th>
                     <th style={thRightStyle}>Gross</th>
-                    <th style={thRightStyle}>Withhold</th>
-                    <th style={thRightStyle}>SS</th>
+                    <th style={thRightStyle}>FX</th>
                     <th style={thRightStyle}>CC amount</th>
-                    <th style={thStyle}>Rule</th>
                   </tr>
                 </thead>
                 <tbody>
                   {outcomes.length === 0 && (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={5}
                         style={{
                           padding: '24px 22px',
                           textAlign: 'center',
@@ -228,7 +224,7 @@ export default function OutcomesPreviewModal({
                         }}
                       >
                         No outcomes to preview — add Payee cards on the canvas
-                        and connect them to a Transfer.
+                        and connect them to a Source.
                       </td>
                     </tr>
                   )}
@@ -251,60 +247,28 @@ export default function OutcomesPreviewModal({
                           </div>
                         </td>
                         <td style={tdStyle}>
-                          <span
-                            style={{
-                              fontFamily: monoFont,
-                              fontSize: 9,
-                              letterSpacing: '0.12em',
-                              textTransform: 'uppercase',
-                              padding: '2px 6px',
-                              borderRadius: 3,
-                              background:
-                                o.transferVariant === 'employee' ? '#eef0fc' : '#fdf6ec',
-                              color:
-                                o.transferVariant === 'employee' ? BLUE : '#8a5a18',
-                            }}
-                          >
-                            {o.transferVariant}
-                          </span>
-                        </td>
-                        <td style={tdStyle}>
                           <span style={{ fontSize: 11, color: NAVY }}>
                             {employee?.country ?? '—'}
                           </span>
                         </td>
                         <td style={tdRightStyle}>
                           <span style={{ color: NAVY, fontWeight: 600 }}>
-                            {o.grossPay}
+                            {o.effectiveGrossPay ?? o.grossPay}
                           </span>{' '}
                           <span style={{ color: MUTED, fontSize: 10 }}>
                             {currencyLabel(o.payCurrency)}
                           </span>
-                        </td>
-                        <td style={tdRightStyle}>
-                          {o.withholdingAmount ? (
-                            <>
-                              <span style={{ color: '#8a5a18' }}>
-                                −{o.withholdingAmount}
-                              </span>{' '}
-                              <span style={{ color: MUTED, fontSize: 10 }}>
-                                ({formatPct(o.withholdingRate)})
-                              </span>
-                            </>
-                          ) : (
-                            <span style={{ color: MUTED }}>—</span>
+                          {o.effectiveGrossPay && (
+                            <div style={{ fontSize: 9, color: '#8a5a18', marginTop: 2 }}>
+                              override (base {o.grossPay})
+                            </div>
                           )}
                         </td>
                         <td style={tdRightStyle}>
-                          {o.socialSecurityAmount && o.socialSecurityAmount !== '0' ? (
-                            <>
-                              <span style={{ color: '#8a5a18' }}>
-                                −{o.socialSecurityAmount}
-                              </span>{' '}
-                              <span style={{ color: MUTED, fontSize: 10 }}>
-                                ({formatPct(o.socialSecurityRate)})
-                              </span>
-                            </>
+                          {o.fxRate ? (
+                            <span style={{ color: MUTED, fontSize: 10 }}>
+                              {o.fxRate}
+                            </span>
                           ) : (
                             <span style={{ color: MUTED }}>—</span>
                           )}
@@ -314,9 +278,6 @@ export default function OutcomesPreviewModal({
                             {o.amountCC}
                           </span>{' '}
                           <span style={{ color: MUTED, fontSize: 10 }}>CC</span>
-                        </td>
-                        <td style={{ ...tdStyle, fontSize: 10, color: MUTED, maxWidth: 220 }}>
-                          {describeRule(outcomeRule(o))}
                         </td>
                       </tr>
                     )
@@ -403,29 +364,4 @@ const tdRightStyle: React.CSSProperties = {
 function currencyLabel(code: PayCurrency): string {
   if ((code as string) === 'CC') return 'CC'
   return code
-}
-
-/** Map a decimal-string rate ("0.22") to a percentage label ("22%"). */
-function formatPct(rate: string | undefined): string {
-  if (!rate) return '—'
-  const n = Number(rate)
-  if (!isFinite(n)) return rate
-  return `${Math.round(n * 100)}%`
-}
-
-/** Recover the rule label from the outcome's combination of fields.
- *  Mirrors computeOutcome's branch table. */
-function outcomeRule(o: {
-  transferVariant: 'contractor' | 'employee'
-  jurisdiction: 'inside_jurisdiction' | 'outside_jurisdiction'
-  withholdingAmount?: string
-}):
-  | 'contractor-convert-send'
-  | 'employee-inside-withhold-ss-convert-send'
-  | 'employee-outside-convert-send' {
-  if (o.transferVariant === 'contractor') return 'contractor-convert-send'
-  if (o.jurisdiction === 'inside_jurisdiction') {
-    return 'employee-inside-withhold-ss-convert-send'
-  }
-  return 'employee-outside-convert-send'
 }

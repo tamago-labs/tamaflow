@@ -329,43 +329,6 @@ function EmployeeRow({
   )
 }
 
-/**
- * Tiny status chip showing whether the employee is paid under the
- * company's home jurisdiction. "Inside" is the safe default (teal,
- * non-alarming); "Outside" uses a subtle neutral pill so the row
- * visually differentiates cross-border payees without screaming.
- */
-function JurisdictionChip({
-  inside,
-  isCompanySet
-}: {
-  inside: boolean
-  isCompanySet: boolean
-}) {
-  if (inside && !isCompanySet) {
-    return (
-      <span
-        className="font-mono text-[9px] uppercase tracking-wider2 px-1.5 py-0.5 rounded-sm bg-amber-100 text-amber-900 border border-amber-200 mt-1 inline-block"
-        title="Set up your company profile to inherit country + currency"
-      >
-        No company
-      </span>
-    )
-  }
-  if (inside) {
-    return (
-      <span className="font-mono text-[9px] uppercase tracking-wider2 px-1.5 py-0.5 rounded-sm bg-brand-teal/15 text-brand-navy border border-brand-teal/30 mt-1 inline-block">
-        Inside
-      </span>
-    )
-  }
-  return (
-    <span className="font-mono text-[9px] uppercase tracking-wider2 px-1.5 py-0.5 rounded-sm bg-brand-light text-brand-muted border border-brand-border mt-1 inline-block">
-      Outside
-    </span>
-  )
-}
-
 /* -------------------------------------------------------------------------- */
 /* Avatar — initials chip                                                     */
 /* -------------------------------------------------------------------------- */

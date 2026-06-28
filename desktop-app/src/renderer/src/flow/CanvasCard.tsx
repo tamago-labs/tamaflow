@@ -15,7 +15,6 @@ import { motion } from 'framer-motion'
 import { BLUE, BORDER, MUTED, NAVY, TEAL, monoFont, sansFont } from './theme'
 import {
   CATEGORY_PREFIX,
-  TRANSFER_VARIANT_PREFIX,
   TONE_COLORS,
   cardHasInput,
   cardHasOutput,
@@ -24,8 +23,6 @@ import {
 import type {
   CanvasCard as CanvasCardType,
   CanvasCardEdit,
-  ContractorTransferFields,
-  EmployeeTransferFields,
   PayeeFields,
   SourceFields,
 } from './types'
@@ -90,39 +87,14 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
   const [draftPayee, setDraftPayee] = useState<PayeeFields>(
     card.payeeFields ?? { employeeId: '' },
   )
-  const [draftContractor, setDraftContractor] = useState<ContractorTransferFields>(
-    card.contractorTransferFields ?? { variant: 'contractor', fxRate: '' },
-  )
-  const [draftEmployee, setDraftEmployee] = useState<EmployeeTransferFields>(
-    card.employeeTransferFields ?? {
-      variant: 'employee',
-      withholdingRate: '',
-      socialSecurityRate: '',
-      fxRate: '',
-    },
-  )
 
   useEffect(() => {
     if (editing) {
       setDraftTitle(card.title)
       setDraftSource(card.sourceFields ?? { partyId: '' })
       setDraftPayee(card.payeeFields ?? { employeeId: '' })
-      setDraftContractor(card.contractorTransferFields ?? { variant: 'contractor', fxRate: '' })
-      setDraftEmployee(card.employeeTransferFields ?? {
-        variant: 'employee',
-        withholdingRate: '',
-        socialSecurityRate: '',
-        fxRate: '',
-      })
     }
-  }, [
-    editing,
-    card.title,
-    card.sourceFields,
-    card.payeeFields,
-    card.contractorTransferFields,
-    card.employeeTransferFields,
-  ])
+  }, [editing, card.title, card.sourceFields, card.payeeFields])
 
   function handleSave() {
     const nextTitle = draftTitle.trim() === '' ? card.title : draftTitle
@@ -130,14 +102,6 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
       title: nextTitle,
       sourceFields: card.category === 'source' ? pruneEmpty(draftSource) : undefined,
       payeeFields: card.category === 'payee' ? pruneEmpty(draftPayee) : undefined,
-      contractorTransferFields:
-        card.category === 'transfer' && card.transferVariant === 'contractor'
-          ? pruneEmpty(draftContractor)
-          : undefined,
-      employeeTransferFields:
-        card.category === 'transfer' && card.transferVariant === 'employee'
-          ? pruneEmpty(draftEmployee)
-          : undefined,
     })
   }
 
@@ -195,10 +159,10 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
   }
 
   // The summary line under the title — different per category. For
-  // Source it's the snapshot party id (truncated) or a "no wallet" hint
-  // when the snapshot is empty. For Payee it's the resolved employee
-  // record (displayName + truncated partyId + jurisdiction) — red when
-  // the FK points to a missing employee.
+  // Source it's a "no wallet" hint when the snapshot is empty. For
+  // Payee it's the resolved employee record (displayName + truncated
+  // partyId + jurisdiction) — red when the FK points to a missing
+  // employee.
   const { summaryLine, summaryTone } = (() => {
     if (card.category === 'source') {
       const partyId = card.sourceFields?.partyId?.trim() ?? ''
@@ -210,11 +174,7 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
           summaryTone: 'danger' as const,
         }
       }
-      // Title already shows the wallet identity (shortPartyId), so use
-      // the summary line for the transfer memo — that's the next most
-      // useful piece of context at-a-glance.
-      const memo = card.sourceFields?.memo?.trim() ?? ''
-      return { summaryLine: memo, summaryTone: 'muted' as const }
+      return { summaryLine: '', summaryTone: 'muted' as const }
     }
     if (card.category === 'payee') {
       const employeeId = card.payeeFields?.employeeId?.trim() ?? ''
@@ -233,26 +193,11 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
       }
       const party = emp.cantonPartyId ? shortPartyId(emp.cantonPartyId) : 'no party id'
       const countryLabel = emp.country ?? '?'
+      const fxRate = card.payeeFields?.fxRate?.trim()
+      const fxSuffix = fxRate ? ` · ${fxRate} FX` : ''
       return {
-        summaryLine: `${party} · ${countryLabel}`,
+        summaryLine: `${party} · ${countryLabel}${fxSuffix}`,
         summaryTone: 'muted' as const,
-      }
-    }
-    if (card.category === 'transfer') {
-      if (card.transferVariant === 'contractor') {
-        return {
-          summaryLine: card.contractorTransferFields?.fxRate
-            ? `FX: ${card.contractorTransferFields.fxRate} CC per unit`
-            : 'No FX rate set',
-          summaryTone: 'muted' as const,
-        }
-      }
-      if (card.transferVariant === 'employee') {
-        const w = card.employeeTransferFields?.withholdingRate
-        return {
-          summaryLine: w ? `Withhold: ${(parseFloat(w) * 100).toFixed(1)}%` : 'No withholding rate',
-          summaryTone: 'muted' as const,
-        }
       }
     }
     return { summaryLine: '', summaryTone: 'muted' as const }
@@ -275,15 +220,11 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
           title={draftTitle}
           source={draftSource}
           payee={draftPayee}
-          contractor={draftContractor}
-          employee={draftEmployee}
           employees={employees}
           walletReady={walletReady}
           onTitleChange={setDraftTitle}
           onSourceChange={setDraftSource}
           onPayeeChange={setDraftPayee}
-          onContractorChange={setDraftContractor}
-          onEmployeeChange={setDraftEmployee}
           onSave={handleSave}
           onCancel={() => onEditCancel(card.placementId)}
           onKeyDown={handleEditKeyDown}
@@ -344,9 +285,7 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
                         letterSpacing: '0.1em',
                       }}
                     >
-                      {card.category === 'transfer'
-                        ? TRANSFER_VARIANT_PREFIX[card.transferVariant!]
-                        : CATEGORY_PREFIX[card.category]}
+                      {CATEGORY_PREFIX[card.category]}
                     </span>
                   </div>
                   <div
@@ -519,8 +458,8 @@ function Port({ side, active, color, onClick }: PortProps) {
 }
 
 /**
- * Strip out empty/undefined fields so we don't persist `withholdingRate: ''`
- * on every card. Keeps the JSON tidy.
+ * Strip out empty/undefined fields so we don't persist `note: ''` on
+ * every card. Keeps the JSON tidy.
  */
 function pruneEmpty<T>(o: T): T {
   const out: Record<string, unknown> = {}

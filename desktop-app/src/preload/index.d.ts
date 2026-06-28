@@ -430,15 +430,13 @@ export interface FlowFile {
  * persist each one at `<userData>/profiles/<slug>/flows/<flowId>/outcomes/<id>.json`
  * and walk them through the worker.
  *
- * The preview-only fields (`withholdingAmount`, `socialSecurityAmount`,
- * `fxRate`, `amountCC`) are computed up-front by `computeOutcome` so the
- * renderer can show the user exactly what will hit Canton before sign-off.
+ * The preview-only fields (`grossPay`, `effectiveGrossPay`, `amountCC`)
+ * are computed up-front by `computeOutcome` so the renderer can show the
+ * user exactly what will hit Canton before sign-off.
  */
 export type FlowOutcomeStatus =
   | 'pending'
   | 'computing'
-  | 'withholding'
-  | 'social_security'
   | 'converting'
   | 'signing'
   | 'sending'
@@ -451,32 +449,23 @@ export interface FlowOutcome {
   flowId: string
   employeeId: string
   payeePlacementId: string
-  transferPlacementId: string
-  transferVariant: 'contractor' | 'employee'
+  sourcePlacementId: string
   status: FlowOutcomeStatus
   error?: string
 
   // Computed per outcome (pre-execution):
+  /** Gross pay derived from the employee record (or `amountOverride` if set). */
   grossPay: string
-  payCurrency: 'JPY' | 'THB' | 'USD' | 'EUR'
   /**
-   * Derived per outcome from `employee.country` vs `company.country` —
-   * `inside_jurisdiction` when they match (withholding + SS apply for
-   * Employee Transfer), `outside_jurisdiction` when they don't (withhold
-   * + SS are skipped). Not stored on the employee; computed by
-   * `shared/flowPaths.ts` at enumeration time.
+   * Amount the compute actually used as input. Equals `grossPay` unless
+   * the Payee card has an `amountOverride` set, in which case it equals
+   * that override. Surfaced in the preview modal so the user can see
+   * "this payee got a $1000 bonus instead of their $5000 salary".
    */
-  jurisdiction: 'inside_jurisdiction' | 'outside_jurisdiction'
+  effectiveGrossPay?: string
+  payCurrency: 'JPY' | 'THB' | 'USD' | 'EUR'
 
-  // Withholding applied (Employee variant + inside only):
-  withholdingAmount?: string
-  withholdingRate?: string
-
-  // Social security applied (Employee variant + inside only):
-  socialSecurityAmount?: string
-  socialSecurityRate?: string
-
-  // FX applied (when pay currency !== CC):
+  // FX applied (Payee card has fxRate when pay currency !== CC):
   fxRate?: string
   /** CC amount (10dp decimal string) — what actually hits the ledger. */
   amountCC: string
@@ -502,8 +491,6 @@ export interface FlowSummary {
   cardCount: number
   /** Payee card count — drives the "N recipients" badge. */
   payeeCount: number
-  /** Transfer card count — drives the "N rules" badge. */
-  transferCount: number
   schedule?: FlowSchedule
   createdAt: string
   updatedAt: string
@@ -513,52 +500,22 @@ export interface FlowSummary {
  * Minimal canvas shapes shared with the flow-builder renderer. These
  * mirror the renderer's `CanvasCard` and `Connection` types but live
  * in the preload type surface so main-process IPC payloads stay typed.
+ *
+ * Two card categories only: `source` (treasury wallet) and `payee`
+ * (employee to be paid). Field shapes are loose envelopes on the wire
+ * so main never has to know about the renderer's edit form. Validation
+ * is enforced on the way back IN (in `FlowStore.validateCanvasCard`).
  */
 export interface CanvasCard {
   placementId: string
-  category: 'source' | 'payee' | 'transfer'
-  transferVariant?: 'contractor' | 'employee'
+  category: 'source' | 'payee'
   title: string
   tone: 'blue' | 'teal' | 'navy' | 'muted'
   x: number
   y: number
   collapsed: boolean
-  // Field shapes — kept loose on the wire so main never has to know
-  // about the renderer's edit form. Validation is enforced on the way
-  // back IN (in `FlowStore.validateCanvasCard`).
   sourceFields?: Record<string, unknown>
   payeeFields?: Record<string, unknown>
-  contractorTransferFields?: Record<string, unknown>
-  employeeTransferFields?: Record<string, unknown>
-}
-
-/**
- * Typed Transfer card field shapes. The renderer stores these loosely
- * inside `CanvasCard.contractorTransferFields` / `employeeTransferFields`
- * for forward-compat; the shared compute layer (`shared/computeOutcome.ts`,
- * `shared/flowPaths.ts`) reads them through these typed mirrors so the
- * per-outcome math has a clean input surface.
- *
- * Defined here (preload) so both the renderer and the main-process
- * worker can import from the same source — the renderer adds render-only
- * extensions in `src/renderer/src/flow/types.ts`.
- */
-export type TransferVariant = 'contractor' | 'employee'
-
-export interface ContractorTransferFields {
-  variant: 'contractor'
-  /** CC per 1 unit of payCurrency. Required when payCurrency !== 'CC'. */
-  fxRate?: string
-}
-
-export interface EmployeeTransferFields {
-  variant: 'employee'
-  /** Decimal string, e.g. "0.22" for 22%. */
-  withholdingRate: string
-  /** Decimal string, e.g. "0.05" for 5%. Optional, defaults to 0. */
-  socialSecurityRate?: string
-  /** CC per 1 unit of payCurrency. Required when payCurrency !== 'CC'. */
-  fxRate?: string
 }
 
 export interface Connection {

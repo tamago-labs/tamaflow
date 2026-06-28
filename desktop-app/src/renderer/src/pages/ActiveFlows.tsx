@@ -71,15 +71,12 @@ export default function ActiveFlows() {
 
       {/* List */}
       <div className="bg-white border border-brand-border rounded-md overflow-hidden">
-        <div className="grid grid-cols-[1.6fr_1fr_1fr_1fr_auto] gap-4 py-3 px-4 border-b border-brand-border bg-brand-light">
+        <div className="grid grid-cols-[1.6fr_1fr_1fr_auto] gap-4 py-3 px-4 border-b border-brand-border bg-brand-light">
           <span className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase font-semibold">
             Flow
           </span>
           <span className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase font-semibold">
             Payees
-          </span>
-          <span className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase font-semibold">
-            Transfers
           </span>
           <span className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase font-semibold">
             Updated
@@ -121,7 +118,7 @@ function FlowRow({ flow, onOpen }: { flow: FlowSummary; onOpen: () => void }) {
       <button
         type="button"
         onClick={onOpen}
-        className="w-full text-left grid grid-cols-[1.6fr_1fr_1fr_1fr_auto] gap-4 py-3 px-4 items-center bg-transparent border-0 cursor-pointer hover:bg-brand-light transition-colors"
+        className="w-full text-left grid grid-cols-[1.6fr_1fr_1fr_auto] gap-4 py-3 px-4 items-center bg-transparent border-0 cursor-pointer hover:bg-brand-light transition-colors"
       >
         <span className="font-sans text-sm text-brand-navy font-medium truncate">
           {flow.name || <span className="italic text-brand-muted">Untitled flow</span>}
@@ -129,9 +126,6 @@ function FlowRow({ flow, onOpen }: { flow: FlowSummary; onOpen: () => void }) {
         <span className="font-mono text-sm text-brand-navy">
           {flow.payeeCount}
           <span className="text-brand-muted"> / {flow.cardCount}</span>
-        </span>
-        <span className="font-mono text-sm text-brand-navy">
-          {flow.transferCount}
         </span>
         <span className="font-sans text-xs text-brand-muted">
           {formatDate(flow.updatedAt)}
