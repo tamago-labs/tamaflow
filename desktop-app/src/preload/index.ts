@@ -17,6 +17,10 @@ import type {
   CompanyFile,
   CompanyExportResult,
   CompanyImportResult,
+  Employee,
+  EmployeeFile,
+  EmployeeExportResult,
+  EmployeeImportResult,
 } from './index.d'
 
 // Custom APIs for renderer
@@ -98,6 +102,22 @@ const api = {
       const handler = (_: unknown, file: CompanyFile | null) => callback(file)
       ipcRenderer.on('company:onChange', handler)
       return () => ipcRenderer.removeListener('company:onChange', handler)
+    },
+  },
+
+  employees: {
+    get: (): Promise<EmployeeFile | null> => ipcRenderer.invoke('employees:get'),
+    save: (employees: Employee[]): Promise<EmployeeFile> =>
+      ipcRenderer.invoke('employees:save', employees),
+    remove: (id: string): Promise<EmployeeFile | null> =>
+      ipcRenderer.invoke('employees:remove', id),
+    exportJson: (): Promise<EmployeeExportResult> => ipcRenderer.invoke('employees:export'),
+    importJson: (): Promise<EmployeeImportResult> => ipcRenderer.invoke('employees:import'),
+    reset: (): Promise<{ success: boolean }> => ipcRenderer.invoke('employees:reset'),
+    onChange: (callback: (file: EmployeeFile | null) => void) => {
+      const handler = (_: unknown, file: EmployeeFile | null) => callback(file)
+      ipcRenderer.on('employees:onChange', handler)
+      return () => ipcRenderer.removeListener('employees:onChange', handler)
     },
   },
 }

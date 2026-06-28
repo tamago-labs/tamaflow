@@ -17,6 +17,7 @@ import {
 import { modelStore, type ModelEntry, type ModelSourceKind } from './modelStore'
 import { registerWalletIpcHandlers } from './wallet'
 import { registerCompanyIpcHandlers } from './company'
+import { registerEmployeeIpcHandlers } from './employee'
 
 app.commandLine.appendSwitch('no-sandbox')
 
@@ -218,6 +219,7 @@ app.whenReady().then(() => {
   registerModelsIpcHandlers()
   registerWalletIpcHandlers()
   registerCompanyIpcHandlers()
+  registerEmployeeIpcHandlers()
 
   // Create window
   createWindow()
