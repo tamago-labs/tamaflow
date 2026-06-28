@@ -223,7 +223,6 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
           employees={employees}
           walletReady={walletReady}
           onTitleChange={setDraftTitle}
-          onSourceChange={setDraftSource}
           onPayeeChange={setDraftPayee}
           onSave={handleSave}
           onCancel={() => onEditCancel(card.placementId)}
