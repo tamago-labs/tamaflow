@@ -251,6 +251,7 @@ export default function FlowBuilder({
         addOpen={addOpen}
         onToggleAdd={() => setAddOpen((v) => !v)}
         onRequestClearAll={() => setClearConfirmOpen(true)}
+        onNameChange={onFlowNameChange}
       />
 
       <AddCardPopover
@@ -258,9 +259,6 @@ export default function FlowBuilder({
         onPick={handleAddTemplate}
         onClose={() => setAddOpen(false)}
       />
-
-      {/* Flow-name editor — sits at top-centre, just below the toolbar. */}
-      <FlowNameEditor name={flowName} onChange={onFlowNameChange} />
 
       {/* Save badge — top-right, mirrored from the toolbar on the left.
           Only renders when the parent supplies `saveBadge`; the in-memory
@@ -376,122 +374,6 @@ function SaveBadge({
     >
       {label}
     </div>
-  )
-}
-
-function FlowNameEditor({
-  name,
-  onChange,
-}: {
-  name: string
-  onChange: (next: string) => void
-}) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(name)
-
-  // Keep the draft in sync if the parent's name changes externally
-  // (e.g. after Clear All resets to a default).
-  useEffect(() => {
-    if (!editing) setDraft(name)
-  }, [name, editing])
-
-  function commit() {
-    const next = draft.trim() === '' ? name : draft.trim()
-    setDraft(next)
-    onChange(next)
-    setEditing(false)
-  }
-
-  if (editing) {
-    return (
-      <input
-        autoFocus
-        type="text"
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault()
-            commit()
-          } else if (e.key === 'Escape') {
-            e.preventDefault()
-            setDraft(name)
-            setEditing(false)
-          }
-        }}
-        style={{
-          position: 'absolute',
-          top: 16,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 100,
-          height: 30,
-          padding: '0 14px',
-          background: 'rgba(255,255,255,0.92)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
-          border: '1px solid ' + BLUE,
-          borderRadius: 6,
-          fontFamily: sansFont,
-          fontSize: 14,
-          fontWeight: 700,
-          color: '#0a0a5c',
-          outline: 'none',
-          boxShadow: '0 4px 14px rgba(10,10,92,0.10)',
-          minWidth: 220,
-          textAlign: 'center',
-        }}
-      />
-    )
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        setDraft(name)
-        setEditing(true)
-      }}
-      title="Click to rename"
-      style={{
-        position: 'absolute',
-        top: 16,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 100,
-        height: 30,
-        padding: '0 14px',
-        background: 'rgba(255,255,255,0.92)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        border: '1px solid #e0e0f0',
-        borderRadius: 6,
-        fontFamily: sansFont,
-        fontSize: 14,
-        fontWeight: 700,
-        color: '#0a0a5c',
-        cursor: 'text',
-        boxShadow: '0 4px 14px rgba(10,10,92,0.06)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-      }}
-    >
-      <span
-        style={{
-          fontFamily: monoFont,
-          fontSize: 8,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: MUTED,
-          fontWeight: 700,
-        }}
-      >
-        Untitled draft ·
-      </span>
-      <span>{name}</span>
-    </button>
   )
 }
 

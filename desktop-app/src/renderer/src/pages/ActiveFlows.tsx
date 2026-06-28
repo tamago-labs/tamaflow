@@ -43,7 +43,11 @@ export default function ActiveFlows() {
         actions={
           <button
             type="button"
-            onClick={() => navigate('/flows/new')}
+            // `state.create: true` tells NewFlow to ALWAYS create a new
+            // flow (skipping the "use the latest" fallback the sidebar
+            // Flow Builder entry uses). The sidebar's NavLink doesn't
+            // pass any state, so it still lands on the most-recent flow.
+            onClick={() => navigate('/flows/new', { state: { create: true } })}
             className="flex items-center gap-1.5 py-2 px-3 bg-brand-blue text-white border-0 rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:opacity-90"
           >
             <Plus size={11} />

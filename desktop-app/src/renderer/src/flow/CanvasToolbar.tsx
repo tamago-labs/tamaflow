@@ -1,22 +1,16 @@
 // Floating top-left toolbar — the only "header" on the flow builder.
 //
 // MVP scope (Phase 1):
-//   • Display the flow name
+//   • Click-to-edit flow name (inline)
 //   • "+ Add Card" toggle that opens <AddCardPopover>
 //   • "Clear All" button (with confirm)
 //
 // Template menu / prompt-to-flow AI / generate-outcomes button are
 // deferred to later phases — they don't exist yet.
 
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { BLUE, MUTED, NAVY, monoFont, sansFont } from './theme'
-
-const MAX_NAME_LENGTH = 24
-
-function truncate(name: string): string {
-  if (name.length <= MAX_NAME_LENGTH) return name
-  return name.slice(0, MAX_NAME_LENGTH - 3) + '...'
-}
 
 interface CanvasToolbarProps {
   flowName: string
@@ -24,6 +18,7 @@ interface CanvasToolbarProps {
   addOpen: boolean
   onToggleAdd: () => void
   onRequestClearAll: () => void
+  onNameChange: (next: string) => void
 }
 
 export default function CanvasToolbar({
@@ -32,6 +27,7 @@ export default function CanvasToolbar({
   addOpen,
   onToggleAdd,
   onRequestClearAll,
+  onNameChange,
 }: CanvasToolbarProps) {
   return (
     <div
@@ -52,48 +48,10 @@ export default function CanvasToolbar({
         boxShadow: '0 4px 14px rgba(10,10,92,0.06)',
       }}
     >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          lineHeight: 1.15,
-          paddingRight: 8,
-        }}
-      >
-        <span
-          style={{
-            fontFamily: monoFont,
-            fontSize: 9,
-            letterSpacing: '0.18em',
-            color: MUTED,
-            textTransform: 'uppercase',
-          }}
-        >
-          Flow Builder
-        </span>
-        <span
-          style={{
-            fontFamily: sansFont,
-            fontSize: 14,
-            fontWeight: 700,
-            color: NAVY,
-            letterSpacing: '0.02em',
-          }}
-        >
-          {flowName.trim() ? truncate(flowName) : 'Untitled flow'}
-        </span>
-        <span
-          style={{
-            fontFamily: monoFont,
-            fontSize: 8,
-            color: MUTED,
-            letterSpacing: '0.1em',
-            marginTop: 2,
-          }}
-        >
-          {cardCount} {cardCount === 1 ? 'card' : 'cards'}
-        </span>
-      </div>
+      <FlowNameField
+        flowName={flowName}
+        onNameChange={onNameChange}
+      />
 
       <div style={{ width: 1, height: 24, background: '#e0e0f0' }} />
 
@@ -155,6 +113,136 @@ export default function CanvasToolbar({
       >
         Clear All
       </motion.button>
+    </div>
+  )
+}
+
+// ─── FlowNameField ────────────────────────────────────────────────────
+//
+// Click-to-edit flow name — the "Flow Builder" eyebrow sits above an
+// editable name. On click the name becomes an inline input; commit on
+// blur or Enter, cancel on Escape. Lifted from the standalone
+// <FlowNameEditor> overlay that previously floated at top-centre —
+// merging into the toolbar keeps all canvas chrome in one place so
+// the canvas top edge isn't cluttered.
+function FlowNameField({
+  flowName,
+  onNameChange,
+}: {
+  flowName: string
+  onNameChange: (next: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(flowName)
+
+  // Keep the draft in sync with the parent if the name changes
+  // externally (e.g. after Clear All or after switching flows).
+  useEffect(() => {
+    if (!editing) setDraft(flowName)
+  }, [flowName, editing])
+
+  function commit() {
+    const trimmed = draft.trim()
+    const next = trimmed === '' ? flowName : trimmed
+    setDraft(next)
+    onNameChange(next)
+    setEditing(false)
+  }
+
+  function startEdit() {
+    setDraft(flowName)
+    setEditing(true)
+  }
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        lineHeight: 1.15,
+        paddingRight: 8,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: monoFont,
+          fontSize: 9,
+          letterSpacing: '0.18em',
+          color: MUTED,
+          textTransform: 'uppercase',
+        }}
+      >
+        Flow Builder
+      </span>
+      {editing ? (
+        <input
+          autoFocus
+          type="text"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              commit()
+            } else if (e.key === 'Escape') {
+              e.preventDefault()
+              setDraft(flowName)
+              setEditing(false)
+            }
+          }}
+          // Don't let key events leak to the canvas — typing space
+          // shouldn't toggle add-card popovers, etc.
+          onKeyUp={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{
+            fontFamily: sansFont,
+            fontSize: 14,
+            fontWeight: 700,
+            color: NAVY,
+            letterSpacing: '0.02em',
+            background: 'transparent',
+            border: 'none',
+            borderBottom: '1.5px solid ' + BLUE,
+            padding: '1px 0',
+            margin: '-1px 0',
+            outline: 'none',
+            minWidth: 160,
+            maxWidth: 280,
+          }}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={startEdit}
+          title="Click to rename"
+          onPointerDown={(e) => e.stopPropagation()}
+          style={{
+            fontFamily: sansFont,
+            fontSize: 14,
+            fontWeight: 700,
+            color: NAVY,
+            letterSpacing: '0.02em',
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            margin: 0,
+            cursor: 'text',
+            textAlign: 'left',
+            // Underline-on-hover affordance — it's not obviously a
+            // button otherwise.
+            borderBottom: '1.5px dashed transparent',
+          }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.borderBottomColor = '#e0e0f0')
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.borderBottomColor = 'transparent')
+          }
+        >
+          {flowName.trim() ? flowName : 'Untitled flow'}
+        </button>
+      )}
     </div>
   )
 }

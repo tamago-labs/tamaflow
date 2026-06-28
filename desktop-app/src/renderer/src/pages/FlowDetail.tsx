@@ -403,29 +403,10 @@ export default function FlowDetail() {
       />
 
       {/* Floating chrome — anchored to the canvas viewport so they
-          don't intrude on the work area. Back lives bottom-left
-          (out of the way of the top-left Add Card toolbar), delete
-          sits bottom-right (mirrored, mirrors the save badge in the
-          top-right). */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 16,
-          bottom: 16,
-          zIndex: 100,
-          pointerEvents: 'auto',
-        }}
-      >
-        <Link
-          to="/flows"
-          className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-white/90 text-brand-blue border border-brand-border rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase no-underline backdrop-blur"
-          style={{ boxShadow: '0 2px 8px rgba(10,10,92,0.06)' }}
-        >
-          <ArrowLeft size={11} />
-          Active Flows
-        </Link>
-      </div>
-
+          don't intrude on the work area. All action buttons (Back,
+          Preview Outcomes, Save, Delete) share a single bottom-right
+          cluster so the bottom-left stays clear for the canvas zoom
+          bar. */}
       <div
         style={{
           position: 'absolute',
@@ -438,6 +419,14 @@ export default function FlowDetail() {
           pointerEvents: 'auto',
         }}
       >
+        <Link
+          to="/flows"
+          className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-white/90 text-brand-blue border border-brand-border rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase no-underline backdrop-blur"
+          style={{ boxShadow: '0 2px 8px rgba(10,10,92,0.06)' }}
+        >
+          <ArrowLeft size={11} />
+          Active Flows
+        </Link>
         {saveError && (
           <span
             role="alert"

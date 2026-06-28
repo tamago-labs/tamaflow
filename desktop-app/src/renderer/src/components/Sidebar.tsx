@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Users,
@@ -78,6 +78,7 @@ function Wordmark() {
 }
 
 export default function Sidebar() {
+  const location = useLocation()
   const { profile, loadStatus } = useCompany()
   const country = profile ? COUNTRIES.find((c) => c.code === profile.country) : undefined
   const flag = country?.flag ?? null
@@ -112,13 +113,22 @@ export default function Sidebar() {
                     key={item.path}
                     to={item.path}
                     end={item.end}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2.5 py-2 px-3 rounded-md no-underline text-[13px] transition-colors ${
-                        isActive
+                    className={({ isActive }) => {
+                      // /flows/new is a redirect route — when the user
+                      // lands on the canvas at /flows/:id (e.g. /flows/abc123)
+                      // the Flow Builder nav should still light up, since
+                      // that's the same destination in user terms. Bare
+                      // /flows stays its own entry (Active Flows).
+                      const onCanvas =
+                        item.path === '/flows/new' &&
+                        /^\/flows\/[^/]+$/.test(location.pathname)
+                      const active = isActive || onCanvas
+                      return `flex items-center gap-2.5 py-2 px-3 rounded-md no-underline text-[13px] transition-colors ${
+                        active
                           ? 'bg-brand-blue text-white font-medium'
                           : 'text-brand-navy font-normal hover:bg-brand-light'
                       }`
-                    }
+                    }}
                   >
                     <Icon size={16} className="flex-shrink-0" />
                     <span>{item.label}</span>
