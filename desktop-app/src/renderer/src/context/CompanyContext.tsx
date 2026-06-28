@@ -27,6 +27,15 @@ import type { CompanyProfile, CompanyFile, CompanyImportResult } from '../../../
 
 type LoadStatus = 'absent' | 'present' | 'saving' | 'error'
 
+/**
+ * Minimum visible duration for the `saving` state. The on-disk write
+ * is essentially instant for a tiny JSON file, so without a floor the
+ * "Saving…" UI flashes for a single frame and feels like a bug to the
+ * user. 500 ms is enough for the spinner / button label to register
+ * without making the flow feel sluggish.
+ */
+const MIN_SAVING_MS = 500
+
 interface CompanyContextValue {
   profile: CompanyProfile | null
   file: CompanyFile | null
@@ -99,8 +108,18 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     const run = async (): Promise<void> => {
       setLoadStatus('saving')
       setError(null)
+      const startedAt = Date.now()
       try {
         const f = await window.api.company.save(profile)
+        // Pad the saving state to MIN_SAVING_MS so the "Saving…" UI
+        // is perceptible. The IPC roundtrip is single-digit ms for a
+        // tiny JSON file, which feels instantaneous and skips the
+        // loading affordance entirely.
+        const elapsed = Date.now() - startedAt
+        const remaining = MIN_SAVING_MS - elapsed
+        if (remaining > 0) {
+          await new Promise<void>((r) => setTimeout(r, remaining))
+        }
         if (!mounted.current) return
         setFile(f)
         setLoadStatus('present')

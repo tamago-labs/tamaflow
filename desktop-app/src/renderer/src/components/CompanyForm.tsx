@@ -4,8 +4,7 @@ import type {
   CompanyProfile,
   CountryCode,
   CurrencyCode,
-  LegalEntityType,
-  SettlementCurrency
+  LegalEntityType
 } from '../../../preload/index.d'
 import { COUNTRIES, CURRENCIES, LEGAL_ENTITY_TYPES } from '../lib/countries'
 
@@ -14,7 +13,7 @@ import { COUNTRIES, CURRENCIES, LEGAL_ENTITY_TYPES } from '../lib/countries'
  *
  * Used at two surfaces:
  *   - CompanyGate (first-run wizard).
- *   - Company Profile page (inline edit).
+ *   - Company Profile page > Profile tab.
  *
  * Rendered as a single `<form>` — one unified section. Auto-fill logic:
  * when the user picks a Country, Base Currency is auto-populated from
@@ -23,9 +22,9 @@ import { COUNTRIES, CURRENCIES, LEGAL_ENTITY_TYPES } from '../lib/countries'
  * country changes. The `touched` flag resets when `initial` changes
  * (i.e. when the parent swaps to a freshly imported profile).
  *
- * The settlement-currency field is rendered as a disabled `<select>`
- * with a single locked option (Canton Coin / CC) so it visually matches
- * the other selects without pretending the user can change it.
+ * Settlement currency is NOT editable here — it's surfaced on the
+ * Company Profile page's "On-ledger" tab instead, where it lives with
+ * the other on-ledger settings. The form always submits `CC`.
  */
 
 interface CompanyFormProps {
@@ -41,11 +40,39 @@ interface CompanyFormProps {
   submitting?: boolean
 }
 
-/** Sole settlement option for the MVP — matches the `'CC'` literal
- *  in the `CompanyProfile` schema. Future currencies will land here. */
-const SETTLEMENT_OPTIONS: ReadonlyArray<{ value: SettlementCurrency; label: string }> = [
-  { value: 'CC', label: 'CC — Canton Coin' }
+/** Month names for the fiscal year picker. */
+const MONTHS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: '01', label: 'January' },
+  { value: '02', label: 'February' },
+  { value: '03', label: 'March' },
+  { value: '04', label: 'April' },
+  { value: '05', label: 'May' },
+  { value: '06', label: 'June' },
+  { value: '07', label: 'July' },
+  { value: '08', label: 'August' },
+  { value: '09', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' }
 ]
+
+/**
+ * Normalise a stored fiscal-year value into an MM month string.
+ *
+ * Accepts both the new shape (`"04"`) and the legacy `MM-DD` shape
+ * (`"04-01"`) so profiles saved before the day picker was removed
+ * still load. Returns `null` for anything else.
+ */
+function parseFiscalMonth(value: string | undefined): string | null {
+  if (!value) return null
+  // Legacy MM-DD → take the month half.
+  if (/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(value)) {
+    return value.split('-')[0]
+  }
+  // New MM shape.
+  if (/^(0[1-9]|1[0-2])$/.test(value)) return value
+  return null
+}
 
 export default function CompanyForm({
   initial,
@@ -59,6 +86,11 @@ export default function CompanyForm({
   const [baseCurrency, setBaseCurrency] = useState<CurrencyCode>(initial?.baseCurrency ?? 'JPY')
   const [legalEntityType, setLegalEntityType] = useState<LegalEntityType>(
     initial?.legalEntityType ?? 'corporation'
+  )
+  // Fiscal year start — month only (MM string). Defaults to January
+  // (calendar year). Drives how payroll reports are grouped for tax.
+  const [fiscalMonth, setFiscalMonth] = useState<string>(
+    parseFiscalMonth(initial?.fiscalYearStart) ?? '01'
   )
   // Track manual edits so subsequent country changes don't clobber them.
   const [currencyTouched, setCurrencyTouched] = useState(
@@ -77,6 +109,7 @@ export default function CompanyForm({
     setCountry(initial.country)
     setBaseCurrency(initial.baseCurrency)
     setLegalEntityType(initial.legalEntityType)
+    setFiscalMonth(parseFiscalMonth(initial.fiscalYearStart) ?? '01')
     setCurrencyTouched(initial.baseCurrency !== defaultCurrencyFor(initial.country))
     setTouched({})
     setSubmitError(null)
@@ -87,7 +120,8 @@ export default function CompanyForm({
     initial?.companyName,
     initial?.country,
     initial?.baseCurrency,
-    initial?.legalEntityType
+    initial?.legalEntityType,
+    initial?.fiscalYearStart
   ])
 
   const handleCountryChange = (next: CountryCode) => {
@@ -115,7 +149,10 @@ export default function CompanyForm({
         country,
         baseCurrency,
         legalEntityType,
+        // Settlement currency is fixed at CC for the MVP. It lives on
+        // the Company Profile page's "On-ledger" tab, not here.
         settlementCurrency: 'CC',
+        fiscalYearStart: fiscalMonth,
         createdAt: initial?.createdAt ?? '',
         updatedAt: initial?.updatedAt ?? ''
       })
@@ -130,37 +167,17 @@ export default function CompanyForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       <fieldset className="space-y-4">
-        <div>
-          <label
-            htmlFor="company-name"
-            className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5"
-          >
-            Company name
-          </label>
-          <input
-            id="company-name"
-            type="text"
-            value={companyName}
-            onChange={(e) => setCompanyName(e.target.value)}
-            onBlur={() => setTouched((t) => ({ ...t, companyName: true }))}
-            placeholder="Acme Corp"
-            disabled={disabled}
-            maxLength={200}
-            autoFocus
-            className="w-full px-3 py-2 bg-white border border-brand-border rounded-md font-sans text-sm text-brand-navy placeholder:text-brand-muted focus:outline-none focus:border-brand-blue transition-colors disabled:opacity-60"
-          />
-          {showCompanyNameError && (
-            <p className="font-sans text-xs text-brand-err mt-1 m-0">Company name is required.</p>
-          )}
-        </div>
-
+        {/* Jurisdiction comes FIRST — it's the parent anchor for the
+            company base currency (auto-fill) and for any "inside
+            jurisdiction" employees on the roster. Picking a jurisdiction
+            here cascades into the rest of the form. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label
               htmlFor="company-country"
               className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5"
             >
-              Country / Region
+              Jurisdiction
             </label>
             <select
               id="company-country"
@@ -197,12 +214,31 @@ export default function CompanyForm({
                 </option>
               ))}
             </select>
-            {currencyTouched && (
-              <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted mt-1.5 m-0">
-                Overridden — won't change when you pick a different country.
-              </p>
-            )}
           </div>
+        </div>
+
+        <div>
+          <label
+            htmlFor="company-name"
+            className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5"
+          >
+            Company name
+          </label>
+          <input
+            id="company-name"
+            type="text"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            onBlur={() => setTouched((t) => ({ ...t, companyName: true }))}
+            placeholder="Acme Corp"
+            disabled={disabled}
+            maxLength={200}
+            autoFocus
+            className="w-full px-3 py-2 bg-white border border-brand-border rounded-md font-sans text-sm text-brand-navy placeholder:text-brand-muted focus:outline-none focus:border-brand-blue transition-colors disabled:opacity-60"
+          />
+          {showCompanyNameError && (
+            <p className="font-sans text-xs text-brand-err mt-1 m-0">Company name is required.</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -228,22 +264,26 @@ export default function CompanyForm({
             </select>
           </div>
 
+          {/* Fiscal year start — month-only pick. Drives how payroll
+              reports are grouped for tax / accounting. Defaults to
+              calendar year (January). */}
           <div>
             <label
-              htmlFor="company-settlement"
+              htmlFor="company-fiscal-month"
               className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5"
             >
-              Settlement currency
+              Fiscal year start
             </label>
             <select
-              id="company-settlement"
-              value="CC"
-              disabled
+              id="company-fiscal-month"
+              value={fiscalMonth}
+              onChange={(e) => setFiscalMonth(e.target.value)}
+              disabled={disabled}
               className="w-full px-3 py-2 bg-white border border-brand-border rounded-md font-sans text-sm text-brand-navy focus:outline-none focus:border-brand-blue transition-colors disabled:opacity-60"
             >
-              {SETTLEMENT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+              {MONTHS.map((m) => (
+                <option key={m.value} value={m.value}>
+                  {m.label}
                 </option>
               ))}
             </select>

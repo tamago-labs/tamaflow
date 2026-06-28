@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Loader2, RefreshCw } from 'lucide-react'
+import { Loader2, Upload } from 'lucide-react'
 import { useCompany } from '../context/CompanyContext'
 import CompanyForm from '../components/CompanyForm'
 import CompanyImportModal from '../components/CompanyImportModal'
-import Logomark from '../components/Logomark'
-import { WORDMARK } from '../theme'
+import { TealBar, Wordmark } from '../components/ModelSelectorChrome'
 import type { CompanyProfile } from '../../../preload/index.d'
 
 /**
@@ -13,7 +12,7 @@ import type { CompanyProfile } from '../../../preload/index.d'
  *
  * Two primary render branches based on `loadStatus`:
  *   - `absent`  → first-run wizard — full `<CompanyForm>` plus an
- *                 "Import from JSON" CTA.
+ *                 "Import from backup file" CTA.
  *   - `error`   → error card with **Retry** + **Reset and start over**
  *                 (the only un-wedge path for a corrupt `company.json`).
  *
@@ -23,12 +22,11 @@ import type { CompanyProfile } from '../../../preload/index.d'
  * automatically after the first-run form is saved. To edit the profile,
  * returning users go via the sidebar → Company Profile page.
  *
- * The card uses the brand wordmark + a single short subtitle so the
- * gate looks consistent across first-run wizard / error states.
+ * Visually mirrors `<ModelSelector>`: same TealBar + Wordmark header,
+ * same off-white card width, same decorative blocks in the top-right.
+ * The two wizard pages should feel like siblings — first you tell us
+ * about your company, then you pick a model.
  */
-
-/** Short subtitle shown under the wordmark on the first-run wizard card. */
-const GATE_SUBTITLE = 'Company details used to default payroll amounts and on-ledger settlement.'
 
 interface CompanyGateProps {
   /** Called when the user clicks "Continue to App" on a saved profile. */
@@ -76,71 +74,78 @@ export default function CompanyGate({ onContinue }: CompanyGateProps) {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Soft decorative halos — match the Dashboard / LoadingScreen vibe */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="absolute -top-32 -right-32 w-96 h-96 rounded-full opacity-20"
-          style={{
-            background: 'radial-gradient(closest-side, rgba(62,196,192,0.55), transparent)'
-          }}
-        />
-        <div
-          className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full opacity-15"
-          style={{
-            background: 'radial-gradient(closest-side, rgba(26,26,232,0.55), transparent)'
-          }}
-        />
-      </div>
+    <div className="min-h-screen bg-white flex items-center justify-start pl-14 relative overflow-hidden font-sans">
+      {/* Decorative blocks — mirror the ModelSelector exactly so the
+          two wizard pages feel like siblings. */}
+      <div className="absolute top-0 right-[180px] w-[200px] h-[160px] bg-brand-teal z-[1]" />
+      <div className="absolute top-0 right-0 w-[180px] h-[80px] bg-brand-blue z-[3]" />
+      <div className="absolute top-[80px] right-0 w-[320px] h-[240px] bg-brand-blue z-[2]" />
+      <div className="absolute bottom-0 left-0 w-1 h-[100px] bg-brand-teal z-[5]" />
 
-      <div className="relative flex items-center justify-center min-h-screen px-4 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 12, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.22, ease: 'easeOut' }}
-          className="w-full max-w-2xl"
-        >
-          {/* ── Error state ─────────────────────────────────────── */}
-          {loadStatus === 'error' && (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="relative z-[10] bg-white border border-brand-border w-full max-w-2xl overflow-hidden"
+      >
+        <TealBar />
+
+        <div className="px-8 pt-7 pb-8">
+          {/* Header — same chrome as the model picker */}
+          <div className="flex items-center justify-between mb-7">
+            <Wordmark />
+            <span className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase">
+              Employer Setup
+            </span>
+          </div>
+
+          {loadStatus === 'error' ? (
             <ErrorCard
               message={error ?? 'Could not read company profile'}
               onRetry={refresh}
               onReset={handleReset}
               resetting={resetting}
             />
-          )}
-
-          {/* ── Saving transient ───────────────────────────────── */}
-          {loadStatus === 'saving' && !profile && (
+          ) : loadStatus === 'saving' && !profile ? (
             <Centered>
               <Loader2 size={20} className="animate-spin text-brand-muted" />
-              <p className="font-sans text-sm text-brand-muted m-0 mt-3">Saving company profile…</p>
+              <p className="font-sans text-sm text-brand-muted m-0 mt-3">
+                Saving company profile…
+              </p>
             </Centered>
-          )}
+          ) : loadStatus === 'absent' ? (
+            <>
+              <h1 className="font-sans text-2xl font-light text-brand-navy mb-2 leading-tight m-0">
+                Set up your <strong className="font-medium">company</strong>
+              </h1>
+              <p className="font-sans text-xs text-brand-muted mb-5 mt-0 leading-relaxed">
+                Tell us a few basics so payroll has sensible defaults. You can edit any
+                of this later from the Company Profile page.
+              </p>
 
-          {/* ── Absent: first-run wizard ──────────────────────── */}
-          {loadStatus === 'absent' && (
-            <div className="bg-white border border-brand-border rounded-md p-6 sm:p-8 shadow-sm">
-              <GateHeader subtitle={GATE_SUBTITLE} />
+              <CompanyForm
+                submitLabel="Save & Next"
+                submitting={loadStatus === 'saving'}
+                onSubmit={handleSubmit}
+              />
 
-              <CompanyForm submitLabel="Continue to App" onSubmit={handleSubmit} />
-
-              <div className="border-t border-brand-border mt-6 pt-4">
+              <div className="mt-5 pt-4 border-t border-brand-border">
                 <button
                   type="button"
                   onClick={() => setImportOpen(true)}
-                  className="px-4 py-2 bg-white text-brand-navy border border-brand-border rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-brand-light"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white border border-brand-blue text-brand-blue rounded-md font-mono text-[11px] font-bold tracking-wide2 uppercase cursor-pointer hover:bg-[#f7f7fc]"
                 >
-                  Import from JSON
+                  <Upload size={12} />
+                  Import from backup file
                 </button>
-                <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted mt-2 m-0">
-                  Already exported a company profile? Load it here.
+                <p className="font-sans text-[11px] text-brand-muted mt-2 m-0 leading-relaxed">
+                  Already exported a company profile? Load it to skip the setup.
                 </p>
               </div>
-            </div>
-          )}
-        </motion.div>
-      </div>
+            </>
+          ) : null}
+        </div>
+      </motion.div>
 
       <CompanyImportModal
         open={importOpen}
@@ -162,24 +167,8 @@ export default function CompanyGate({ onContinue }: CompanyGateProps) {
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-brand-border rounded-md p-8 shadow-sm text-center">
-      {children}
-    </div>
-  )
-}
-
-/** Wordmark + subtitle shown at the top of the gate card. */
-function GateHeader({ subtitle }: { subtitle: string }) {
-  return (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 leading-none mb-3">
-        <Logomark size={24} />
-        <p className="font-mono font-bold text-lg tracking-wide text-brand-navy m-0 leading-none">
-          <span className="text-brand-navy">{WORDMARK.prefix}</span>
-          <span className="text-brand-blue">{WORDMARK.suffix}</span>
-        </p>
-      </div>
-      <p className="font-sans text-sm text-brand-muted m-0 leading-relaxed">{subtitle}</p>
+    <div className="text-center py-10">
+      <span className="font-mono text-xs text-brand-muted tracking-wide2">{children}</span>
     </div>
   )
 }
@@ -196,31 +185,26 @@ function ErrorCard({
   resetting: boolean
 }) {
   return (
-    <div className="bg-white border border-brand-border rounded-md p-6 sm:p-8 shadow-sm">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-md bg-brand-errBg text-brand-err flex items-center justify-center">
-          <RefreshCw size={18} />
-        </div>
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-err m-0">
-            Company profile error
-          </p>
-          <h1 className="font-sans text-xl font-medium text-brand-navy m-0 mt-0.5">
-            Couldn't read your company profile
-          </h1>
-        </div>
-      </div>
-      <p className="font-sans text-sm text-brand-muted m-0 mb-6 leading-relaxed">
-        The on-disk <code className="font-mono text-xs">company.json</code> file looks corrupt or
-        unreadable. You can retry the read, or reset and start over.
+    <div>
+      <p className="font-mono text-[11px] tracking-wider2 text-brand-err uppercase mb-2 m-0">
+        Company profile error
       </p>
-      <div className="p-3 bg-brand-errBg border border-brand-errBorder rounded-md mb-6">
-        <p className="font-mono text-[10px] font-bold tracking-wider2 uppercase text-brand-err m-0 mb-1">
+      <h1 className="font-sans text-2xl font-light text-brand-navy mb-3 leading-tight m-0">
+        Couldn't read your profile
+      </h1>
+      <p className="font-sans text-xs text-brand-muted mb-4 leading-relaxed">
+        The on-disk <code className="font-mono text-[11px]">company.json</code> looks
+        corrupt. You can retry the read, or reset and start over.
+      </p>
+      <div className="py-2.5 px-3 bg-brand-errBg border border-brand-errBorder rounded-md mb-4">
+        <p className="font-mono text-[10px] text-brand-err uppercase tracking-wide2 m-0 mb-1">
           Error
         </p>
-        <p className="font-sans text-xs text-brand-errDark m-0 whitespace-pre-wrap">{message}</p>
+        <p className="font-sans text-xs text-brand-errDark m-0 whitespace-pre-wrap">
+          {message}
+        </p>
       </div>
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={onReset}

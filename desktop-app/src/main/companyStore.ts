@@ -170,6 +170,25 @@ export class CompanyStore {
     if (p.settlementCurrency !== 'CC') {
       throw new Error(`Settlement currency must be "CC" (got: ${String(p.settlementCurrency)})`)
     }
+    // fiscalYearStart — required MM month string (e.g. "01" = January,
+    // "04" = April-start). Falls back to "01" if missing for backward
+    // compatibility with profiles written before this field existed.
+    let fiscalYearStart = '01'
+    if (typeof p.fiscalYearStart === 'string' && p.fiscalYearStart.trim().length > 0) {
+      const v = p.fiscalYearStart.trim()
+      // New shape: MM. Legacy shape: MM-DD (still accepted, normalised to MM).
+      const mm = /^(0[1-9]|1[0-2])$/.test(v)
+        ? v
+        : /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(v)
+          ? v.split('-')[0]
+          : null
+      if (!mm) {
+        throw new Error(
+          `Fiscal year start must be a month string MM (got: "${v}")`
+        )
+      }
+      fiscalYearStart = mm
+    }
     // createdAt / updatedAt are optional on input (save() will stamp them).
     const createdAt = typeof p.createdAt === 'string' ? p.createdAt : ''
     const updatedAt = typeof p.updatedAt === 'string' ? p.updatedAt : ''
@@ -179,6 +198,7 @@ export class CompanyStore {
       baseCurrency,
       legalEntityType,
       settlementCurrency: 'CC',
+      fiscalYearStart,
       createdAt,
       updatedAt
     }
