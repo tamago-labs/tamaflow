@@ -30,8 +30,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import FlowBuilder from '../flow/FlowBuilder'
+import OutcomesPreviewModal from '../flow/OutcomesPreviewModal'
 import type { CanvasCard as RendererCanvasCard, CanvasState, Connection as RendererConnection } from '../flow/types'
 import { useFlows } from '../context/FlowContext'
+import { useEmployees } from '../context/EmployeeContext'
+import { useCompany } from '../context/CompanyContext'
 
 /**
  * Map the IPC `FlowFile` payload (preload's `CanvasCard` / `Connection`)
@@ -83,6 +86,8 @@ export default function FlowDetail() {
   const { id = '' } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { flows, get, save, remove } = useFlows()
+  const { employees } = useEmployees()
+  const { profile: companyProfile } = useCompany()
 
   // ─── Load state ────────────────────────────────────────────────
   const [loadStatus, setLoadStatus] = useState<LoadStatus>('loading')
@@ -302,6 +307,13 @@ export default function FlowDetail() {
     }
   }, [deleting, id, navigate, remove])
 
+  // ─── Preview outcomes modal (Phase 3) ───────────────────────────
+  // Opens a centered modal that walks every Payee card on the canvas
+  // and shows the resolved gross / withholding / SS / CC amount before
+  // the user submits. Uses the same `enumerateOutcomes` module the
+  // worker will use in Phase 4 so the preview matches reality.
+  const [previewOpen, setPreviewOpen] = useState(false)
+
   // ─── Render ────────────────────────────────────────────────────
   if (loadStatus === 'loading') {
     return (
@@ -436,6 +448,14 @@ export default function FlowDetail() {
         )}
         <button
           type="button"
+          onClick={() => setPreviewOpen(true)}
+          className="py-1.5 px-3 bg-white/90 text-brand-blue border border-brand-border rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-white backdrop-blur"
+          style={{ boxShadow: '0 2px 8px rgba(10,10,92,0.06)' }}
+        >
+          Preview Outcomes
+        </button>
+        <button
+          type="button"
           onClick={handleManualSave}
           disabled={saveStatus === 'saving'}
           className="py-1.5 px-3 bg-brand-blue text-white border-0 rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed backdrop-blur"
@@ -453,6 +473,18 @@ export default function FlowDetail() {
           {deleting ? 'Deleting…' : 'Delete'}
         </button>
       </div>
+
+      {/* Pre-submit preview modal — uses the shared enumerateOutcomes
+          + computeOutcome modules so the table matches what the worker
+          will eventually send (Phase 4). */}
+      <OutcomesPreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        flowId={id}
+        canvas={canvas}
+        employees={employees}
+        companyProfile={companyProfile}
+      />
 
       {!nameReady && (
         <span className="sr-only">Loading flow name…</span>

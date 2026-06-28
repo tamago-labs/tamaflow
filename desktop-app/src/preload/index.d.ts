@@ -445,6 +445,68 @@ export interface FlowFile {
   flow: FlowDefinition
 }
 
+/**
+ * A payroll outcome — one per Payee card on the canvas. Phase 3
+ * enumerates these for the pre-submit preview modal. Phase 4 will
+ * persist each one at `<userData>/profiles/<slug>/flows/<flowId>/outcomes/<id>.json`
+ * and walk them through the worker.
+ *
+ * The preview-only fields (`withholdingAmount`, `socialSecurityAmount`,
+ * `fxRate`, `amountCC`) are computed up-front by `computeOutcome` so the
+ * renderer can show the user exactly what will hit Canton before sign-off.
+ */
+export type FlowOutcomeStatus =
+  | 'pending'
+  | 'computing'
+  | 'withholding'
+  | 'social_security'
+  | 'converting'
+  | 'signing'
+  | 'sending'
+  | 'settled'
+  | 'failed'
+  | 'memoized'
+
+export interface FlowOutcome {
+  id: string
+  flowId: string
+  employeeId: string
+  payeePlacementId: string
+  transferPlacementId: string
+  transferVariant: 'contractor' | 'employee'
+  status: FlowOutcomeStatus
+  error?: string
+
+  // Computed per outcome (pre-execution):
+  grossPay: string
+  payCurrency: 'JPY' | 'THB' | 'USD' | 'EUR'
+  jurisdiction: 'inside_jurisdiction' | 'outside_jurisdiction'
+
+  // Withholding applied (Employee variant + inside only):
+  withholdingAmount?: string
+  withholdingRate?: string
+
+  // Social security applied (Employee variant + inside only):
+  socialSecurityAmount?: string
+  socialSecurityRate?: string
+
+  // FX applied (when pay currency !== CC):
+  fxRate?: string
+  /** CC amount (10dp decimal string) — what actually hits the ledger. */
+  amountCC: string
+  recipientPartyId: string
+
+  // On-ledger result (Phase 4):
+  txHash?: string
+  ledgerEffectiveAt?: string
+
+  // AI memo (Phase 5):
+  memoText?: string
+
+  startedAt?: string
+  completedAt?: string
+}
+
 /** Summary row shape used by the Active Flows list (avoid sending the
  *  full card list to the renderer just to render a table). */
 export interface FlowSummary {
@@ -482,6 +544,35 @@ export interface CanvasCard {
   payeeFields?: Record<string, unknown>
   contractorTransferFields?: Record<string, unknown>
   employeeTransferFields?: Record<string, unknown>
+}
+
+/**
+ * Typed Transfer card field shapes. The renderer stores these loosely
+ * inside `CanvasCard.contractorTransferFields` / `employeeTransferFields`
+ * for forward-compat; the shared compute layer (`shared/computeOutcome.ts`,
+ * `shared/flowPaths.ts`) reads them through these typed mirrors so the
+ * per-outcome math has a clean input surface.
+ *
+ * Defined here (preload) so both the renderer and the main-process
+ * worker can import from the same source — the renderer adds render-only
+ * extensions in `src/renderer/src/flow/types.ts`.
+ */
+export type TransferVariant = 'contractor' | 'employee'
+
+export interface ContractorTransferFields {
+  variant: 'contractor'
+  /** CC per 1 unit of payCurrency. Required when payCurrency !== 'CC'. */
+  fxRate?: string
+}
+
+export interface EmployeeTransferFields {
+  variant: 'employee'
+  /** Decimal string, e.g. "0.22" for 22%. */
+  withholdingRate: string
+  /** Decimal string, e.g. "0.05" for 5%. Optional, defaults to 0. */
+  socialSecurityRate?: string
+  /** CC per 1 unit of payCurrency. Required when payCurrency !== 'CC'. */
+  fxRate?: string
 }
 
 export interface Connection {
