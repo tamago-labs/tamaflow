@@ -26,9 +26,18 @@
 import type {
   ContractorTransferFields,
   EmployeeTransferFields,
-  EmploymentLocation,
   TransferVariant,
 } from '../preload/index.d'
+
+/**
+ * Where the employee sits relative to the company's home jurisdiction.
+ * Derived at runtime from `employee.country === company.country` (see
+ * `shared/flowPaths.ts`) — not stored on the employee. The two values
+ * map directly to the cross-border rule branch:
+ *   - inside → Employee Transfer applies withhold + SS
+ *   - outside → Employee Transfer skips withhold + SS
+ */
+type JurisdictionContext = 'inside_jurisdiction' | 'outside_jurisdiction'
 
 /** CC has 10 decimal places — keep this in sync with the worker. */
 export const CC_DECIMALS = 10
@@ -46,7 +55,7 @@ export interface ComputeInput {
   /** Decimal string in pay currency (e.g. "5000.00"). */
   grossPay: string
   payCurrency: PayCurrency
-  jurisdiction: EmploymentLocation
+  jurisdiction: JurisdictionContext
   /** Required when payCurrency !== 'CC'. CC per 1 unit of payCurrency. */
   fxRate?: string
   /** Employee variant only — e.g. "0.22" for 22%. */

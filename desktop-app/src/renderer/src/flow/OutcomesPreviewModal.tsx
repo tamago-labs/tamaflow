@@ -73,16 +73,21 @@ export default function OutcomesPreviewModal({
           />
           <motion.div
             key="outcomes-card"
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
+            // The -50% / -50% translation lives on framer-motion's own
+            // x/y values, NOT on the inline `transform`. Reason:
+            // framer-motion animates `scale` by writing its own transform
+            // string — if `transform: translate(-50%, -50%)` is also set
+            // inline, the scale animation wins and the modal ends up
+            // anchored at its top-left corner instead of centered.
+            initial={{ opacity: 0, scale: 0.96, x: '-50%', y: '-50%' }}
+            animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
+            exit={{ opacity: 0, scale: 0.96, x: '-50%', y: '-50%' }}
             transition={{ duration: 0.15 }}
             onClick={(e) => e.stopPropagation()}
             style={{
               position: 'fixed',
               top: '50%',
               left: '50%',
-              transform: 'translate(-50%, -50%)',
               width: 920,
               maxHeight: '85vh',
               background: '#fff',
@@ -202,7 +207,7 @@ export default function OutcomesPreviewModal({
                   >
                     <th style={thStyle}>Payee</th>
                     <th style={thStyle}>Type</th>
-                    <th style={thStyle}>Location</th>
+                    <th style={thStyle}>Country</th>
                     <th style={thRightStyle}>Gross</th>
                     <th style={thRightStyle}>Withhold</th>
                     <th style={thRightStyle}>SS</th>
@@ -265,7 +270,7 @@ export default function OutcomesPreviewModal({
                         </td>
                         <td style={tdStyle}>
                           <span style={{ fontSize: 11, color: NAVY }}>
-                            {o.jurisdiction === 'inside_jurisdiction' ? 'Inside' : 'Outside'}
+                            {employee?.country ?? '—'}
                           </span>
                         </td>
                         <td style={tdRightStyle}>

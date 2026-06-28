@@ -13,13 +13,31 @@ export type SimTone = 'blue' | 'teal' | 'navy' | 'muted'
 // ─── Per-category fields ─────────────────────────────────────────
 
 export interface SourceFields {
-  walletRef: 'treasury'
+  /**
+   * Canton party id of the wallet funds originate from. Snapshotted from
+   * `useWallet().status.partyId` at the moment the card is created so the
+   * flow stays runnable even if the user later destroys and recreates
+   * the wallet (the worker will still execute against the recorded id).
+   * The card's display label lives on `CanvasCard.title` (user-editable;
+   * FlowBuilder seeds it with the shortPartyId of the snapshot so the
+   * wallet identity is visible at-a-glance) — renaming the card never
+   * touches the party id.
+   */
+  partyId: string
+  /** Decimal string. Worker aborts the run if treasury CC balance < this. */
   minBalanceCC?: string
+  /** Baked into every outcome's transfer memo. */
   memo?: string
 }
 
 export interface PayeeFields {
-  /** FK into employees.json — set when the user picks an employee. */
+  /**
+   * FK into the employee roster. Set when the card is created from the
+   * palette (one tile per employee) and never rebound at edit time — the
+   * renderer resolves this to a full Employee record (displayName,
+   * cantonPartyId, jurisdiction, etc.) at render time so stale snapshots
+   * can't survive an employee being renamed or removed.
+   */
   employeeId: string
   note?: string
 }

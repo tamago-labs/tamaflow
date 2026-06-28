@@ -120,10 +120,27 @@ function resolveGrossPay(
 }
 
 function resolvePayCurrency(employee: Employee): PayCurrency | null {
+  // `payCurrency` is required on every employee — guaranteed non-null
+  // once the row is validated by `main/employeeStore.ts`. The legacy
+  // null-guard here is kept as a defensive fallback.
   if (employee.payCurrency) return employee.payCurrency
-  // Inside-jurisdiction employees inherit from the company profile.
-  if (employee.employmentLocation === 'inside_jurisdiction') return null
   return null
+}
+
+/**
+ * Whether the employee is paid under the company's home jurisdiction.
+ * Derived from country comparison — there's no longer a stored flag on
+ * the employee. When `companyProfile` is null we fall back to
+ * `outside_jurisdiction` (no company → no home jurisdiction to match).
+ */
+function resolveJurisdiction(
+  employee: Employee,
+  companyProfile: CompanyProfile | null
+): 'inside_jurisdiction' | 'outside_jurisdiction' {
+  if (!companyProfile) return 'outside_jurisdiction'
+  return employee.country === companyProfile.country
+    ? 'inside_jurisdiction'
+    : 'outside_jurisdiction'
 }
 
 /** Tolerant decimal parser used only for the gross-pay resolution
@@ -268,7 +285,7 @@ export function enumerateOutcomes(input: EnumerateInput): EnumerationResult {
       transferVariant: transfer.variant,
       grossPay: gross.value,
       payCurrency: gross.payCurrency,
-      jurisdiction: employee.employmentLocation,
+      jurisdiction: resolveJurisdiction(employee, input.companyProfile),
       fxRate:
         transfer.variant === 'contractor'
           ? transfer.fields.fxRate
@@ -308,7 +325,7 @@ export function enumerateOutcomes(input: EnumerateInput): EnumerationResult {
       status: 'pending' satisfies FlowOutcomeStatus,
       grossPay: computed.grossPay,
       payCurrency: computed.payCurrency,
-      jurisdiction: employee.employmentLocation,
+      jurisdiction: resolveJurisdiction(employee, input.companyProfile),
       amountCC: computed.amountCC,
       recipientPartyId: employee.cantonPartyId ?? '',
       ...(computed.withholdingAmount !== undefined && {
