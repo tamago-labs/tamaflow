@@ -19,6 +19,7 @@ import {
   TONE_COLORS,
   cardHasInput,
   cardHasOutput,
+  shortPartyId,
 } from '../data/flowCards'
 import type {
   CanvasCard as CanvasCardType,
@@ -28,6 +29,7 @@ import type {
   PayeeFields,
   SourceFields,
 } from './types'
+import type { Employee } from '../../../preload/index.d'
 import EditForm from './EditForm'
 
 export type PortSide = 'in' | 'out'
@@ -37,6 +39,13 @@ interface CanvasCardProps {
   selected: boolean
   isConnectSource: boolean
   editing: boolean
+  /** Roster used to resolve a Payee card's employeeId → Employee. */
+  employees: Employee[]
+  /**
+   * Whether the desktop wallet is currently loaded. Drives the Source
+   * card's "no wallet set up" warning when the card has no snapshot.
+   */
+  walletReady: boolean
   onSelect: (placementId: string) => void
   onDelete: (placementId: string) => void
   onToggleCollapse: (placementId: string) => void
@@ -56,6 +65,8 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
   selected,
   isConnectSource,
   editing,
+  employees,
+  walletReady,
   onSelect,
   onDelete,
   onToggleCollapse,
@@ -74,7 +85,7 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
   // on mount/edit-entry so the user can see and tweak them.
   const [draftTitle, setDraftTitle] = useState(card.title)
   const [draftSource, setDraftSource] = useState<SourceFields>(
-    card.sourceFields ?? { walletRef: 'treasury' },
+    card.sourceFields ?? { partyId: '' },
   )
   const [draftPayee, setDraftPayee] = useState<PayeeFields>(
     card.payeeFields ?? { employeeId: '' },
@@ -94,7 +105,7 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
   useEffect(() => {
     if (editing) {
       setDraftTitle(card.title)
-      setDraftSource(card.sourceFields ?? { walletRef: 'treasury' })
+      setDraftSource(card.sourceFields ?? { partyId: '' })
       setDraftPayee(card.payeeFields ?? { employeeId: '' })
       setDraftContractor(card.contractorTransferFields ?? { variant: 'contractor', fxRate: '' })
       setDraftEmployee(card.employeeTransferFields ?? {
@@ -183,29 +194,71 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
     onSelect(card.placementId)
   }
 
-  // The summary line under the title — different per category.
-  const summaryLine = (() => {
+  // The summary line under the title — different per category. For
+  // Source it's the snapshot party id (truncated) or a "no wallet" hint
+  // when the snapshot is empty. For Payee it's the resolved employee
+  // record (displayName + truncated partyId + jurisdiction) — red when
+  // the FK points to a missing employee.
+  const { summaryLine, summaryTone } = (() => {
     if (card.category === 'source') {
-      return card.sourceFields?.memo ?? 'Treasury wallet'
+      const partyId = card.sourceFields?.partyId?.trim() ?? ''
+      if (!partyId) {
+        return {
+          summaryLine: walletReady
+            ? 'No wallet set on this card'
+            : 'No wallet set up — create one in Assets',
+          summaryTone: 'danger' as const,
+        }
+      }
+      // Title already shows the wallet identity (shortPartyId), so use
+      // the summary line for the transfer memo — that's the next most
+      // useful piece of context at-a-glance.
+      const memo = card.sourceFields?.memo?.trim() ?? ''
+      return { summaryLine: memo, summaryTone: 'muted' as const }
     }
     if (card.category === 'payee') {
-      return card.payeeFields?.employeeId
-        ? `Employee: ${card.payeeFields.employeeId}`
-        : 'No employee selected'
+      const employeeId = card.payeeFields?.employeeId?.trim() ?? ''
+      if (!employeeId) {
+        return {
+          summaryLine: 'No employee selected — double-click to bind',
+          summaryTone: 'danger' as const,
+        }
+      }
+      const emp = employees.find((e) => e.id === employeeId)
+      if (!emp) {
+        return {
+          summaryLine: `Employee not found (id: ${employeeId})`,
+          summaryTone: 'danger' as const,
+        }
+      }
+      const party = emp.cantonPartyId ? shortPartyId(emp.cantonPartyId) : 'no party id'
+      const countryLabel = emp.country ?? '?'
+      return {
+        summaryLine: `${party} · ${countryLabel}`,
+        summaryTone: 'muted' as const,
+      }
     }
     if (card.category === 'transfer') {
       if (card.transferVariant === 'contractor') {
-        return card.contractorTransferFields?.fxRate
-          ? `FX: ${card.contractorTransferFields.fxRate} CC per unit`
-          : 'No FX rate set'
+        return {
+          summaryLine: card.contractorTransferFields?.fxRate
+            ? `FX: ${card.contractorTransferFields.fxRate} CC per unit`
+            : 'No FX rate set',
+          summaryTone: 'muted' as const,
+        }
       }
       if (card.transferVariant === 'employee') {
         const w = card.employeeTransferFields?.withholdingRate
-        return w ? `Withhold: ${(parseFloat(w) * 100).toFixed(1)}%` : 'No withholding rate'
+        return {
+          summaryLine: w ? `Withhold: ${(parseFloat(w) * 100).toFixed(1)}%` : 'No withholding rate',
+          summaryTone: 'muted' as const,
+        }
       }
     }
-    return ''
+    return { summaryLine: '', summaryTone: 'muted' as const }
   })()
+
+  const summaryColor = summaryTone === 'danger' ? '#c83030' : MUTED
 
   return (
     <div
@@ -224,6 +277,8 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
           payee={draftPayee}
           contractor={draftContractor}
           employee={draftEmployee}
+          employees={employees}
+          walletReady={walletReady}
           onTitleChange={setDraftTitle}
           onSourceChange={setDraftSource}
           onPayeeChange={setDraftPayee}
@@ -312,7 +367,7 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
                     style={{
                       fontFamily: monoFont,
                       fontSize: 10,
-                      color: MUTED,
+                      color: summaryColor,
                       marginTop: 3,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',

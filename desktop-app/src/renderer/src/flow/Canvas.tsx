@@ -13,6 +13,7 @@ import { BLUE, BORDER, LIGHT_BLUE, MUTED, monoFont } from './theme'
 import CanvasCard, { type PortSide } from './CanvasCard'
 import CanvasLines from './CanvasLines'
 import type { CanvasCardEdit, CanvasState } from './types'
+import type { Employee } from '../../../preload/index.d'
 
 interface CanvasProps {
   state: CanvasState
@@ -21,6 +22,10 @@ interface CanvasProps {
   connectFrom: string | null
   /** placementId of the card currently in inline-edit mode, if any. */
   editingId: string | null
+  /** Roster forwarded to CanvasCard for Payee employeeId → Employee lookup. */
+  employees: Employee[]
+  /** Whether the desktop wallet is loaded. Drives Source card warnings. */
+  walletReady: boolean
   onSelectCard: (id: string | null) => void
   onDeleteCard: (id: string) => void
   onToggleCollapse: (id: string) => void
@@ -41,6 +46,8 @@ export default function Canvas({
   selectedId,
   connectFrom,
   editingId,
+  employees,
+  walletReady,
   onSelectCard,
   onDeleteCard,
   onToggleCollapse,
@@ -207,6 +214,8 @@ export default function Canvas({
             selected={selectedId === card.placementId}
             isConnectSource={connectFrom === card.placementId}
             editing={editingId === card.placementId}
+            employees={employees}
+            walletReady={walletReady}
             onSelect={onSelectCard}
             onDelete={onDeleteCard}
             onToggleCollapse={onToggleCollapse}

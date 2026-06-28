@@ -19,6 +19,7 @@ import {
 import {
   canConnect,
   describeConnectionRule,
+  shortPartyId,
   toPlacedCard,
 } from '../data/flowCards'
 import type {
@@ -29,6 +30,8 @@ import type {
   SimCardTemplate,
 } from './types'
 import type { PortSide } from './CanvasCard'
+import { useEmployees } from '../context/EmployeeContext'
+import { useWallet } from '../context/WalletContext'
 
 export interface FlowBuilderProps {
   /** Canonical canvas state — owned by the parent. */
@@ -62,6 +65,12 @@ export default function FlowBuilder({
   onRequestPreview,
   saveBadge,
 }: FlowBuilderProps) {
+  const { employees } = useEmployees()
+  const { status: walletStatus, loadStatus: walletLoadStatus } = useWallet()
+  const walletReady = walletLoadStatus === 'present' && !!walletStatus?.partyId
+  const walletPartyId = walletStatus?.partyId ?? ''
+  const hasEmployees = employees.length > 0
+
   const [addOpen, setAddOpen] = useState(false)
   const [connectFrom, setConnectFrom] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -103,8 +112,32 @@ export default function FlowBuilder({
     // back-to-back adds don't stack perfectly.
     const jitterX = Math.round((Math.random() - 0.5) * 80)
     const jitterY = Math.round((Math.random() - 0.5) * 60)
+    const placed = toPlacedCard(template, id)
+    // Snapshot the current wallet party id into the Source card's
+    // sourceFields at the moment of creation. The palette seed leaves
+    // partyId empty so this is the one place the live wallet state
+    // gets baked into the card.
+    const sourceFields =
+      placed.category === 'source'
+        ? {
+            ...(placed.sourceFields ?? { partyId: '' }),
+            partyId: walletPartyId,
+          }
+        : placed.sourceFields
+    // Source title defaults to the wallet identity (shortPartyId) so the
+    // card immediately shows which wallet funds originate from instead
+    // of a "Treasury Wallet" placeholder. User can rename freely. Payee
+    // titles already come from the employee displayName via the palette.
+    const title =
+      placed.category === 'source'
+        ? walletPartyId
+          ? shortPartyId(walletPartyId)
+          : 'Source'
+        : placed.title
     const newCard: CanvasCard = {
-      ...toPlacedCard(template, id),
+      ...placed,
+      title,
+      ...(sourceFields ? { sourceFields } : {}),
       x: 360 + jitterX,
       y: 220 + jitterY,
       collapsed: false,
@@ -112,7 +145,7 @@ export default function FlowBuilder({
     onCanvasChange({ ...canvas, cards: [...canvas.cards, newCard] })
     setSelectedId(id)
     setAddOpen(false)
-  }, [canvas, onCanvasChange])
+  }, [canvas, onCanvasChange, walletPartyId])
 
   function handleEditCard(id: string, updates: CanvasCardEdit) {
     onCanvasChange({
@@ -228,6 +261,8 @@ export default function FlowBuilder({
           selectedId={selectedId}
           connectFrom={connectFrom}
           editingId={editingId}
+          employees={employees}
+          walletReady={walletReady}
           onSelectCard={handleSelectCard}
           onDeleteCard={handleDeleteCard}
           onToggleCollapse={handleToggleCollapse}
@@ -250,6 +285,10 @@ export default function FlowBuilder({
 
       <AddCardPopover
         open={addOpen}
+        hasWallet={walletReady}
+        walletPartyId={walletPartyId}
+        hasEmployees={hasEmployees}
+        employees={employees}
         onPick={handleAddTemplate}
         onClose={() => setAddOpen(false)}
       />
@@ -310,10 +349,14 @@ const BADGE_COLORS: Record<
   'idle' | 'saving' | 'saved' | 'error',
   { bg: string; fg: string; border: string }
 > = {
-  idle:   { bg: '#f4f4fa', fg: MUTED,  border: '#e0e0f0' },
-  saving: { bg: 'rgba(20,90,200,0.10)', fg: BLUE,  border: BLUE },
-  saved:  { bg: 'rgba(40,160,90,0.10)',  fg: '#1a8c4a', border: '#1a8c4a' },
-  error:  { bg: 'rgba(200,48,48,0.10)',  fg: '#c83030', border: '#c83030' },
+  // White background matches the bottom-right cluster buttons (Save,
+  // Preview Outcomes, Delete, Active Flows). Saving keeps a blue text
+  // accent so the user can still see progress at a glance; idle/saved
+  // use muted text since they're "nothing happening" states.
+  idle:   { bg: 'rgba(255,255,255,0.92)', fg: MUTED,    border: '#e0e0f0' },
+  saving: { bg: 'rgba(255,255,255,0.92)', fg: BLUE,     border: '#cfd2ec' },
+  saved:  { bg: 'rgba(255,255,255,0.92)', fg: MUTED,    border: '#e0e0f0' },
+  error:  { bg: 'rgba(200,48,48,0.10)',   fg: '#c83030', border: '#c83030' },
 }
 
 function SaveBadge({

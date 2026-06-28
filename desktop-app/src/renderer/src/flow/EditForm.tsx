@@ -26,6 +26,7 @@ import type {
   PayeeFields,
   SourceFields,
 } from './types'
+import type { Employee } from '../../../preload/index.d'
 
 interface EditFormProps {
   card: CanvasCardType
@@ -34,6 +35,10 @@ interface EditFormProps {
   payee: PayeeFields
   contractor: ContractorTransferFields
   employee: EmployeeTransferFields
+  /** Roster used by the Payee dropdown to resolve employeeId → Employee. */
+  employees: Employee[]
+  /** Drives the Source section's "no wallet set up" warning. */
+  walletReady: boolean
   onTitleChange: (v: string) => void
   onSourceChange: (v: SourceFields) => void
   onPayeeChange: (v: PayeeFields) => void
@@ -151,6 +156,8 @@ export default function EditForm({
   payee,
   contractor,
   employee,
+  employees,
+  walletReady,
   onTitleChange,
   onSourceChange,
   onPayeeChange,
@@ -207,6 +214,7 @@ export default function EditForm({
       {card.category === 'source' && (
         <SourceFields
           source={source}
+          walletReady={walletReady}
           onChange={onSourceChange}
           onKeyDown={onKeyDown}
         />
@@ -215,6 +223,7 @@ export default function EditForm({
       {card.category === 'payee' && (
         <PayeeFieldsForm
           payee={payee}
+          employees={employees}
           onChange={onPayeeChange}
           onKeyDown={onKeyDown}
         />
@@ -252,23 +261,53 @@ export default function EditForm({
 
 function SourceFields({
   source,
+  walletReady,
   onChange,
   onKeyDown,
 }: {
   source: SourceFields
+  walletReady: boolean
   onChange: (v: SourceFields) => void
   onKeyDown: (e: React.KeyboardEvent) => void
 }) {
+  const hasPartyId = source.partyId.trim().length > 0
   return (
     <>
-      <Field label="Wallet">
+      <Field label="Wallet (Canton party id)" hint="snapshotted at creation">
         <input
           type="text"
-          value="Treasury (hardcoded)"
-          disabled
-          style={{ ...textInputStyle, color: MUTED, background: '#f7f7fc' }}
+          value={source.partyId}
+          readOnly
+          tabIndex={-1}
+          style={{
+            ...textInputStyle,
+            color: hasPartyId ? NAVY : '#c83030',
+            background: '#f7f7fc',
+            fontFamily: monoFont,
+            fontSize: 10,
+          }}
+          placeholder={walletReady ? 'No wallet selected' : 'No wallet set up yet'}
         />
       </Field>
+      {!walletReady && (
+        <div
+          style={{
+            fontFamily: monoFont,
+            fontSize: 9,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: '#c83030',
+            padding: '4px 6px',
+            background: 'rgba(200,48,48,0.06)',
+            borderRadius: 4,
+            border: '1px dashed #c83030',
+            lineHeight: 1.4,
+            whiteSpace: 'normal',
+          }}
+        >
+          No wallet set up. Create one in Assets before running this flow.
+        </div>
+      )}
       <Field label="Memo" hint="baked into transfer memo">
         <input
           type="text"
@@ -296,25 +335,122 @@ function SourceFields({
 
 function PayeeFieldsForm({
   payee,
+  employees,
   onChange,
   onKeyDown,
 }: {
   payee: PayeeFields
+  employees: Employee[]
   onChange: (v: PayeeFields) => void
   onKeyDown: (e: React.KeyboardEvent) => void
 }) {
+  // Payee cards are created with a specific employee already bound from
+  // the palette, so the binding is shown read-only here. To rebind, the
+  // user deletes this card and drops a new Payee tile for the other
+  // employee — this keeps "one card = one employee" invariant intact.
+  const selected = payee.employeeId
+    ? employees.find((e) => e.id === payee.employeeId) ?? null
+    : null
+  const selectedIsGhost = payee.employeeId.length > 0 && !selected
+
   return (
     <>
-      <Field label="Employee ID" hint="FK into employees.json">
-        <input
-          type="text"
-          value={payee.employeeId}
-          onChange={(e) => onChange({ ...payee, employeeId: e.target.value })}
-          onKeyDown={onKeyDown}
-          placeholder="e.g. emp-001"
-          style={textInputStyle}
-        />
-      </Field>
+      {selected ? (
+        <div
+          style={{
+            padding: '6px 8px',
+            background: '#f7f7fc',
+            border: '1px solid ' + BORDER,
+            borderRadius: 4,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: sansFont,
+              fontSize: 11,
+              fontWeight: 600,
+              color: NAVY,
+              lineHeight: 1.2,
+            }}
+          >
+            {selected.displayName}
+            {selected.status !== 'active' && (
+              <span
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 8,
+                  letterSpacing: '0.12em',
+                  color: MUTED,
+                  marginLeft: 6,
+                }}
+              >
+                · {selected.status}
+              </span>
+            )}
+          </div>
+          <div
+            style={{
+              fontFamily: monoFont,
+              fontSize: 9,
+              color: MUTED,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {selected.cantonPartyId ?? '— no party id —'}
+          </div>
+          <div
+            style={{
+              fontFamily: monoFont,
+              fontSize: 9,
+              color: MUTED,
+            }}
+          >
+            {`${selected.country ?? '?'} · ${selected.payCurrency ?? '?'}`}
+          </div>
+        </div>
+      ) : selectedIsGhost ? (
+        <div
+          style={{
+            fontFamily: monoFont,
+            fontSize: 9,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: '#c83030',
+            padding: '6px 8px',
+            background: 'rgba(200,48,48,0.06)',
+            borderRadius: 4,
+            border: '1px dashed #c83030',
+            lineHeight: 1.4,
+            whiteSpace: 'normal',
+          }}
+        >
+          Employee id not found in roster — id: {payee.employeeId}
+        </div>
+      ) : (
+        <div
+          style={{
+            fontFamily: monoFont,
+            fontSize: 9,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: MUTED,
+            padding: '6px 8px',
+            background: '#f7f7fc',
+            borderRadius: 4,
+            border: '1px dashed ' + BORDER,
+            lineHeight: 1.4,
+            whiteSpace: 'normal',
+          }}
+        >
+          No employee bound to this card
+        </div>
+      )}
+
       <Field label="Note">
         <input
           type="text"

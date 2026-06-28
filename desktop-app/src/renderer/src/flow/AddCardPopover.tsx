@@ -25,12 +25,31 @@ import {
   PALETTE_CARDS,
   TRANSFER_VARIANT_LABELS,
   TONE_COLORS,
+  payeeTemplatesFor,
+  shortPartyId,
   toneForCategory,
 } from '../data/flowCards'
 import type { SimCardTemplate } from './types'
+import type { Employee } from '../../../preload/index.d'
 
 interface AddCardPopoverProps {
   open: boolean
+  /** Set to false to hide the Source tile (treasury wallet isn't set up). */
+  hasWallet: boolean
+  /**
+   * Canton party id of the loaded treasury wallet. Used to render the
+   * Source palette tile as the actual wallet identity (matches what the
+   * card will show on the canvas after placement), instead of the static
+   * "Treasury Wallet" placeholder from the catalog.
+   */
+  walletPartyId: string
+  /** Set to false to hide the Payee section (no employees in the roster). */
+  hasEmployees: boolean
+  /**
+   * Roster used to build one Payee tile per employee. Required even when
+   * `hasEmployees` is false (pass `[]`) so the prop type stays stable.
+   */
+  employees: Employee[]
   onPick: (template: SimCardTemplate) => void
   onClose: () => void
 }
@@ -43,6 +62,10 @@ const CATEGORY_DESCRIPTIONS: Record<string, string> = {
 
 export default function AddCardPopover({
   open,
+  hasWallet,
+  walletPartyId,
+  hasEmployees,
+  employees,
   onPick,
   onClose,
 }: AddCardPopoverProps) {
@@ -85,16 +108,32 @@ export default function AddCardPopover({
 
   const filteredByCategory = useMemo(() => {
     const q = query.trim().toLowerCase()
+    // Hide categories whose prerequisite isn't met (no wallet → no Source
+    // tile; no employees → no Payee tile). Users see only what they can
+    // actually use — the matching "no wallet / no employees" hints live
+    // in the categories section header so they know why.
+    const catAvailable: Record<string, boolean> = {
+      source: hasWallet,
+      payee: hasEmployees,
+      transfer: true,
+    }
     const out: Record<string, SimCardTemplate[]> = {}
     for (const cat of CATEGORY_ORDER) {
-      out[cat] = PALETTE_CARDS.filter(
-        (c) =>
-          c.category === cat &&
-          (q === '' || c.title.toLowerCase().includes(q)),
+      if (!catAvailable[cat]) {
+        out[cat] = []
+        continue
+      }
+      // Payee section is dynamic — one tile per employee. Source and
+      // Transfer come from the static palette catalog.
+      const all = cat === 'payee'
+        ? payeeTemplatesFor(employees)
+        : PALETTE_CARDS.filter((c) => c.category === cat)
+      out[cat] = all.filter(
+        (c) => q === '' || c.title.toLowerCase().includes(q),
       )
     }
     return out
-  }, [query])
+  }, [query, hasWallet, hasEmployees, employees])
 
   if (!open) return null
 
@@ -154,7 +193,17 @@ export default function AddCardPopover({
       <div style={{ overflowY: 'auto', padding: '8px 12px 16px' }}>
         {CATEGORY_ORDER.map((cat) => {
           const items = filteredByCategory[cat]
-          if (!items || items.length === 0) return null
+          // A category can be empty either because the search didn't match
+          // anything (skip the header — the "no matches" footer handles it)
+          // OR because the prerequisite isn't met (show the header + a hint
+          // so the user knows why the tile is missing).
+          const catAvailable: Record<string, boolean> = {
+            source: hasWallet,
+            payee: hasEmployees,
+            transfer: true,
+          }
+          const prereqMissing = !catAvailable[cat]
+          if ((!items || items.length === 0) && !prereqMissing) return null
           return (
             <section key={cat} style={{ marginTop: 12 }}>
               <div
@@ -189,26 +238,49 @@ export default function AddCardPopover({
                   {CATEGORY_DESCRIPTIONS[cat]}
                 </p>
               </div>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 6,
-                }}
-              >
-                {items.map((c) => (
-                  <PopoverTile
-                    key={c.id}
-                    template={c}
-                    onClick={() => onPick(c)}
-                  />
-                ))}
-              </div>
+              {prereqMissing ? (
+                <div
+                  style={{
+                    fontFamily: monoFont,
+                    fontSize: 9,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    color: '#a5a5c4',
+                    padding: '6px 8px',
+                    background: '#f7f7fc',
+                    borderRadius: 4,
+                    border: '1px dashed ' + BORDER,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {cat === 'source'
+                    ? 'Set up a wallet in Assets to add a Source card'
+                    : 'Add employees in Employees to add a Payee card'}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: 6,
+                  }}
+                >
+                  {items!.map((c) => (
+                    <PopoverTile
+                      key={c.id}
+                      template={c}
+                      employees={employees}
+                      walletPartyId={walletPartyId}
+                      onClick={() => onPick(c)}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           )
         })}
 
-        {totalMatches === 0 && (
+        {totalMatches === 0 && (hasWallet || hasEmployees) && (
           <p
             style={{
               fontFamily: sansFont,
@@ -228,9 +300,13 @@ export default function AddCardPopover({
 
 function PopoverTile({
   template,
+  employees,
+  walletPartyId,
   onClick,
 }: {
   template: SimCardTemplate
+  employees: Employee[]
+  walletPartyId: string
   onClick: () => void
 }) {
   // Use the same per-category tone the placed card will get so the tile
@@ -238,15 +314,33 @@ function PopoverTile({
   const accent = TONE_COLORS[toneForCategory(template.category)]
 
   // One-line subtitle per category — short context about what this card
-  // represents, helps the user disambiguate similar templates.
-  const subtitle =
-    template.category === 'source'
-      ? 'Treasury wallet'
-      : template.category === 'payee'
-      ? 'Bind to an employee at edit time'
-      : template.transferVariant
-      ? TRANSFER_VARIANT_LABELS[template.transferVariant] + ' payment'
-      : ''
+  // represents. For Payee, look up the bound employee to show their
+  // jurisdiction + pay currency (e.g. "Inside · CC" / "Outside · US · USD").
+  const subtitle = (() => {
+    if (template.category === 'source') return 'Treasury wallet'
+    if (template.category === 'transfer') {
+      return template.transferVariant
+        ? TRANSFER_VARIANT_LABELS[template.transferVariant] + ' payment'
+        : ''
+    }
+    if (template.category === 'payee') {
+      const employeeId = template.payeeFields?.employeeId
+      if (!employeeId) return 'Payee'
+      const emp = employees.find((e) => e.id === employeeId)
+      if (!emp) return 'Payee'
+      return `${emp.country ?? '?'} · ${emp.payCurrency ?? '?'}`
+    }
+    return ''
+  })()
+
+  // Override the Source tile title with the live wallet identity so the
+  // palette shows the same thing the placed card will display. Falls
+  // back to the catalog default when the wallet isn't loaded (the tile
+  // is also gated off by `hasWallet` in that case, so users won't see it).
+  const title =
+    template.category === 'source' && walletPartyId
+      ? shortPartyId(walletPartyId)
+      : template.title
 
   return (
     <button
@@ -293,7 +387,7 @@ function PopoverTile({
           textOverflow: 'ellipsis',
         }}
       >
-        {template.title}
+        {title}
       </span>
     </button>
   )
