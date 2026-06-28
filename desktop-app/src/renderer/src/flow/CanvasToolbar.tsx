@@ -3,10 +3,10 @@
 // MVP scope (Phase 1):
 //   • Click-to-edit flow name (inline)
 //   • "+ Add Card" toggle that opens <AddCardPopover>
-//   • "Clear All" button (with confirm)
+//   • "Preview" button that opens the OutcomesPreviewModal
 //
-// Template menu / prompt-to-flow AI / generate-outcomes button are
-// deferred to later phases — they don't exist yet.
+// Template menu / prompt-to-flow AI are deferred to later phases —
+// they don't exist yet.
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
@@ -14,19 +14,17 @@ import { BLUE, MUTED, NAVY, monoFont, sansFont } from './theme'
 
 interface CanvasToolbarProps {
   flowName: string
-  cardCount: number
   addOpen: boolean
   onToggleAdd: () => void
-  onRequestClearAll: () => void
+  onRequestPreview: () => void
   onNameChange: (next: string) => void
 }
 
 export default function CanvasToolbar({
   flowName,
-  cardCount,
   addOpen,
   onToggleAdd,
-  onRequestClearAll,
+  onRequestPreview,
   onNameChange,
 }: CanvasToolbarProps) {
   return (
@@ -90,28 +88,33 @@ export default function CanvasToolbar({
 
       <motion.button
         type="button"
-        onClick={onRequestClearAll}
-        // Disabled state is implied by the empty canvas — no cards means
-        // there's nothing to clear. Visual cue only; not a hard disable
-        // because the parent owns the confirm modal.
-        whileHover={{ scale: cardCount > 0 ? 1.02 : 1 }}
-        whileTap={{ scale: cardCount > 0 ? 0.98 : 1 }}
+        onClick={onRequestPreview}
+        // Mirrors the same `onPointerDown` guard as Add Card — the
+        // popover listens for window mousedown to close, and pointerdown
+        // fires first. Without this, the click would bubble and toggle
+        // the popover back open right after closing it.
+        onPointerDown={(e) => e.stopPropagation()}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
         style={{
           height: 30,
           padding: '0 12px',
           background: 'transparent',
-          color: cardCount > 0 ? MUTED : '#d0d0e8',
-          border: '1px solid ' + (cardCount > 0 ? '#e0e0f0' : '#f0f0f8'),
+          color: BLUE,
+          border: '1.5px solid ' + BLUE,
           borderRadius: 6,
           fontFamily: monoFont,
           fontSize: 10,
           fontWeight: 700,
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
-          cursor: cardCount > 0 ? 'pointer' : 'not-allowed',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
         }}
       >
-        Clear All
+        Preview
       </motion.button>
     </div>
   )
@@ -136,7 +139,7 @@ function FlowNameField({
   const [draft, setDraft] = useState(flowName)
 
   // Keep the draft in sync with the parent if the name changes
-  // externally (e.g. after Clear All or after switching flows).
+  // externally (e.g. after switching flows).
   useEffect(() => {
     if (!editing) setDraft(flowName)
   }, [flowName, editing])

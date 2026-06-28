@@ -6,8 +6,7 @@
 // byte-for-byte. The user reviews the table before clicking Submit
 // (Phase 4) so surprises don't show up on Canton.
 //
-// Centered modal (matches the canvas ConfirmPanel pattern in
-// FlowBuilder.tsx). Backdrop click closes. Width is generous — the
+// Centered modal — backdrop click closes. Width is generous — the
 // table needs ~7 columns to show the variant × jurisdiction breakdown
 // clearly.
 

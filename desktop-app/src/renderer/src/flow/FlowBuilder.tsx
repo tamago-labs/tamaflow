@@ -15,7 +15,6 @@ import {
   BLUE,
   MUTED,
   monoFont,
-  sansFont,
 } from './theme'
 import {
   canConnect,
@@ -31,8 +30,6 @@ import type {
 } from './types'
 import type { PortSide } from './CanvasCard'
 
-const EMPTY_CANVAS: CanvasState = { cards: [], connections: [] }
-
 export interface FlowBuilderProps {
   /** Canonical canvas state — owned by the parent. */
   canvas: CanvasState
@@ -40,6 +37,12 @@ export interface FlowBuilderProps {
   /** Canonical flow name — owned by the parent. */
   flowName: string
   onFlowNameChange: (next: string) => void
+  /**
+   * Opens the outcomes preview modal owned by the parent. The toolbar's
+   * "Preview" button calls this; the modal itself lives outside the
+   * canvas so it can stay centred over the full viewport.
+   */
+  onRequestPreview: () => void
   /**
    * Optional unsaved-state indicator surfaced as a small badge next to
    * the toolbar (e.g. "Saving…" / "Saved"). When omitted, no badge is
@@ -56,6 +59,7 @@ export default function FlowBuilder({
   onCanvasChange,
   flowName,
   onFlowNameChange,
+  onRequestPreview,
   saveBadge,
 }: FlowBuilderProps) {
   const [addOpen, setAddOpen] = useState(false)
@@ -63,7 +67,6 @@ export default function FlowBuilder({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
-  const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
 
   // Warning toast auto-dismiss (3s).
   useEffect(() => {
@@ -209,14 +212,6 @@ export default function FlowBuilder({
     })
   }
 
-  function handleClearAll() {
-    onCanvasChange(EMPTY_CANVAS)
-    onFlowNameChange(defaultName())
-    setSelectedId(null)
-    setConnectFrom(null)
-    setEditingId(null)
-  }
-
   return (
     <div
       style={{
@@ -247,10 +242,9 @@ export default function FlowBuilder({
 
       <CanvasToolbar
         flowName={flowName}
-        cardCount={canvas.cards.length}
         addOpen={addOpen}
         onToggleAdd={() => setAddOpen((v) => !v)}
-        onRequestClearAll={() => setClearConfirmOpen(true)}
+        onRequestPreview={onRequestPreview}
         onNameChange={onFlowNameChange}
       />
 
@@ -265,22 +259,6 @@ export default function FlowBuilder({
           Phase 1 flow (no parent save state) leaves the prop off so the
           canvas stays clean. */}
       {saveBadge && <SaveBadge label={saveBadge.label} tone={saveBadge.tone} />}
-
-      {/* Clear All confirm — Phase 1 inline modal. */}
-      <AnimatePresence>
-        {clearConfirmOpen && (
-          <ConfirmPanel
-            title="Clear all cards?"
-            message="All cards and connections will be removed. This can't be undone."
-            confirmLabel="Clear"
-            onConfirm={() => {
-              handleClearAll()
-              setClearConfirmOpen(false)
-            }}
-            onCancel={() => setClearConfirmOpen(false)}
-          />
-        )}
-      </AnimatePresence>
 
       {/* Warning toast (e.g. invalid connection). */}
       <AnimatePresence>
@@ -377,133 +355,6 @@ function SaveBadge({
   )
 }
 
-interface ConfirmPanelProps {
-  title: string
-  message: string
-  confirmLabel: string
-  onConfirm: () => void
-  onCancel: () => void
-  destructive?: boolean
-}
-
-function ConfirmPanel({
-  title,
-  message,
-  confirmLabel,
-  onConfirm,
-  onCancel,
-  destructive = true,
-}: ConfirmPanelProps) {
-  return (
-    <>
-      {/* Backdrop — clicking cancels. */}
-      <motion.div
-        key="confirm-backdrop"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.15 }}
-        onClick={onCancel}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(10,10,92,0.32)',
-          zIndex: 250,
-        }}
-      />
-      <motion.div
-        key="confirm-card"
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }}
-        transition={{ duration: 0.15 }}
-        style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 380,
-          background: '#fff',
-          borderRadius: 8,
-          boxShadow: '0 20px 50px rgba(10,10,92,0.22)',
-          padding: '20px 22px',
-          zIndex: 260,
-          fontFamily: sansFont,
-        }}
-      >
-        <p
-          style={{
-            fontFamily: monoFont,
-            fontSize: 11,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: destructive ? '#c83030' : BLUE,
-            margin: 0,
-            marginBottom: 6,
-            fontWeight: 700,
-          }}
-        >
-          {title}
-        </p>
-        <p
-          style={{
-            fontFamily: sansFont,
-            fontSize: 13,
-            color: '#0a0a5c',
-            lineHeight: 1.45,
-            margin: 0,
-            marginBottom: 18,
-          }}
-        >
-          {message}
-        </p>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button
-            type="button"
-            onClick={onCancel}
-            style={{
-              height: 32,
-              padding: '0 14px',
-              background: 'transparent',
-              border: '1px solid #e0e0f0',
-              borderRadius: 6,
-              fontFamily: monoFont,
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              color: '#0a0a5c',
-              cursor: 'pointer',
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            style={{
-              height: 32,
-              padding: '0 14px',
-              background: destructive ? '#c83030' : BLUE,
-              color: '#fff',
-              border: 'none',
-              borderRadius: 6,
-              fontFamily: monoFont,
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-            }}
-          >
-            {confirmLabel}
-          </button>
-        </div>
-      </motion.div>
-    </>
-  )
-}
-
 // ─── Helpers ─────────────────────────────────────────────────────────
 
 function freshId(prefix: string): string {
@@ -511,10 +362,4 @@ function freshId(prefix: string): string {
     return prefix + '-' + crypto.randomUUID()
   }
   return prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8)
-}
-
-function defaultName(): string {
-  const d = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `Flow · ${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }

@@ -392,6 +392,7 @@ export default function FlowDetail() {
         onCanvasChange={handleCanvasChange}
         flowName={flowName}
         onFlowNameChange={handleNameChange}
+        onRequestPreview={() => setPreviewOpen(true)}
         {...(badgeLabel
           ? {
               saveBadge: {
