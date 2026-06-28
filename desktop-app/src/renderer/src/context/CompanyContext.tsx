@@ -34,7 +34,7 @@ type LoadStatus = 'absent' | 'present' | 'saving' | 'error'
  * user. 500 ms is enough for the spinner / button label to register
  * without making the flow feel sluggish.
  */
-const MIN_SAVING_MS = 500
+const MIN_SAVING_MS = 1000
 
 interface CompanyContextValue {
   profile: CompanyProfile | null

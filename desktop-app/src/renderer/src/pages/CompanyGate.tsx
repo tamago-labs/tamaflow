@@ -36,32 +36,54 @@ interface CompanyGateProps {
 export default function CompanyGate({ onContinue }: CompanyGateProps) {
   const { profile, loadStatus, error, save, importJson, reset, refresh } = useCompany()
   const [importOpen, setImportOpen] = useState(false)
-  const [resetting, setResetting] = useState(false)
+  const [resetting, setResetting] = useState(false) 
+  const [submitting, setSubmitting] = useState(false)
 
   // Auto-advance to the model picker whenever a profile is present.
-  // Covers both flows:
-  //   - Returning user: loadStatus flips to `present` on the initial IPC
-  //     fetch — we never want to show a confirmation card at boot.
-  //   - First-run save: loadStatus flips to `present` after `save()`
-  //     resolves — instead of asking the user to click Continue, hop
-  //     straight to the model picker.
-  // To edit the profile, returning users go through the sidebar →
-  // Company Profile page (the gate no longer hosts an Edit path).
+  // Covers the returning-user flow: loadStatus flips to `present` on
+  // the initial IPC fetch — we never want to show a confirmation card
+  // at boot.
+  //
+  // We skip this effect while `submitting` is true so the first-run
+  // save path doesn't advance prematurely. The context's `save()`
+  // resolves (and flips loadStatus to `present`) as soon as its own
+  // MIN_SAVING_MS timer elapses — but `handleSubmit` keeps the saving
+  // spinner visible for a longer local hold, then calls `onContinue()`
+  // explicitly when the hold finishes. Without the `!submitting`
+  // gate, the effect would fire from inside the context's save and
+  // unmount us before the spinner is ever seen.
   useEffect(() => {
+    if (submitting) return
     if (loadStatus === 'present' && profile) {
       onContinue()
     }
-  }, [loadStatus, profile, onContinue])
+  }, [loadStatus, profile, onContinue, submitting])
 
   const handleSubmit = async (next: CompanyProfile) => {
-    await save(next)
-    // The auto-advance effect above picks up the `present` state and
-    // transitions to the model picker.
+    if (submitting) return
+    setSubmitting(true)
+    try { 
+      const hold = new Promise<void>((r) => setTimeout(r, 1200))
+      await Promise.all([save(next), hold])
+ 
+      onContinue()
+    } catch (e) {
+      setSubmitting(false)
+      throw e
+    }
   }
 
   const handleImportApply = async (file: { profile: CompanyProfile }) => {
-    await save(file.profile)
-    // Same auto-advance as above.
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      const hold = new Promise<void>((r) => setTimeout(r, 1200))
+      await Promise.all([save(file.profile), hold])
+      onContinue()
+    } catch (e) {
+      setSubmitting(false)
+      throw e
+    }
   }
 
   const handleReset = async () => {
@@ -86,7 +108,7 @@ export default function CompanyGate({ onContinue }: CompanyGateProps) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="relative z-[10] bg-white border border-brand-border w-full max-w-2xl overflow-hidden"
+        className="relative z-[10] bg-white border border-brand-border w-full max-w-xl overflow-hidden"
       >
         <TealBar />
 
@@ -99,20 +121,25 @@ export default function CompanyGate({ onContinue }: CompanyGateProps) {
             </span>
           </div>
 
-          {loadStatus === 'error' ? (
+          {submitting ? (
+            <Centered>
+              <div className="w-12 h-12 rounded-full border-[3px] border-brand-light border-t-brand-blue animate-spin" />
+              <div className="text-center">
+                <p className="font-mono text-[11px] tracking-wider2 uppercase text-brand-navy m-0 font-semibold">
+                  Saving your company
+                </p>
+                <p className="font-sans text-xs text-brand-muted m-0 mt-1.5 leading-relaxed">
+                  Continuing to the next step…
+                </p>
+              </div>
+            </Centered>
+          ) : loadStatus === 'error' ? (
             <ErrorCard
               message={error ?? 'Could not read company profile'}
               onRetry={refresh}
               onReset={handleReset}
               resetting={resetting}
             />
-          ) : loadStatus === 'saving' && !profile ? (
-            <Centered>
-              <Loader2 size={20} className="animate-spin text-brand-muted" />
-              <p className="font-sans text-sm text-brand-muted m-0 mt-3">
-                Saving company profile…
-              </p>
-            </Centered>
           ) : loadStatus === 'absent' ? (
             <>
               <h1 className="font-sans text-2xl font-light text-brand-navy mb-2 leading-tight m-0">
@@ -120,12 +147,12 @@ export default function CompanyGate({ onContinue }: CompanyGateProps) {
               </h1>
               <p className="font-sans text-xs text-brand-muted mb-5 mt-0 leading-relaxed">
                 Tell us a few basics so payroll has sensible defaults. You can edit any
-                of this later from the Company Profile page.
+                of this later.
               </p>
 
               <CompanyForm
                 submitLabel="Save & Next"
-                submitting={loadStatus === 'saving'}
+                submitting={false}
                 onSubmit={handleSubmit}
               />
 
@@ -165,10 +192,16 @@ export default function CompanyGate({ onContinue }: CompanyGateProps) {
 
 // ─── Sub-components ──────────────────────────────────────────────────
 
+/**
+ * Saving-state panel. Renders an explicit spinner + label inside a
+ * proper block layout (NOT a span wrapper, which breaks when children
+ * include a `<p>`). Sized to fill the card so the saving state reads
+ * as a real transition rather than a quick blip.
+ */
 function Centered({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-center py-10">
-      <span className="font-mono text-xs text-brand-muted tracking-wide2">{children}</span>
+    <div className="flex flex-col items-center justify-center gap-4 py-12 min-h-[260px]">
+      {children}
     </div>
   )
 }
