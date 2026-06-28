@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard'
 import Employees from './pages/Employees'
 import NewFlow from './pages/NewFlow'
 import ActiveFlows from './pages/ActiveFlows'
+import FlowDetail from './pages/FlowDetail'
 import Settlements from './pages/Settlements'
 import Assets from './pages/Assets'
 import Settings from './pages/Settings'
@@ -162,6 +163,7 @@ function AppRouter({
           <Route path="/employees" element={<Employees />} />
           <Route path="/flows" element={<ActiveFlows />} />
           <Route path="/flows/new" element={<NewFlow />} />
+          <Route path="/flows/:id" element={<FlowDetail />} />
           <Route path="/settlements" element={<Settlements />} />
           <Route path="/assets" element={<Assets />} />
           <Route path="/company-profile" element={<CompanyProfile />} />

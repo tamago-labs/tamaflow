@@ -1,25 +1,9 @@
-// Free-form flow builder page — fills the entire main content area.
+// Free-form flow builder — fills the entire main content area.
 //
-// Phase 1 MVP scope:
-//   • Drag cards from the palette (AddCardPopover) onto the canvas
-//   • Drag cards around (dnd-kit)
-//   • Click a port to start a connection, click another to finish
-//   • Hover a connection to reveal the delete handle
-//   • Double-click a card to edit its fields inline (EditForm)
-//   • Delete/Backspace removes the selected card; Escape cancels connect
-//   • Clear All with confirm
-//
-// Phase 1 does NOT persist. The canvas lives in component state and is
-// discarded on unmount. Persistence (FlowStore / FlowContext) ships in
-// Phase 2, and the AI features (PromptToFlowModal, OutcomesPreviewModal,
-// worker execution) ship in later phases.
-//
-// Wiring summary:
-//   - DndContext wraps <Canvas> for drag-to-move
-//   - All canvas state lives here (cards + connections + selection +
-//     connect-source + editing)
-//   - <CanvasToolbar> + <AddCardPopover> live on top of the canvas
-//   - One inline confirm modal for Clear All (Phase 1 only)
+// Controlled component: the parent owns the canonical `canvas` state
+// and `flowName` (and is responsible for persistence). FlowBuilder owns
+// the transient UI state (selection, connect-source, editing, warning
+// toast, confirm modals).
 
 import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -49,18 +33,37 @@ import type { PortSide } from './CanvasCard'
 
 const EMPTY_CANVAS: CanvasState = { cards: [], connections: [] }
 
-export default function FlowBuilder() {
-  const [canvas, setCanvas] = useState<CanvasState>(EMPTY_CANVAS)
+export interface FlowBuilderProps {
+  /** Canonical canvas state — owned by the parent. */
+  canvas: CanvasState
+  onCanvasChange: (next: CanvasState) => void
+  /** Canonical flow name — owned by the parent. */
+  flowName: string
+  onFlowNameChange: (next: string) => void
+  /**
+   * Optional unsaved-state indicator surfaced as a small badge next to
+   * the toolbar (e.g. "Saving…" / "Saved"). When omitted, no badge is
+   * rendered (the toolbar stays clean for the in-memory Phase 1 flow).
+   */
+  saveBadge?: {
+    label: string
+    tone: 'idle' | 'saving' | 'saved' | 'error'
+  }
+}
+
+export default function FlowBuilder({
+  canvas,
+  onCanvasChange,
+  flowName,
+  onFlowNameChange,
+  saveBadge,
+}: FlowBuilderProps) {
   const [addOpen, setAddOpen] = useState(false)
   const [connectFrom, setConnectFrom] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
-
-  // Flow name — shown in the toolbar. Phase 2 will persist this with the
-  // flow definition; for now it's just a UI string in component state.
-  const [flowName, setFlowName] = useState<string>(() => defaultName())
 
   // Warning toast auto-dismiss (3s).
   useEffect(() => {
@@ -76,21 +79,17 @@ export default function FlowBuilder() {
       | undefined
     if (!data || data.kind !== 'canvas-card' || !data.placementId) return
     const id = data.placementId
-    setCanvas((prev) => {
-      const card = prev.cards.find((c) => c.placementId === id)
-      if (!card) return prev
-      const moved: CanvasCard = {
-        ...card,
-        // Clamp to non-negative so cards don't drift off the origin.
-        x: Math.max(0, card.x + event.delta.x),
-        y: Math.max(0, card.y + event.delta.y),
-      }
-      return {
-        ...prev,
-        cards: prev.cards.map((c) =>
-          c.placementId === id ? moved : c,
-        ),
-      }
+    const card = canvas.cards.find((c) => c.placementId === id)
+    if (!card) return
+    const moved: CanvasCard = {
+      ...card,
+      // Clamp to non-negative so cards don't drift off the origin.
+      x: Math.max(0, card.x + event.delta.x),
+      y: Math.max(0, card.y + event.delta.y),
+    }
+    onCanvasChange({
+      ...canvas,
+      cards: canvas.cards.map((c) => (c.placementId === id ? moved : c)),
     })
   }
 
@@ -107,18 +106,18 @@ export default function FlowBuilder() {
       y: 220 + jitterY,
       collapsed: false,
     }
-    setCanvas((prev) => ({ ...prev, cards: [...prev.cards, newCard] }))
+    onCanvasChange({ ...canvas, cards: [...canvas.cards, newCard] })
     setSelectedId(id)
     setAddOpen(false)
-  }, [])
+  }, [canvas, onCanvasChange])
 
   function handleEditCard(id: string, updates: CanvasCardEdit) {
-    setCanvas((prev) => ({
-      ...prev,
-      cards: prev.cards.map((c) =>
+    onCanvasChange({
+      ...canvas,
+      cards: canvas.cards.map((c) =>
         c.placementId === id ? { ...c, ...updates } : c,
       ),
-    }))
+    })
     setEditingId(null)
   }
 
@@ -171,10 +170,10 @@ export default function FlowBuilder() {
       from: connectFrom,
       to: placementId,
     }
-    setCanvas((prev) => ({
-      ...prev,
-      connections: [...prev.connections, newConn],
-    }))
+    onCanvasChange({
+      ...canvas,
+      connections: [...canvas.connections, newConn],
+    })
     setConnectFrom(null)
   }
 
@@ -184,38 +183,38 @@ export default function FlowBuilder() {
 
   // ─── Delete / collapse ─────────────────────────────────────────────
   function handleDeleteCard(id: string) {
-    setCanvas((prev) => ({
-      cards: prev.cards.filter((c) => c.placementId !== id),
-      connections: prev.connections.filter(
+    onCanvasChange({
+      cards: canvas.cards.filter((c) => c.placementId !== id),
+      connections: canvas.connections.filter(
         (c) => c.from !== id && c.to !== id,
       ),
-    }))
+    })
     if (selectedId === id) setSelectedId(null)
     if (connectFrom === id) setConnectFrom(null)
   }
 
   function handleToggleCollapse(id: string) {
-    setCanvas((prev) => ({
-      ...prev,
-      cards: prev.cards.map((c) =>
+    onCanvasChange({
+      ...canvas,
+      cards: canvas.cards.map((c) =>
         c.placementId === id ? { ...c, collapsed: !c.collapsed } : c,
       ),
-    }))
+    })
   }
 
   function handleDeleteConnection(id: string) {
-    setCanvas((prev) => ({
-      ...prev,
-      connections: prev.connections.filter((c) => c.id !== id),
-    }))
+    onCanvasChange({
+      ...canvas,
+      connections: canvas.connections.filter((c) => c.id !== id),
+    })
   }
 
   function handleClearAll() {
-    setCanvas(EMPTY_CANVAS)
+    onCanvasChange(EMPTY_CANVAS)
+    onFlowNameChange(defaultName())
     setSelectedId(null)
     setConnectFrom(null)
     setEditingId(null)
-    setFlowName(defaultName())
   }
 
   return (
@@ -260,10 +259,14 @@ export default function FlowBuilder() {
         onClose={() => setAddOpen(false)}
       />
 
-      {/* Flow-name editor — sits at top-centre, just below the toolbar.
-          Phase 1 lets the user rename in-place; Phase 2 will route this
-          through the EditScenarioModal-style dialog once we persist. */}
-      <FlowNameEditor name={flowName} onChange={setFlowName} />
+      {/* Flow-name editor — sits at top-centre, just below the toolbar. */}
+      <FlowNameEditor name={flowName} onChange={onFlowNameChange} />
+
+      {/* Save badge — top-right, mirrored from the toolbar on the left.
+          Only renders when the parent supplies `saveBadge`; the in-memory
+          Phase 1 flow (no parent save state) leaves the prop off so the
+          canvas stays clean. */}
+      {saveBadge && <SaveBadge label={saveBadge.label} tone={saveBadge.tone} />}
 
       {/* Clear All confirm — Phase 1 inline modal. */}
       <AnimatePresence>
@@ -324,6 +327,57 @@ export default function FlowBuilder() {
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────
+
+// Save-state badge — top-right corner of the canvas. Tone colour matches
+// the `tone` prop. Kept tiny so it doesn't compete with the toolbar.
+const BADGE_COLORS: Record<
+  'idle' | 'saving' | 'saved' | 'error',
+  { bg: string; fg: string; border: string }
+> = {
+  idle:   { bg: '#f4f4fa', fg: MUTED,  border: '#e0e0f0' },
+  saving: { bg: 'rgba(20,90,200,0.10)', fg: BLUE,  border: BLUE },
+  saved:  { bg: 'rgba(40,160,90,0.10)',  fg: '#1a8c4a', border: '#1a8c4a' },
+  error:  { bg: 'rgba(200,48,48,0.10)',  fg: '#c83030', border: '#c83030' },
+}
+
+function SaveBadge({
+  label,
+  tone,
+}: {
+  label: string
+  tone: 'idle' | 'saving' | 'saved' | 'error'
+}) {
+  const c = BADGE_COLORS[tone]
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        zIndex: 100,
+        height: 30,
+        padding: '0 12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        background: c.bg,
+        border: '1px solid ' + c.border,
+        borderRadius: 6,
+        color: c.fg,
+        fontFamily: monoFont,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.14em',
+        textTransform: 'uppercase',
+        boxShadow: '0 4px 14px rgba(10,10,92,0.06)',
+      }}
+    >
+      {label}
+    </div>
+  )
+}
 
 function FlowNameEditor({
   name,

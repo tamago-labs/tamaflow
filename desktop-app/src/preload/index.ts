@@ -21,6 +21,9 @@ import type {
   EmployeeFile,
   EmployeeExportResult,
   EmployeeImportResult,
+  FlowDefinition,
+  FlowFile,
+  FlowSummary,
 } from './index.d'
 
 // Custom APIs for renderer
@@ -118,6 +121,26 @@ const api = {
       const handler = (_: unknown, file: EmployeeFile | null) => callback(file)
       ipcRenderer.on('employees:onChange', handler)
       return () => ipcRenderer.removeListener('employees:onChange', handler)
+    },
+  },
+
+  flows: {
+    list: (): Promise<FlowSummary[]> => ipcRenderer.invoke('flows:list'),
+    get: (id: string): Promise<FlowFile | null> =>
+      ipcRenderer.invoke('flows:get', id),
+    save: (
+      flow: Omit<FlowDefinition, 'id' | 'createdAt' | 'updatedAt'> & {
+        id?: string
+        createdAt?: string
+        updatedAt?: string
+      },
+    ): Promise<FlowFile> => ipcRenderer.invoke('flows:save', flow),
+    remove: (id: string): Promise<FlowSummary[]> =>
+      ipcRenderer.invoke('flows:remove', id),
+    onChange: (callback: (list: FlowSummary[]) => void) => {
+      const handler = (_: unknown, list: FlowSummary[]) => callback(list)
+      ipcRenderer.on('flows:onChange', handler)
+      return () => ipcRenderer.removeListener('flows:onChange', handler)
     },
   },
 }
