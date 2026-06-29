@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Monitor, Apple, Github } from "lucide-react";
+import { ChevronDown, Monitor, Github } from "lucide-react";
 
 /**
  * DownloadDesktopApp — secondary CTA in the Hero, for the

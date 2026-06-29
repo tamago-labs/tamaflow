@@ -1,19 +1,20 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Cpu, Wallet, User, GitBranch } from "lucide-react";
+import { Wallet, User } from "lucide-react";
 import PageHeader from "@/components/app/PageHeader";
 import AccountIsland from "@/components/wallet/AccountIsland";
 
 /**
- * Settings placeholder — four sub-tabs (mirrors the desktop-app):
- *   • AI Model  — load / change model (placeholder)
+ * Settings placeholder — two sub-tabs (mirrors the desktop-app):
  *   • Wallet    — Connect Wallet (Canton)
  *   • Profile   — company / employer info
- *   • Netting   — netting rules / preferences
+ *
+ * The AI Model and Netting tabs that used to live here have been
+ * removed — local AI and auto-netting are desktop-app-only surfaces.
  */
 
-type Tab = "ai" | "wallet" | "profile" | "netting";
+type Tab = "wallet" | "profile";
 
 interface TabDef {
   key: Tab;
@@ -22,18 +23,15 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-  { key: "ai", label: "AI Model", icon: <Cpu size={12} /> },
   { key: "wallet", label: "Wallet", icon: <Wallet size={12} /> },
   { key: "profile", label: "Profile", icon: <User size={12} /> },
-  { key: "netting", label: "Netting", icon: <GitBranch size={12} /> },
 ];
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<Tab>("ai");
+  const [tab, setTab] = useState<Tab>("wallet");
 
   return (
-    <div> 
-
+    <div>
       {/* Sub-tabs */}
       <div className="flex items-center gap-1 mb-6 border-b border-brand-border overflow-x-auto">
         {TABS.map((t) => (
@@ -53,26 +51,6 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {tab === "ai" && (
-        <div className="bg-white border border-brand-border rounded-md p-6 max-w-2xl">
-          <p className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase mb-3 m-0">
-            AI Model
-          </p>
-          <p className="font-sans text-sm text-brand-muted m-0 mb-4">
-            Load a local AI model to start processing payroll flows. The
-            model runs entirely on your machine — no data ever leaves
-            your network.
-          </p>
-          <button
-            type="button"
-            className="px-4 py-2 bg-brand-blue text-white border-0 rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase cursor-pointer hover:opacity-90"
-          >
-            <Cpu size={12} className="inline-block mr-1.5 -mt-0.5" />
-            Load Model
-          </button>
-        </div>
-      )}
-
       {tab === "wallet" && <AccountIsland />}
 
       {tab === "profile" && (
@@ -83,18 +61,6 @@ export default function SettingsPage() {
           <p className="font-sans text-sm text-brand-muted m-0">
             Company name, base country, and default currency will live
             here.
-          </p>
-        </div>
-      )}
-
-      {tab === "netting" && (
-        <div className="bg-white border border-brand-border rounded-md p-6 max-w-2xl">
-          <p className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase mb-3 m-0">
-            Netting Rules
-          </p>
-          <p className="font-sans text-sm text-brand-muted m-0">
-            Toggles for auto-netting, minimum thresholds, and
-            counterparty rules will live here.
           </p>
         </div>
       )}
