@@ -38,8 +38,21 @@ interface WalletContextValue {
   loadStatus: Status
   holdings: Holding[]
   holdingsLoading: boolean
+  /**
+   * True once the initial `holdings()` IPC round-trip has resolved at
+   * least once (success or empty result). Lets the UI distinguish
+   * "still loading on first paint" from "loaded, value happens to be
+   * 0" — without this flag the Dashboard tiles flash "0" during boot.
+   * Reset to false when the wallet is destroyed or recreated.
+   */
+  holdingsHasLoaded: boolean
   pendingTransfers: PendingTransfer[]
   pendingTransfersLoading: boolean
+  /**
+   * Same as `holdingsHasLoaded` for the pending-transfers list. Used by
+   * the Dashboard "Pending Offers" KPI tile.
+   */
+  pendingTransfersHasLoaded: boolean
   modal: ModalState
   /** Symbol the user is currently sending via the SendModal. */
   openSendSymbol: string | null
@@ -102,8 +115,10 @@ export function WalletProvider({
   const [loadStatus, setLoadStatus] = useState<Status>('absent')
   const [holdings, setHoldings] = useState<Holding[]>([])
   const [holdingsLoading, setHoldingsLoading] = useState(false)
+  const [holdingsHasLoaded, setHoldingsHasLoaded] = useState(false)
   const [pendingTransfers, setPendingTransfers] = useState<PendingTransfer[]>([])
   const [pendingTransfersLoading, setPendingTransfersLoading] = useState(false)
+  const [pendingTransfersHasLoaded, setPendingTransfersHasLoaded] = useState(false)
   const [modal, setModal] = useState<ModalState>(defaultModal)
   const [openSendSymbol, setOpenSendSymbol] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -115,7 +130,17 @@ export function WalletProvider({
       const s = await window.api.wallet.status()
       if (!mounted.current) return
       setStatus(s)
-      setLoadStatus(s.exists ? 'present' : 'absent')
+      const next = s.exists ? 'present' : 'absent'
+      setLoadStatus(next)
+      // When the wallet is gone, cached holdings + pending lists are
+      // stale; clear them and reset "has loaded" so the next mount of
+      // a wallet re-runs the full first-paint loading sequence.
+      if (!s.exists) {
+        setHoldings([])
+        setHoldingsHasLoaded(false)
+        setPendingTransfers([])
+        setPendingTransfersHasLoaded(false)
+      }
     } catch (e) {
       console.error('[WalletContext] status failed:', e)
     }
@@ -128,6 +153,7 @@ export function WalletProvider({
       const h = await window.api.wallet.holdings()
       if (!mounted.current) return
       setHoldings(h)
+      setHoldingsHasLoaded(true)
     } catch (e) {
       console.error('[WalletContext] holdings failed:', e)
     } finally {
@@ -142,6 +168,7 @@ export function WalletProvider({
       const list = await window.api.wallet.pendingTransfers()
       if (!mounted.current) return
       setPendingTransfers(list)
+      setPendingTransfersHasLoaded(true)
     } catch (e) {
       console.error('[WalletContext] pendingTransfers failed:', e)
     } finally {
@@ -374,8 +401,10 @@ export function WalletProvider({
     loadStatus,
     holdings,
     holdingsLoading,
+    holdingsHasLoaded,
     pendingTransfers,
     pendingTransfersLoading,
+    pendingTransfersHasLoaded,
     modal,
     openSendSymbol,
     error,
