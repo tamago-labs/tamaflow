@@ -208,10 +208,11 @@ export interface PaymentTemplate {
   id: string
   /** Palette tile label (user-editable). */
   name: string
-  /** Decimal string (e.g. "0.22" for 22%). Empty = no withholding. */
+  /** Single combined deduction rate as a decimal string (e.g. "0.27"
+   *  for 27%). Empty = no deductions applied. Absorbs the previously
+   *  separate social-security rate — both halves of payroll tax now
+   *  roll into this one field. */
   withholdingRate: string
-  /** Decimal string (e.g. "0.05" for 5%). Empty = no social security. */
-  socialSecurityRate: string
   /** Required, ≤ 200 chars. Baked into the route when the Payment
    *  card's own memo is empty. */
   defaultMemo: string

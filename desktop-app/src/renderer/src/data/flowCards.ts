@@ -126,23 +126,19 @@ export function paymentTemplatesFor(templates: PaymentTemplate[]): SimCardTempla
  * with no leading zero; empty rates render as `—`.
  *
  * Examples:
- *   "22% WHT · 5% SS · memo \"March payroll\""
+ *   "27% WHT · memo \"March payroll\""
  *   "no deductions · memo \"Bonus\""
  *   "10% WHT · —"
  *   "— · memo \"Q1 contractor\""
+ *
+ * `withholdingRate` is now the single combined deduction rate (WHT
+ * + social security, post-merge) — the SS half was folded in.
  */
 export function paymentTemplateSubtitle(t: PaymentTemplate): string {
   const wht = t.withholdingRate && t.withholdingRate.trim() !== ''
     ? `${formatRatePct(t.withholdingRate)}% WHT`
     : null
-  const ss = t.socialSecurityRate && t.socialSecurityRate.trim() !== ''
-    ? `${formatRatePct(t.socialSecurityRate)}% SS`
-    : null
-  const deductions =
-    wht && ss ? `${wht} · ${ss}`
-    : wht ? wht
-    : ss ? ss
-    : 'no deductions'
+  const deductions = wht ?? 'no deductions'
   const memoPart = t.defaultMemo ? `memo "${t.defaultMemo}"` : '—'
   return `${deductions} · ${memoPart}`
 }

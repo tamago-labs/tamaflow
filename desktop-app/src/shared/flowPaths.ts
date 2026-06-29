@@ -174,14 +174,15 @@ function readPaymentFields(card: CanvasCard): PaymentFields | null {
  * user-defined templates that become palette tiles). A `null` template
  * = the built-in Direct Payment card = no deductions applied.
  *
- * Both deductions are computed as a percentage of the ORIGINAL gross
- * (not sequential). The `withholdingAmount` + `socialSecurityAmount`
- * surfaces are returned in `payCurrency` (2dp) so the preview modal can
- * render a per-row breakdown.
+ * The deduction (was: separate withholding + social-security rates,
+ * now: a single combined rate on `template.withholdingRate`) is computed
+ * as a percentage of the ORIGINAL gross (not sequential against itself).
+ * The `withholdingAmount` is returned in `payCurrency` (2dp) so the
+ * preview modal can render a per-row breakdown.
  *
  * Note: there is NO country-based skip rule here. The flow's card
  * composition is authoritative — if the user wires a template with
- * non-zero rates to a Payee card, those rates are applied. Cross-border
+ * a non-zero rate to a Payee card, that rate is applied. Cross-border
  * deductions (employee.country ≠ company.country) are the user's
  * intent, not something we silently override.
  *
@@ -194,27 +195,20 @@ function applyDeductions(
 ): {
   adjustedGross: string
   withholdingAmount?: string
-  socialSecurityAmount?: string
 } {
   // Direct Payment (no template) → no deductions ever.
   if (!template) {
     return { adjustedGross: grossPay }
   }
   let withholdingAmount: string | undefined
-  let socialSecurityAmount: string | undefined
   let net = grossPay
   if (template.withholdingRate && template.withholdingRate.trim() !== '') {
     withholdingAmount = mulDecimal(grossPay, template.withholdingRate, 2)
     net = subDecimal(net, withholdingAmount, 2)
   }
-  if (template.socialSecurityRate && template.socialSecurityRate.trim() !== '') {
-    socialSecurityAmount = mulDecimal(grossPay, template.socialSecurityRate, 2)
-    net = subDecimal(net, socialSecurityAmount, 2)
-  }
   return {
     adjustedGross: net,
     ...(withholdingAmount && { withholdingAmount }),
-    ...(socialSecurityAmount && { socialSecurityAmount }),
   }
 }
 

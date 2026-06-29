@@ -604,14 +604,14 @@ function ActionCluster({
         pointerEvents: 'auto',
       }}
     >
-      <Link
+      {/* <Link
         to="/flows"
         className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-white/90 text-brand-blue border border-brand-border rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase no-underline backdrop-blur"
         style={{ boxShadow: '0 2px 8px rgba(10,10,92,0.06)' }}
       >
         <ArrowLeft size={11} />
         Active Flows
-      </Link>
+      </Link> */}
       {saveError && (
         <span
           role="alert"
@@ -623,15 +623,15 @@ function ActionCluster({
 
       {status === 'draft' && (
         <>
-          <button
+          {/* <button
             type="button"
             onClick={onPreview}
             className="py-1.5 px-3 bg-white/90 text-brand-blue border border-brand-border rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase cursor-pointer hover:bg-white backdrop-blur"
             style={{ boxShadow: '0 2px 8px rgba(10,10,92,0.06)' }}
           >
             Preview Routes
-          </button>
-          <button
+          </button> */}
+          {/* <button
             type="button"
             onClick={onSave}
             disabled={saving}
@@ -639,7 +639,7 @@ function ActionCluster({
             style={{ boxShadow: '0 2px 8px rgba(10,10,92,0.06)' }}
           >
             {saving ? 'Saving…' : 'Save'}
-          </button>
+          </button> */}
           <button
             type="button"
             onClick={onStart}
@@ -647,7 +647,7 @@ function ActionCluster({
             style={{ boxShadow: '0 2px 8px rgba(10,10,92,0.18)' }}
           >
             <Play size={11} />
-            Start Flow
+            Start
           </button>
           <button
             type="button"

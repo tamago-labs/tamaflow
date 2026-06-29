@@ -71,7 +71,12 @@ function validateRate(value: unknown, field: string): string {
  * Normalize a single payment template from a partial input. Fills
  * missing fields, generates a fresh `id` + timestamps when absent
  * (server-side — never trust client-provided ids), caps memo length,
- * validates both rate fields.
+ * validates the combined deduction rate.
+ *
+ * **Migration**: legacy shapes carried a separate `socialSecurityRate`.
+ * On load, we add it to `withholdingRate` so existing templates keep
+ * their effective deduction. Once the user saves the profile, the
+ * legacy field is dropped permanently.
  */
 function normalizePaymentTemplate(raw: unknown, now: string): PaymentTemplate {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
@@ -79,8 +84,13 @@ function normalizePaymentTemplate(raw: unknown, now: string): PaymentTemplate {
     typeof r.name === 'string'
       ? r.name.trim().slice(0, 60)
       : ''
+  // Validate both fields now (legacy data may still carry the SS rate)
+  // so we can produce a clean error if either is malformed.
   const withholdingRate = validateRate(r.withholdingRate, `Template "${name}" withholding rate`)
-  const socialSecurityRate = validateRate(r.socialSecurityRate, `Template "${name}" social security rate`)
+  const legacySocialSecurityRate = validateRate(
+    r.socialSecurityRate,
+    `Template "${name}" social security rate`,
+  )
   const defaultMemoRaw = typeof r.defaultMemo === 'string' ? r.defaultMemo.trim() : ''
   const defaultMemo = defaultMemoRaw.length > 0 ? defaultMemoRaw.slice(0, 200) : ''
   if (!defaultMemo) {
@@ -89,15 +99,32 @@ function normalizePaymentTemplate(raw: unknown, now: string): PaymentTemplate {
   const id = typeof r.id === 'string' && r.id.trim().length > 0 ? r.id.trim() : freshTemplateId()
   const createdAt = typeof r.createdAt === 'string' && r.createdAt.trim().length > 0 ? r.createdAt : now
   const updatedAt = typeof r.updatedAt === 'string' && r.updatedAt.trim().length > 0 ? r.updatedAt : now
+  // Silent migration: roll legacy social-security rate into the combined
+  // withholding rate so existing templates keep their effective
+  // deduction. Capped at 1.0 (validateRate refuses > 1 anyway).
+  const combined = legacySocialSecurityRate
+    ? sumDecimalStrings(withholdingRate, legacySocialSecurityRate)
+    : withholdingRate
   return {
     id,
     name,
-    withholdingRate,
-    socialSecurityRate,
+    withholdingRate: combined,
     defaultMemo,
     createdAt,
     updatedAt,
   }
+}
+
+/**
+ * Sum two validated decimal-string rates (each in [0, 1]). Naive float
+ * math on trimmed strings — the caller has already screened for
+ * well-formed decimals via `validateRate`. The sum is clamped to "1".
+ */
+function sumDecimalStrings(a: string, b: string): string {
+  const num = Number(a) + Number(b)
+  if (!Number.isFinite(num)) return '1'
+  const clamped = Math.min(num, 1)
+  return clamped.toString()
 }
 
 /**

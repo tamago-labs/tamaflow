@@ -16,8 +16,8 @@
 //   │                                                            │
 //   │  Custom templates                                          │
 //   │  ┌──────────────────────────────────────────────────────┐  │
-//   │  │ Withholding 22% (US payroll)        [edit] [delete]  │  │
-//   │  │ 22% WHT · 5% SS · memo "March payroll"                │  │
+//   │  │ US payroll 27%                       [edit] [delete]  │  │
+//   │  │ 27% WHT · memo "March payroll"                        │  │
 //   │  ├──────────────────────────────────────────────────────┤  │
 //   │  │ Bonus                                              …  │  │
 //   │  │ no deductions · memo "Bonus"                          │  │
@@ -28,16 +28,18 @@
 // State:
 //   - Local `drafts` mirrored from `profile.paymentTemplates` on load
 //     + on profile change.
-//   - `id?: string` field — undefined = unsaved new row.
+//   - `id?: string` — assigned upfront even for unsaved new rows
+//     (client stub `__new__…`, server stamps a fresh id in
+//     `normalizePaymentTemplates` on save).
 //   - Edit mode toggled per row; new rows start in edit mode.
 //   - "Save all" writes the whole list at once via `useCompany().save`.
 //   - Delete per row with confirmation (per user-confirmed "fall back"
 //     behaviour — canvas cards using a deleted template fall back to
 //     Direct Payment).
 //
-// Deductions (withholding, social security) live on the linked template
-// (Settings → Payment templates). The flow's card composition is
-// authoritative: whatever rates the user wires to a Payee card are
+// Deductions live on the linked template (Settings → Payment templates)
+// as a single combined `withholdingRate`. The flow's card composition
+// is authoritative: whatever rate the user wires to a Payee card is
 // applied — there is no country-based skip rule.
 
 import { useEffect, useState } from 'react'
@@ -58,8 +60,8 @@ function isValidRate(s: string): boolean {
 interface DraftPaymentTemplate {
   id?: string
   name: string
+  /** Single combined deduction rate (was withholding + social security). */
   withholdingRate: string
-  socialSecurityRate: string
   defaultMemo: string
   createdAt?: string
   updatedAt?: string
@@ -71,7 +73,6 @@ function toDraft(t: PaymentTemplate): DraftPaymentTemplate {
     id: t.id,
     name: t.name,
     withholdingRate: t.withholdingRate,
-    socialSecurityRate: t.socialSecurityRate,
     defaultMemo: t.defaultMemo,
     createdAt: t.createdAt,
     updatedAt: t.updatedAt,
@@ -84,7 +85,6 @@ function fromDraft(d: DraftPaymentTemplate, now: string): PaymentTemplate {
     id: d.id ?? 'tpl_pending',
     name: d.name.trim(),
     withholdingRate: d.withholdingRate.trim(),
-    socialSecurityRate: d.socialSecurityRate.trim(),
     defaultMemo: d.defaultMemo.trim(),
     createdAt: d.createdAt ?? now,
     updatedAt: now,
@@ -97,13 +97,11 @@ function fromDraft(d: DraftPaymentTemplate, now: string): PaymentTemplate {
 function validateRow(d: DraftPaymentTemplate): {
   name?: string
   withholdingRate?: string
-  socialSecurityRate?: string
   defaultMemo?: string
 } {
   const errors: {
     name?: string
     withholdingRate?: string
-    socialSecurityRate?: string
     defaultMemo?: string
   } = {}
   if (d.name.trim().length === 0) errors.name = 'Name is required'
@@ -111,8 +109,6 @@ function validateRow(d: DraftPaymentTemplate): {
     errors.name = 'Name must be 60 characters or fewer'
   if (!isValidRate(d.withholdingRate))
     errors.withholdingRate = 'Decimal between 0 and 1, or blank'
-  if (!isValidRate(d.socialSecurityRate))
-    errors.socialSecurityRate = 'Decimal between 0 and 1, or blank'
   if (d.defaultMemo.trim().length === 0)
     errors.defaultMemo = 'Default memo is required'
   else if (d.defaultMemo.trim().length > 200)
@@ -162,12 +158,14 @@ export default function PaymentTemplatesTab() {
   }
 
   function cancelEdit(id: string) {
-    // For an unsaved new row, drop the draft entirely. For an existing
-    // row, revert to the saved value.
+    // For an unsaved new row (id starts with `__new__`), drop the draft
+    // entirely. For an existing row, revert to the saved value.
     setDrafts((current) => {
-      const row = current.find((d) => (d.id ?? '__new__') === id)
+      const row = current.find((d) => d.id === id)
       if (!row) return current
-      if (!row.id) return current.filter((d) => (d.id ?? '__new__') !== id)
+      if (row.id?.startsWith('__new__')) {
+        return current.filter((d) => d.id !== id)
+      }
       const saved = profile!.paymentTemplates.find((t) => t.id === row.id)
       return saved
         ? current.map((d) => (d.id === row.id ? toDraft(saved) : d))
@@ -181,8 +179,11 @@ export default function PaymentTemplatesTab() {
   }
 
   function updateDraft(id: string, patch: Partial<DraftPaymentTemplate>) {
+    // Every draft row carries an id (server stamps a real one on save;
+    // the client gives new rows a `__new__…` stub upfront), so we can
+    // just compare on `d.id` directly.
     setDrafts((current) =>
-      current.map((d) => ((d.id ?? '__new__') === id ? { ...d, ...patch } : d)),
+      current.map((d) => (d.id === id ? { ...d, ...patch } : d)),
     )
   }
 
@@ -198,22 +199,22 @@ export default function PaymentTemplatesTab() {
   }
 
   function addRow() {
-    // Append an unsaved stub in edit mode. `id` undefined → server-side
-    // fresh id will be assigned in `normalizePaymentTemplates`.
-    const stubKey = '__new__' + Date.now().toString(36)
+    // New draft gets a CLIENT-side placeholder id (server stamps a real
+    // one in `normalizePaymentTemplates` on save). Assigning the id up
+    // front means `startEdit` / `updateDraft` / `cancelEdit` can all
+    // address this row by id without fallback hacks — and so the row
+    // opens in edit mode on the same render that adds it.
+    const stubKey = `__new__${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
     setDrafts((current) => [
       ...current,
       {
+        id: stubKey,
         name: '',
         withholdingRate: '',
-        socialSecurityRate: '',
         defaultMemo: 'Payroll',
       },
     ])
     setEditing((s) => new Set([...s, stubKey]))
-    // Note: drafts array has no id yet, so we can't address it by id
-    // for editing — we rely on the LAST row in the list being the
-    // newly-added stub while it's in edit mode.
   }
 
   // ─── Save all ──────────────────────────────────────────────────
@@ -284,7 +285,7 @@ export default function PaymentTemplatesTab() {
               No deductions · built-in card
             </div>
             <p className="font-sans text-xs text-brand-muted m-0 mt-1">
-              No withholding or social security applied. You set the memo
+              No deductions applied. You set the memo
               per card on the canvas.
             </p>
           </div>
@@ -308,11 +309,13 @@ export default function PaymentTemplatesTab() {
           </div>
         ) : (
           <div className="space-y-2">
-            {drafts.map((d, idx) => {
-              // Use the actual id when available; otherwise fall back
-              // to a position-based key for newly-added rows (their
-              // `id` is undefined until the server stamps one on save).
-              const key = d.id ?? `__new_${idx}`
+            {drafts.map((d) => {
+              // Every draft row carries an id (server stamps a real one
+              // on save; client assigns a `__new__…` stub upfront for
+              // unsaved rows added via "+ New template"). Using `d.id`
+              // directly — no fallback — means the key the editing set
+              // was opened under is the same key React uses here.
+              const key = d.id
               const isEditing = editing.has(key)
               const errors = validateRow(d)
               const hasErrors = Object.keys(errors).length > 0
@@ -416,7 +419,6 @@ function TemplateRow({
       id: draft.id ?? 'pending',
       name: draft.name,
       withholdingRate: draft.withholdingRate,
-      socialSecurityRate: draft.socialSecurityRate,
       defaultMemo: draft.defaultMemo,
       createdAt: draft.createdAt ?? '',
       updatedAt: draft.updatedAt ?? '',
@@ -466,53 +468,31 @@ function TemplateRow({
           type="text"
           value={draft.name}
           onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="Withholding 22% (US payroll)"
+          placeholder="US payroll deductions"
           maxLength={60}
           className="w-full px-3 py-2 bg-white border border-brand-border rounded-md font-sans text-sm text-brand-navy focus:outline-none focus:border-brand-blue"
         />
       </Field>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field
-          label="Withholding rate"
-          hint="Decimal between 0 and 1. Blank = no withholding."
-          error={errors.withholdingRate}
-        >
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={draft.withholdingRate}
-              onChange={(e) => onChange({ withholdingRate: e.target.value })}
-              placeholder="0.22"
-              className="w-32 px-3 py-2 bg-white border border-brand-border rounded-md font-mono text-sm text-brand-navy focus:outline-none focus:border-brand-blue"
-            />
-            <span className="font-mono text-[11px] text-brand-muted uppercase tracking-wider2">
-              = {(Number(draft.withholdingRate) * 100).toFixed(2)}%
-            </span>
-          </div>
-        </Field>
-
-        <Field
-          label="Social security rate"
-          hint="Decimal between 0 and 1. Blank = no social security."
-          error={errors.socialSecurityRate}
-        >
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              inputMode="decimal"
-              value={draft.socialSecurityRate}
-              onChange={(e) => onChange({ socialSecurityRate: e.target.value })}
-              placeholder="0.05"
-              className="w-32 px-3 py-2 bg-white border border-brand-border rounded-md font-mono text-sm text-brand-navy focus:outline-none focus:border-brand-blue"
-            />
-            <span className="font-mono text-[11px] text-brand-muted uppercase tracking-wider2">
-              = {(Number(draft.socialSecurityRate) * 100).toFixed(2)}%
-            </span>
-          </div>
-        </Field>
-      </div>
+      <Field
+        label="Withholding rate"
+        hint="Decimal between 0 and 1 (e.g. 0.27 = 27%). Applies to all deductions — formerly a separate social-security rate was added on top."
+        error={errors.withholdingRate}
+      >
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            inputMode="decimal"
+            value={draft.withholdingRate}
+            onChange={(e) => onChange({ withholdingRate: e.target.value })}
+            placeholder="0.27"
+            className="w-32 px-3 py-2 bg-white border border-brand-border rounded-md font-mono text-sm text-brand-navy focus:outline-none focus:border-brand-blue"
+          />
+          <span className="font-mono text-[11px] text-brand-muted uppercase tracking-wider2">
+            = {(Number(draft.withholdingRate) * 100).toFixed(2)}%
+          </span>
+        </div>
+      </Field>
 
       <Field label="Default memo" error={errors.defaultMemo}>
         <input
