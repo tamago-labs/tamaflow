@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { Download, Upload, Trash2, Building2, Link2, Database } from 'lucide-react'
+import { Download, Upload, Trash2, Building2, Database } from 'lucide-react'
 import type { ReactNode } from 'react'
 import PageHeader from '../components/PageHeader'
 import CompanyForm from '../components/CompanyForm'
@@ -28,15 +28,12 @@ interface CompanyProfileOutletContext {
  *   - **Profile**   — the employer business profile (CompanyForm).
  *                     Fields: name, jurisdiction, base currency,
  *                     legal entity type, fiscal year start.
- *   - **On-ledger** — Canton-network specifics. Settlement currency is
- *                     shown read-only (CC for MVP). Employer Canton
- *                     partyId is reserved for future use.
  *   - **Data**      — backup lifecycle. Export and Import live in a
  *                     "Backup" section; Destroy Company lives in a
  *                     clearly marked "Danger zone" so it can't be
  *                     tapped accidentally.
  */
-type Tab = 'profile' | 'onledger' | 'data'
+type Tab = 'profile' | 'data'
 
 interface TabDef {
   key: Tab
@@ -46,7 +43,6 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { key: 'profile', label: 'Profile', icon: <Building2 size={12} /> },
-  { key: 'onledger', label: 'On-ledger', icon: <Link2 size={12} /> },
   { key: 'data', label: 'Data', icon: <Database size={12} /> }
 ]
 
@@ -107,16 +103,6 @@ export default function CompanyProfile() {
             profile={profile}
             saveCompany={saveCompany}
           />
-        )}
-
-        {tab === 'onledger' && profile && <OnLedgerTab profile={profile} />}
-
-        {tab === 'onledger' && !profile && (
-          <div className="bg-white border border-brand-border rounded-md p-6">
-            <p className="font-sans text-sm text-brand-muted m-0">
-              No company profile yet — set up your business details in the Profile tab first.
-            </p>
-          </div>
         )}
 
         {tab === 'data' && (
@@ -194,76 +180,6 @@ function ProfileTab({
       ) : (
         <p className="font-sans text-sm text-brand-muted m-0">Loading company profile…</p>
       )}
-    </div>
-  )
-}
-
-/* -------------------------------------------------------------------------- */
-/* On-ledger tab                                                                */
-/* -------------------------------------------------------------------------- */
-
-/**
- * On-ledger settings — Canton Network-specific fields that the wizard
- * intentionally skips (it only collects the business basics). For the
- * MVP this is mostly a read-only display of the locked-in settlement
- * currency (Canton Coin). The employer Canton partyId is reserved
- * for future use when companies get their own ledger identities.
- */
-function OnLedgerTab({
-  profile
-}: {
-  profile: NonNullable<ReturnType<typeof useCompany>['profile']>
-}) {
-  return (
-    <div className="bg-white border border-brand-border rounded-md p-6">
-      <p className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase mb-4 m-0">
-        On-ledger settings
-      </p>
-
-      <FieldRow label="Settlement currency">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-medium text-brand-navy">
-            {profile.settlementCurrency}
-          </span>
-          <span className="font-sans text-xs text-brand-muted">
-            — Canton Coin
-          </span>
-        </div>
-        <p className="font-sans text-xs text-brand-muted m-0 mt-1.5 leading-relaxed">
-          All payroll settles on the Canton Network in Canton Coin (CC). Additional
-          settlement currencies will be available as the network expands.
-        </p>
-      </FieldRow>
-
-      <FieldRow label="Employer Canton partyId">
-        <div className="flex items-center gap-2">
-          <code className="font-mono text-xs text-brand-muted bg-brand-light px-2 py-1 rounded">
-            not set
-          </code>
-          <span className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted bg-brand-light px-1.5 py-0.5 rounded">
-            Reserved
-          </span>
-        </div>
-        <p className="font-sans text-xs text-brand-muted m-0 mt-1.5 leading-relaxed">
-          Future versions will let your company receive invoices, refunds, and payroll
-          adjustments directly on-ledger. Not yet available.
-        </p>
-      </FieldRow>
-
-      <FieldRow label="Network">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-sm font-medium text-brand-navy">
-            Canton DevNet
-          </span>
-          <span className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted bg-brand-light px-1.5 py-0.5 rounded">
-            Default
-          </span>
-        </div>
-        <p className="font-sans text-xs text-brand-muted m-0 mt-1.5 leading-relaxed">
-          Connected to the FiveNorth Seaport Validator on Canton DevNet. Network
-          selection will land once mainnet support ships.
-        </p>
-      </FieldRow>
     </div>
   )
 }
@@ -351,13 +267,3 @@ function DataTab({
   )
 }
 
-function FieldRow({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="py-4 border-b border-brand-border last:border-b-0">
-      <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted m-0 mb-2">
-        {label}
-      </p>
-      {children}
-    </div>
-  )
-}

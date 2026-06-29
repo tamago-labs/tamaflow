@@ -4,7 +4,7 @@ import PageHeader from '../components/PageHeader'
 import { useAI } from '../context/AIContext'
 import { useWallet } from '../context/WalletContext'
 import { formatSize } from '../utils/modelDisplay'
-import { Cpu, Wallet, GitBranch, RotateCcw, Power, KeyRound, Trash2, Layers } from 'lucide-react'
+import { Cpu, Wallet, RotateCcw, Power, KeyRound, Trash2, Layers } from 'lucide-react'
 import type { ReactNode } from 'react'
 import PaymentTemplatesTab from './Settings/PaymentTemplatesTab'
 
@@ -18,18 +18,17 @@ interface OutletCtx {
 
 /**
  * Settings — sub-tabs:
- *   • AI Model            — old Ready card (active model + Change / Unload)
  *   • Wallet              — Connect Wallet (Canton)
  *   • Payment Templates   — user-defined payment templates (each becomes
  *                           a palette tile on the flow canvas). Direct
  *                           Payment is built-in and is not editable here.
- *   • Netting             — netting rules / preferences (placeholder)
+ *   • AI Model            — active model + Change / Unload
  *
  * The Company Profile has moved to its own page (linked from the
  * sidebar footer).
  */
 
-type Tab = 'ai' | 'wallet' | 'paymentTemplates' | 'netting'
+type Tab = 'wallet' | 'paymentTemplates' | 'ai'
 
 interface TabDef {
   key: Tab
@@ -38,14 +37,13 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-  { key: 'ai', label: 'AI Model', icon: <Cpu size={12} /> },
   { key: 'wallet', label: 'Wallet', icon: <Wallet size={12} /> },
   { key: 'paymentTemplates', label: 'Payment templates', icon: <Layers size={12} /> },
-  { key: 'netting', label: 'Netting', icon: <GitBranch size={12} /> }
+  { key: 'ai', label: 'AI Model', icon: <Cpu size={12} /> }
 ]
 
 export default function Settings() {
-  const [tab, setTab] = useState<Tab>('ai')
+  const [tab, setTab] = useState<Tab>('wallet')
   const { activeModel, reload, unload, resetCache, setError } = useAI()
   const { status, openSetup, openExportKey, openDestroy, openAccountInfo } = useWallet()
   const { onChangeModel } = useOutletContext<OutletCtx>()
@@ -55,7 +53,7 @@ export default function Settings() {
       <PageHeader
         label="Account"
         title="Settings"
-        subtitle="AI model, wallet, profile, and netting preferences."
+        subtitle="Configure your Canton wallet, reusable payment templates, and AI model."
       />
 
       {/* Sub-tabs */}
@@ -239,17 +237,6 @@ export default function Settings() {
       )}
 
       {tab === 'paymentTemplates' && <PaymentTemplatesTab />}
-
-      {tab === 'netting' && (
-        <div className="bg-white border border-brand-border rounded-md p-6 max-w-2xl">
-          <p className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase mb-3 m-0">
-            Netting Rules
-          </p>
-          <p className="font-sans text-sm text-brand-muted m-0">
-            Toggles for auto-netting, minimum thresholds, and counterparty rules will live here.
-          </p>
-        </div>
-      )}
     </div>
   )
 }
