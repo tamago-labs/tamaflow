@@ -15,7 +15,21 @@ import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useFlows } from '../context/FlowContext'
 
-const DEFAULT_NAME = 'Untitled flow'
+/**
+ * Default name for a fresh draft — date-stamped so multiple flows in
+ * the same session don't collide. Resolved once at module load; if the
+ * user keeps the app open past midnight and creates another flow, that
+ * one will still carry the previous day's date. Acceptable for v.1 —
+ * the user can rename the draft from the canvas toolbar before save.
+ */
+function defaultFlowName(): string {
+  const d = new Date()
+  const day = d.getDate()
+  const month = d.getMonth() + 1
+  const yy = String(d.getFullYear()).slice(-2)
+  return `Payroll ${day}-${month}-${yy}`
+}
+const DEFAULT_NAME = defaultFlowName()
 
 /**
  * `/flows/new` can be reached two ways:
