@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useWallet } from '../context/WalletContext'
+import { usePrice } from '../context/PriceContext'
 import {
   ChevronDown,
   Repeat2,
@@ -23,9 +24,10 @@ import PendingTransfersCard from '../components/PendingTransfersCard'
  * symbol, USD value + 24h columns, and a Send button plus a "More ▾"
  * dropdown (Swap / Bridge) in the action cell.
  *
- * USD value + 24h are computed from a hard-coded price table (mirrors
- * how the frontend's PriceContext falls back when no live source is
- * available). Symbols without a price entry show "—".
+ * USD value is computed via PriceContext (USD-relative rates, two-step
+ * `from → USD → to`). Symbols without a price entry show "—". The 24h
+ * column is a static mock for now — bump TOKEN_CHANGE_24H below when
+ * a real feed lands.
  *
  * No locked column (UTXO locks aren't surfaced), no manual refresh
  * (auto-refresh is handled centrally by WalletContext's useInterval),
@@ -46,8 +48,10 @@ const TOKEN_IMAGE_OVERRIDES: Record<string, string> = {
 // fallback when no live price source is wired up. `null` entries show
 // "—" in the table. Replace with a fetch from CoinMarketCap / CoinGecko
 // when network access is needed.
-const TOKEN_PRICES: Record<string, { usd: number; change24h: number } | null> = {
-  CC: { usd: 0.087, change24h: 1.42 },
+// (USD rates now live in `shared/priceProvider.ts` and are consumed via
+// `usePrice()` — only the 24h mock remains here for the change column.)
+const TOKEN_CHANGE_24H: Record<string, number | null> = {
+  CC: 1.42,
 }
 
 // Display name override. The wallet SDK currently returns the bare
@@ -56,6 +60,18 @@ const TOKEN_PRICES: Record<string, { usd: number; change24h: number } | null> = 
 const TOKEN_NAME_OVERRIDES: Record<string, string> = {
   CC: 'Canton',
   Amulet: 'Canton',
+}
+
+/**
+ * Resolve the USD value of a holding via PriceContext. Falls back to
+ * `null` when the token's symbol isn't priced yet (no row, "—" in UI).
+ */
+function useUsdValue(amount: string | number | undefined, symbol: string): number | null {
+  const { convert } = usePrice()
+  const n = typeof amount === 'number' ? amount : parseFloat(amount ?? '')
+  if (!Number.isFinite(n)) return null
+  const v = convert(n, symbol as 'CC', 'USD')
+  return v !== null && Number.isFinite(v) ? v : null
 }
 
 /**
@@ -212,11 +228,8 @@ function AssetRow({
   onSend: () => void
 }) {
   const name = tokenName(symbol, instrumentId)
-  const price = TOKEN_PRICES[symbol]
-  const amountNum = parseFloat(amount)
-  const usdValue =
-    price && Number.isFinite(amountNum) ? amountNum * price.usd : null
-  const change24h = price ? price.change24h : null
+  const usdValue = useUsdValue(amount, symbol)
+  const change24h = TOKEN_CHANGE_24H[symbol] ?? null
 
   return (
     <li className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] gap-4 items-center py-3 px-4 hover:bg-brand-light/40 transition-colors">
@@ -238,7 +251,7 @@ function AssetRow({
         </p>
       </div>
 
-      {/* USD Value — amount × hardcoded price */}
+      {/* USD Value — pulled from PriceContext */}
       <div className="text-right">
         {usdValue !== null ? (
           <p className="font-mono text-sm text-brand-navy m-0">
