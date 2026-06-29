@@ -1,10 +1,4 @@
-import {
-  ShieldCheck,
-  GitBranch,
-  Coins,
-  Sparkles,
-  Mail,
-} from "lucide-react";
+import { ShieldCheck, Zap, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface Feature {
@@ -13,48 +7,42 @@ interface Feature {
   body: string;
   bullets: string[];
   accent: "blue" | "teal" | "navy" | "ok";
+  /** Optional badge rendered in the top-right of the card. */
+  badge?: string;
 }
 
 const features: Feature[] = [
   {
     icon: ShieldCheck,
     title: "Private Payroll",
-    body: "Employee compensation stays visible only to authorized parties.",
-    bullets: ["Fine-grained access control", "Confidential transactions"],
-    accent: "blue",
-  },
-  {
-    icon: GitBranch,
-    title: "Cross-Border Netting",
-    body: "Consolidate obligations across currencies before settlement to cut operational cost.",
-    bullets: ["Multi-currency netting", "Reduced FX exposure"],
-    accent: "teal",
-  },
-  {
-    icon: Coins,
-    title: "Tokenized Deposits",
-    body: "Programmable payroll settlement using digital representations of bank deposits.",
-    bullets: ["Atomic multi-party settlement", "Bank-deposit backed"],
-    accent: "navy",
-  },
-  {
-    icon: Sparkles,
-    title: "AI Payroll Assistant",
-    body: "Local agents review, summarise, and surface what needs you before approval.",
+    body: "Compensation stays visible only to the parties authorised to see it. No third-party LLM, no intermediary, no leak surface.",
     bullets: [
-      "Payroll summaries",
-      "Anomaly detection",
-      "Approval recommendations",
-      "Estimated savings insights",
+      "On-ledger confidentiality",
+      "Per-employee access scope",
     ],
     accent: "blue",
   },
   {
-    icon: Mail,
-    title: "Private Payslips",
-    body: "Employees securely access only their own payment details — never the full dataset.",
-    bullets: ["Per-employee access", "No company-wide exposure"],
-    accent: "ok",
+    icon: Zap,
+    title: "Atomic Settlement on Canton",
+    body: "Every payroll run settles in a single on-ledger transaction. All parties commit or none do — no partial state, no manual reconciliation.",
+    bullets: [
+      "One transaction per cycle",
+      "Full audit trail on Canton",
+    ],
+    accent: "teal",
+  },
+  {
+    icon: Sparkles,
+    title: "AI-Assisted Payroll",
+    body: "Local AI parses payroll documents, flags anomalies, and surfaces what needs review. Sensitive data never leaves your machine.",
+    bullets: [
+      "Local LLM — no cloud",
+      "Roster + document parsing",
+      "Anomaly detection",
+    ],
+    accent: "navy",
+    badge: "Coming soon",
   },
 ];
 
@@ -66,8 +54,11 @@ const accentMap: Record<Feature["accent"], string> = {
 };
 
 /**
- * "Key Features" — 5-card grid (4+1 layout) with icons, descriptions,
- * and short bullet lists. Each card has a coloured accent badge.
+ * "Key Features" — 3-card row (one for each of our three real
+ * promises: privacy, Canton settlement, local AI). Each card has a
+ * coloured accent badge for the icon and a small mono number/badge
+ * in the top-right. The AI card carries a "Coming soon" pill so
+ * visitors don't expect a fully-baked AI in v1.
  */
 export default function Features() {
   return (
@@ -84,14 +75,10 @@ export default function Features() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {features.map((f) => (
+          {features.map((f, i) => (
             <article
               key={f.title}
-              className={`bg-white border border-brand-border rounded-md p-6 hover:border-brand-blue/40 transition-colors ${
-                f.title === "AI Payroll Assistant"
-                  ? "lg:col-span-1 lg:row-span-1"
-                  : ""
-              }`}
+              className="bg-white border border-brand-border rounded-md p-6 hover:border-brand-blue/40 transition-colors"
             >
               <div className="flex items-center justify-between mb-4">
                 <span
@@ -99,9 +86,15 @@ export default function Features() {
                 >
                   <f.icon size={18} />
                 </span>
-                <span className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
-                  {String(features.indexOf(f) + 1).padStart(2, "0")}
-                </span>
+                {f.badge ? (
+                  <span className="inline-flex items-center font-mono text-[9px] tracking-wider2 text-brand-muted uppercase font-semibold border border-brand-border rounded-full px-2 py-0.5 bg-brand-light">
+                    {f.badge}
+                  </span>
+                ) : (
+                  <span className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                )}
               </div>
               <h3 className="text-lg font-medium text-brand-navy">
                 {f.title}

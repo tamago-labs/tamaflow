@@ -50,12 +50,12 @@ export default function CTA() {
                 Launch App
                 <ArrowUpRight size={14} />
               </Link>
-              <a
+              {/* <a
                 href="#whitepaper"
                 className="inline-flex items-center gap-2 py-3 px-7 bg-transparent text-white border border-white/20 rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:bg-white/5"
               >
                 Read the Whitepaper
-              </a>
+              </a> */}
             </div>
           </div>
         </div>

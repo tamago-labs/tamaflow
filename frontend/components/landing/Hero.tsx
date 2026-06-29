@@ -1,18 +1,27 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowUpRight, ShieldCheck, Lock, Cpu } from "lucide-react";
+import { motion } from "framer-motion";
+import { ArrowUpRight, ShieldCheck } from "lucide-react";
 import DownloadDesktopApp from "./DownloadDesktopApp";
 
 /**
  * Landing-page hero.
  *
- *   Top label   : small mono "TamaFlow · Local AI Auto-Payroll on Canton"
  *   H1          : "Zero-Cloud AI. Zero-Leaked Payroll Data."
  *   Subtitle    : Canton + privacy pitch (verbatim from brief)
- *   CTAs        : "Launch App" (primary) + "Read the Whitepaper" (secondary)
- *   Right card  : a stylized dashboard mockup with the brand tokens
+ *   Trust line  : "Edge-AI parses payroll on-device, so no cloud can leak it under GDPR." (Shield)
+ *   CTAs        : "I'm an Employee" (primary) + DownloadDesktopApp (secondary)
+ *   Right card  : a stylized "flow canvas" mockup mirroring the in-app
+ *                 shell — palette of payment templates on the left, two
+ *                 connected cards (Employee → Payment) on the right with
+ *                 an animated dashed connector and a pulsing destination
+ *                 halo on the Payment card.
  *
- * The mockup is hand-rolled with plain divs (no external image) so the
- * visual stays crisp at any size and respects the design system.
+ * The mockup is hand-rolled with plain divs + inline SVG (no external
+ * image) so it stays crisp at any size and respects the design system.
+ * Animations live in `app/globals.css` (dash-flow + halo-breathe) and
+ * framer-motion for one-shot entrance stagger.
  */
 export default function Hero() {
   return (
@@ -58,36 +67,27 @@ export default function Hero() {
             <DownloadDesktopApp />
           </div>
 
-          {/* Trust strip — three small mono badges */}
-          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
-            {[
-              { icon: ShieldCheck, label: "Confidential by design" },
-              { icon: Lock, label: "Local LLM · No cloud" },
-              { icon: Cpu, label: "Atomic settlement on Canton" },
-            ].map((b) => (
-              <span
-                key={b.label}
-                className="inline-flex items-center gap-2  text-[10px] tracking-wider2 text-brand-muted uppercase"
-              >
-                <b.icon size={14} className="text-brand-teal" />
-                {b.label}
-              </span>
-            ))}
+          {/* Trust line — single sentence framing the privacy promise */}
+          <div className="mt-10 flex items-center gap-2.5 text-sm text-brand-navy/80 font-medium leading-relaxed">
+            <ShieldCheck size={14} className="text-brand-teal flex-shrink-0" />
+            Edge-AI parses payroll on-device, so no cloud can leak it under GDPR.
           </div>
         </div>
 
         {/* Right: visual mockup */}
-        <DashboardMockup />
+        <FlowCanvasMockup />
       </div>
     </section>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* Hero mockup — a self-contained "dashboard card" that mirrors the actual    */
-/* in-app shell (teal accent + sidebar). Pure CSS / divs, no images.         */
+/* Hero mockup — a self-contained "flow canvas" card that mirrors the actual  */
+/* in-app shell. Palette on the left, two connected cards on the right with   */
+/* an animated dashed connector and a pulsing "destination" halo. Pure CSS /  */
+/* divs / inline SVG, no images.                                              */
 /* -------------------------------------------------------------------------- */
-function DashboardMockup() {
+function FlowCanvasMockup() {
   return (
     <div className="relative">
       {/* Outer card */}
@@ -110,17 +110,20 @@ function DashboardMockup() {
 
         {/* Body — sidebar + main */}
         <div className="grid grid-cols-[64px_1fr]">
-          {/* Sidebar mock */}
-          <aside className="bg-white border-r border-brand-border py-3 flex flex-col items-center gap-3">
-           
+          {/* Sidebar mock — slim, mirrors the in-app nav rail */}
+          <aside className="bg-white border-r border-brand-border py-3 flex flex-col items-center gap-2">
+            <div className="w-7 h-7 rounded bg-brand-blue text-white flex items-center justify-center text-[10px] font-mono font-bold">
+              T
+            </div>
             <div className="mt-1 flex flex-col gap-1 w-10">
-              {["◆", "◇", "◇", "◇", "◇"].map((g, i) => (
+              {["◆", "◇", "◇", "◇"].map((g, i) => (
                 <span
                   key={i}
-                  className={`h-6 rounded flex items-center justify-center text-[10px] ${i === 0
+                  className={`h-6 rounded flex items-center justify-center text-[10px] ${
+                    i === 0
                       ? "bg-brand-blue text-white"
                       : "text-brand-muted"
-                    }`}
+                  }`}
                 >
                   {g}
                 </span>
@@ -128,63 +131,151 @@ function DashboardMockup() {
             </div>
           </aside>
 
-          {/* Main content */}
-          <div className="p-4 space-y-3">
+          {/* Main content — flow canvas */}
+          <div className="p-4 space-y-3 min-h-[210px]">
+            {/* Flow header — name + ready status */}
             <div className="flex items-center justify-between">
               <p className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase font-semibold">
-                Overview
+                Flow · March payroll
               </p>
-              <span className="inline-flex items-center gap-1.5 font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-teal" />
-                AI Ready
+              <span className="inline-flex items-center gap-1.5 font-mono text-[9px] tracking-wider2 text-brand-ok uppercase font-semibold">
+                <span className="relative inline-flex w-1.5 h-1.5">
+                  <span className="absolute inset-0 rounded-full bg-brand-ok animate-ping opacity-60" />
+                  <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-brand-ok" />
+                </span>
+                Ready
               </span>
             </div>
-            <p className="text-[15px] font-light text-brand-navy">
-              June Payroll · Japan · Thailand · Singapore
-            </p>
 
-            {/* KPI row */}
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { l: "Employees", v: "12" },
-                { l: "Net Flows", v: "03" },
-                { l: "Saved", v: "18%" },
-              ].map((k) => (
-                <div
-                  key={k.l}
-                  className="border border-brand-border rounded p-2.5"
+            {/* Palette + canvas row */}
+            <div className="grid grid-cols-[80px_1fr] gap-3 items-stretch">
+              {/* Palette — small stack of payment templates */}
+              <motion.div
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+                className="border border-brand-border rounded p-2 space-y-1.5"
+              >
+                <p className="font-mono text-[8px] tracking-wider2 text-brand-muted uppercase font-semibold">
+                  Palette
+                </p>
+                {[
+                  { name: "Direct", tone: "navy" as const },
+                  { name: "US 27%", tone: "teal" as const },
+                  { name: "Bonus", tone: "navy" as const },
+                ].map((t, i) => (
+                  <motion.div
+                    key={t.name}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.4,
+                      delay: 0.3 + i * 0.1,
+                      ease: "easeOut",
+                    }}
+                    className={`text-[8px] font-mono tracking-wider2 uppercase px-1.5 py-1 rounded border ${
+                      t.tone === "teal"
+                        ? "border-brand-teal text-brand-tealAccent bg-[#eafaf8]"
+                        : "border-brand-border text-brand-navy bg-white"
+                    }`}
+                  >
+                    {t.name}
+                  </motion.div>
+                ))}
+              </motion.div>
+
+              {/* Canvas — two cards joined by an animated dashed line */}
+              <div className="relative flex items-center justify-between min-h-[120px] px-1">
+                {/* Animated dashed connector — draws from the right edge
+                    of the Employee card to the left edge of the Payee
+                    card. `viewBox` keeps the dash pattern consistent
+                    regardless of the container's actual pixel size. */}
+                <svg
+                  className="absolute inset-0 w-full h-full pointer-events-none"
+                  viewBox="0 0 200 60"
+                  preserveAspectRatio="none"
+                  fill="none"
+                  aria-hidden
                 >
-                  <p className="font-mono text-[8px] tracking-wider2 text-brand-muted uppercase font-semibold">
-                    {k.l}
+                  {/* Solid faint track underneath for context */}
+                  <line
+                    x1="28"
+                    y1="30"
+                    x2="172"
+                    y2="30"
+                    stroke="#e0e0f0"
+                    strokeWidth="1"
+                  />
+                  {/* Animated teal dashes flowing left → right */}
+                  <line
+                    x1="28"
+                    y1="30"
+                    x2="172"
+                    y2="30"
+                    stroke="#3EC4C0"
+                    strokeWidth="1.5"
+                    strokeDasharray="4 4"
+                    strokeLinecap="round"
+                    className="animate-dash-flow"
+                  />
+                  {/* Tiny input/output port dots, matching the in-app
+                      canvas card ports. */}
+                  <circle cx="28" cy="30" r="2" fill="#3EC4C0" />
+                  <circle cx="172" cy="30" r="2" fill="#3EC4C0" />
+                </svg>
+
+                {/* Employee card — origin of the route */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.45, delay: 0.2, ease: "easeOut" }}
+                  className="relative z-10 bg-white border border-brand-border rounded p-2 w-[78px] shadow-[0_2px_8px_-4px_rgba(10,10,92,0.18)]"
+                >
+                  <p className="font-mono text-[7px] tracking-wider2 text-brand-muted uppercase">
+                    Employee
                   </p>
-                  <p className="text-base font-light text-brand-navy">
-                    {k.v}
+                  <p className="text-[12px] text-brand-navy font-semibold leading-tight mt-0.5">
+                    Akira
                   </p>
-                </div>
-              ))}
+                  <p className="font-mono text-[8px] text-brand-muted mt-1">
+                    JPY · Tokyo
+                  </p>
+                </motion.div>
+
+                {/* Payment card — destination; breathing halo + teal
+                    outline signal "this is the on-ledger settlement —
+                    amount in CC, settled on Canton". */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.45, delay: 0.4, ease: "easeOut" }}
+                  className="relative z-10"
+                >
+                  <div className="absolute -inset-1.5 rounded-md bg-brand-teal/15 animate-halo-breathe" />
+                  <div className="relative bg-white border-2 border-brand-teal rounded p-2 w-[78px] shadow-[0_2px_12px_-4px_rgba(62,196,192,0.45)]">
+                    <p className="font-mono text-[7px] tracking-wider2 text-brand-tealAccent uppercase font-semibold">
+                      Payment
+                    </p>
+                    <p className="text-[12px] text-brand-navy font-semibold leading-tight mt-0.5 whitespace-nowrap">
+                      1,250 CC
+                    </p>
+                    <p className="font-mono text-[8px] text-brand-muted mt-1 whitespace-nowrap">
+                      on Canton
+                    </p>
+                  </div>
+                </motion.div>
+              </div>
             </div>
 
-            {/* AI summary card */}
-            <div className="border border-brand-border rounded p-3 bg-brand-light">
-              <p className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase font-semibold mb-1.5">
-                AI Summary
-              </p>
-              <p className="text-[12px] text-brand-navy leading-snug">
-                Payroll approved. Estimated FX and settlement savings{" "}
-                <span className="text-brand-ok font-semibold">18%</span>.
-              </p>
-              <div className="mt-2 flex items-center gap-1.5">
-                <span className="inline-flex items-center font-mono text-[8px] font-bold tracking-wider2 uppercase border border-brand-ok text-brand-ok bg-[#e6f7ee] rounded-full px-1.5 py-0.5">
-                  Approved
-                </span>
-                <span className="inline-flex items-center font-mono text-[8px] font-bold tracking-wider2 uppercase border border-brand-teal text-brand-tealAccent bg-[#eafaf8] rounded-full px-1.5 py-0.5">
-                  Canton
-                </span>
-              </div>
+            {/* Footer — route meta */}
+            <div className="flex items-center justify-between border-t border-brand-border pt-2">
+              <span className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
+                2 cards · 1 route
+              </span>
             </div>
           </div>
         </div>
-      </div> 
+      </div>
     </div>
   );
 }

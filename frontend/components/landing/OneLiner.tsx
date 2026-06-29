@@ -21,7 +21,7 @@ import { Quote } from "lucide-react";
  * the motion across the site feels unified.
  */
 const QUOTE =
-  "TamaFlow helps us pay our Japan and Singapore teams in one atomic settlement — without ever exposing payroll data to a third-party LLM. It's the first payroll product that actually respects privacy.";
+  "TamaFlow helps us pay our team in crypto without breaking Japanese law or messing up the accounting. It's the only payroll product that does both.";
 
 const NAME = "Pisuth D.";
 const ROLE = "Representative Director, Tamago Labs Japan";
@@ -56,7 +56,7 @@ export default function OneLiner() {
             stiffness: 320,
             damping: 28,
           }}
-          className="font-sans text-2xl md:text-3xl lg:text-[32px] font-light leading-snug text-white m-0 max-w-3xl"
+          className="font-sans text-2xl md:text-3xl lg:text-[32px] font-light leading-snug text-white m-0 max-w-4xl"
         >
           &ldquo;{QUOTE}&rdquo;
         </motion.p>

@@ -44,8 +44,6 @@ export default function Footer() {
             links={[
               { href: "#problem", label: "Problem" },
               { href: "#solution", label: "Solution" },
-              { href: "#whitepaper", label: "Whitepaper" },
-              { href: "mailto:hello@tamaflow.xyz", label: "Contact" },
             ]}
           />
           <FooterCol
@@ -64,12 +62,12 @@ export default function Footer() {
             <p className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
               © {new Date().getFullYear()} {SITE.name}
             </p>
-            <span className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
+            {/* <span className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
               ·
             </span>
             <p className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
               {SITE.version} · TamaFlow
-            </p>
+            </p> */}
           </div>
           <div className="flex items-center gap-3">
             {marketingNav.slice(0, 3).map((n) => (

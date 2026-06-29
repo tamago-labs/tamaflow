@@ -58,3 +58,38 @@ body {
     linear-gradient(to bottom, rgba(10, 10, 92, 0.05) 1px, transparent 1px);
   background-size: 56px 56px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Hero mockup animations                                              */
+/* ------------------------------------------------------------------ */
+
+/* Continuous left-to-right dash flow for the SVG connector line that
+   links the two flow canvas cards in the Hero mockup. One full
+   `stroke-dasharray` cycle (4 on + 4 off = 8) per loop keeps the
+   motion seamless — no visible "snap" at the loop boundary. */
+@keyframes dash-flow {
+  to {
+    stroke-dashoffset: -8;
+  }
+}
+.animate-dash-flow {
+  animation: dash-flow 0.9s linear infinite;
+}
+
+/* Slow halo pulse for the destination card on the canvas — a soft
+   teal ring breathes around the Payee to communicate "this is the
+   end of the route, ready to receive". */
+@keyframes halo-breathe {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.06);
+  }
+}
+.animate-halo-breathe {
+  animation: halo-breathe 2.4s ease-in-out infinite;
+  transform-origin: center;
+}

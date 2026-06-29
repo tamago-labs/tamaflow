@@ -47,11 +47,6 @@ export default function Problem() {
             <span className="text-brand-blue">Global payroll</span> is
             broken.
           </h2>
-          <p className="mt-4 text-base text-brand-navy/70 leading-relaxed">
-            Global companies increasingly hire across multiple countries.
-            Today's process is expensive, fragmented, and quietly leaks
-            sensitive financial data to every intermediary it touches.
-          </p>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
