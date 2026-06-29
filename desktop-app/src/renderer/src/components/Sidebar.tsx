@@ -15,14 +15,17 @@ import { useCompany } from '../context/CompanyContext'
 import { COUNTRIES } from '../lib/countries'
 
 /**
- * Fixed 200px left navigation. Grouped into two sections:
- *   Payroll: Dashboard, Employees, Flow Builder, Active Flows
- *   Account: Assets, Settlements, Settings
+ * Fixed 200px left navigation. v.1 ships a single flat nav group
+ * ordered to follow the natural payroll workflow:
  *
- * Settlements is an account-level ledger view (the record of completed
- * on-ledger payments), so it lives next to Assets rather than under
- * the operational Payroll group. The icon is a receipt — settlements
- * are receipts of completed transactions.
+ *   1. Dashboard         — landing
+ *   2. Employees         — set up roster (must come before flows)
+ *   3. Flow Builder      — create a new flow
+ *   4. Active Flows      — running + completed flows
+ *   5. Settlements       — cross-flow ledger (read-the-history step
+ *                          right after running flows)
+ *   6. Assets            — wallet, holdings, transfers
+ *   7. Settings          — config (always last)
  *
  * Active item gets the brand-blue fill + white text. The teal 3px top
  * accent matches the my-doctor-ai reference.
@@ -37,32 +40,14 @@ interface NavItem {
   end?: boolean
 }
 
-interface NavCategory {
-  key: string
-  label: string
-  items: NavItem[]
-}
-
-const navCategories: NavCategory[] = [
-  {
-    key: 'payroll',
-    label: 'Payroll',
-    items: [
-      { path: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-      { path: '/employees', label: 'Employees', icon: Users },
-      { path: '/flows/new', label: 'Flow Builder', icon: Plus },
-      { path: '/flows', label: 'Active Flows', icon: ListTodo, end: true }
-    ]
-  },
-  {
-    key: 'account',
-    label: 'Account',
-    items: [
-      { path: '/assets', label: 'Assets', icon: Wallet },
-      { path: '/settlements', label: 'Settlements', icon: Receipt },
-      { path: '/settings', label: 'Settings', icon: SettingsIcon }
-    ]
-  }
+const navItems: NavItem[] = [
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { path: '/employees', label: 'Employees', icon: Users },
+  { path: '/flows/new', label: 'Flow Builder', icon: Plus },
+  { path: '/flows', label: 'Active Flows', icon: ListTodo, end: true },
+  { path: '/settlements', label: 'Settlements', icon: Receipt },
+  { path: '/assets', label: 'Assets', icon: Wallet },
+  { path: '/settings', label: 'Settings', icon: SettingsIcon },
 ]
 
 function Wordmark() {
@@ -98,46 +83,37 @@ export default function Sidebar() {
         <Wordmark />
       </div>
 
-      {/* Nav items grouped by category */}
-      <nav className="flex flex-col gap-4 flex-1 overflow-y-auto">
-        {navCategories.map((category) => (
-          <div key={category.key}>
-            <p className="font-mono text-[10px] font-semibold text-brand-muted uppercase tracking-wider2 m-0 mb-2 ml-3">
-              {category.label}
-            </p>
-            <div className="flex flex-col gap-1">
-              {category.items.map((item) => {
-                const Icon = item.icon
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    end={item.end}
-                    className={({ isActive }) => {
-                      // /flows/new is a redirect route — when the user
-                      // lands on the canvas at /flows/:id (e.g. /flows/abc123)
-                      // the Flow Builder nav should still light up, since
-                      // that's the same destination in user terms. Bare
-                      // /flows stays its own entry (Active Flows).
-                      const onCanvas =
-                        item.path === '/flows/new' &&
-                        /^\/flows\/[^/]+$/.test(location.pathname)
-                      const active = isActive || onCanvas
-                      return `flex items-center gap-2.5 py-2 px-3 rounded-md no-underline text-[13px] transition-colors ${
-                        active
-                          ? 'bg-brand-blue text-white font-medium'
-                          : 'text-brand-navy font-normal hover:bg-brand-light'
-                      }`
-                    }}
-                  >
-                    <Icon size={16} className="flex-shrink-0" />
-                    <span>{item.label}</span>
-                  </NavLink>
-                )
-              })}
-            </div>
-          </div>
-        ))}
+      {/* Nav items — flat list, see navItems above for ordering */}
+      <nav className="flex flex-col gap-1 flex-1 overflow-y-auto">
+        {navItems.map((item) => {
+          const Icon = item.icon
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.end}
+              className={({ isActive }) => {
+                // /flows/new is a redirect route — when the user
+                // lands on the canvas at /flows/:id (e.g. /flows/abc123)
+                // the Flow Builder nav should still light up, since
+                // that's the same destination in user terms. Bare
+                // /flows stays its own entry (Active Flows).
+                const onCanvas =
+                  item.path === '/flows/new' &&
+                  /^\/flows\/[^/]+$/.test(location.pathname)
+                const active = isActive || onCanvas
+                return `flex items-center gap-2.5 py-2 px-3 rounded-md no-underline text-[13px] transition-colors ${
+                  active
+                    ? 'bg-brand-blue text-white font-medium'
+                    : 'text-brand-navy font-normal hover:bg-brand-light'
+                }`
+              }}
+            >
+              <Icon size={16} className="flex-shrink-0" />
+              <span>{item.label}</span>
+            </NavLink>
+          )
+        })}
       </nav>
 
       {/* Bottom employer block — clickable, opens the Company Profile
@@ -149,8 +125,8 @@ export default function Sidebar() {
         className={({ isActive }) =>
           `block pt-3 mt-2 border-t border-brand-border px-3 py-2.5 rounded-md no-underline transition-colors ${
             isActive ? 'bg-brand-light' : 'hover:bg-brand-light'
-          }`
-        }
+ }`
+ }
         title="Open Company Profile"
       >
         <div className="flex items-center gap-2 mb-1">
@@ -165,7 +141,7 @@ export default function Sidebar() {
         <p
           className={`font-sans text-[13px] m-0 truncate ${
             isPlaceholder ? 'text-brand-muted italic' : 'text-brand-navy font-medium'
-          }`}
+ }`}
         >
           {flag && <span className="mr-1">{flag}</span>}
           {displayName}
