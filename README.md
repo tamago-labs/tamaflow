@@ -1,38 +1,35 @@
-# TamaFlow
+# TamaFlow - AI Auto-Payroll on Canton
 
-## AI Auto-Payroll on Canton
-
----
 
 > **Stop leaking corporate finances to third-party cloud LLMs.** Import sensitive data locally, verify employees with 5N ID, and let AI run payroll end-to-end on Canton.
+
+<img width="953" height="499" alt="Screenshot 2026-06-29 115350" src="https://github.com/user-attachments/assets/3b88dd84-b61e-4806-9d8a-bcaacc618446" />
 
 ---
 
 ## What is TamaFlow?
 
-TamaFlow is a **privacy-first payroll stack** for companies that pay people across borders. Sensitive employee data — rosters, compensation, tax IDs — never leaves the operator's machine, yet settlement happens on a public, auditable ledger (the Canton Network). Two apps ship together: a desktop **Employer Client** where the operator builds payment flows, and a web **Employee Portal** where recipients can see what they were paid and why.
+TamaFlow is a **privacy-first AI payroll platform** built for modern companies operating on Canton. It keeps sensitive payroll data entirely within the employer's local environment while using AI to automate payroll workflows and Canton to coordinate secure, auditable settlements.
 
-The desktop app is the workhorse: a drag-and-drop canvas where you wire **Employee cards → Payment Templates** (direct pay, US-style withholding, JP-style withholding, bonus, custom) into a single atomic flow. When you press **Run**, every route settles in **one Canton transaction** — either every employee gets paid or none of them do. There is no partial state, no manual reconciliation, and no third-party LLM has ever read a payroll file.
+TamaFlow consists of two applications: an **Employer Client** for managing payroll operations with local AI, and an **Employee Portal** where employees verify their identity with 5N ID, receive payments, and access payroll statements. Together, they provide an end-to-end payroll experience without exposing confidential financial data to third-party cloud AI services.
 
-The Employee Portal is a thin, browser-based wallet view. An employee connects their **Loop wallet** (a Canton-compatible browser wallet), sees their **Canton party ID**, and can later see incoming payments, download statements, and (eventually) bridge out to Ethereum. v1 of the portal is intentionally minimal — it shows what's already settled on-ledger and tells you what you can do next.
-
-- **Employer Client** — Electron desktop app. Drag-and-drop flow builder, local AI roster parsing (in v2), on-device Canton wallet.
-- **Employee Portal** — Next.js web app. Browser-wallet connect, statement view, payment alerts.
-- **Ledger** — Canton Network (FiveNorth Seaport Validator DevNet by default).
-- **Wallet** — Local Canton wallet in the desktop app; Loop wallet in the browser.
+- **Employer Client** — Electron desktop app for payroll management, AI-powered workflows, and Canton settlements.
+- **Employee Portal** — Next.js web app for employee identity verification, payment history, assets, and statements.
+- **Settlement** — Canton Network (FiveNorth Seaport Validator DevNet by default).
+- **Identity** — 5N ID SDK for secure employee identity verification on Canton.
 
 ---
 
 ## Highlighted Features
 
-- **🔒 Private Payroll** — Compensation is visible only to the parties authorised to see it; no third-party LLM, no intermediary, no leak surface.
-- **⚡ Atomic Settlement on Canton** — Every payroll run settles in a single on-ledger transaction; all parties commit or none do.
-- **🤖 AI-Assisted Payroll** — Local AI parses payroll documents, flags anomalies, and surfaces what needs review — sensitive data never leaves your machine. *(Coming soon)*
-- **🧩 Drag-and-Drop Flow Builder** — Compose multi-step payroll runs visually: drop Employees, attach Payment Templates, wire them with intent-carrying connectors.
-- **🪪 5N ID KYC** — Verify employee identity against a Tamago Labs-issued credential before unlocking payouts.
-- **💱 Multi-Currency Payroll** — Pay each route in its native currency (JPY, USD, EUR, …) and settle the underlying transfer in CC (Canton's native coin) on-ledger.
-- **🧾 On-Ledger Audit Trail** — Every settled route carries a transaction hash; nothing is hidden in a vendor's database.
-- **🔁 Re-Send on Failure** — A failed route can be retried in isolation without rerunning the whole flow.
+* **Privacy-First Payroll** — Process sensitive payroll data entirely within the employer's local environment without exposing it to third-party cloud LLMs.
+* **AI-Powered Payroll Automation** — Local AI reviews payroll documents, extracts employee data, flags anomalies, and automates approval workflows while keeping data on-device.
+* **Visual Flow Builder** — Design payroll workflows with a drag-and-drop canvas, defining approval steps and payment routing before execution.
+* **Atomic Settlement on Canton** — Execute payroll as a single atomic settlement on Canton, ensuring every payment succeeds together or none are processed.
+* **Employee Identity Verification** — Verify employees using 5N ID before payroll is approved and settled.
+* **Employee Self-Service Portal** — Employees can verify their identity, view assets, receive payroll, and download payroll statements through a dedicated web portal.
+* **Multi-Currency Payroll** — Configure payroll in local fiat currencies while settling securely on Canton.
+* **Auditable Payment Records** — Every payroll settlement is recorded on Canton, providing a transparent and verifiable audit trail.
 
 ---
 
@@ -179,9 +176,7 @@ tamaflow/
 │   ├── app/            # App Router pages (/, /app/*)
 │   ├── components/     # Shared + per-section components
 │   └── package.json
-├── scripts/            # Canton smoke-test scripts (01-faucet, 02-wallet, 03-transfer)
-├── example-scripts/    # 13 reference TypeScript scripts (SDK examples)
-└── example-sdk/        # Canton wallet SDK reference docs
+└── scripts/            # Canton smoke-test scripts (01-faucet, 02-wallet, 03-transfer)
 ```
 
 ---
@@ -211,19 +206,6 @@ tamaflow/
 - ✅ Employee Portal (landing + dashboard + wallet connect + statement mock)
 - 🚧 AI-assisted payroll (QVAC SDK wired; UI surfaces in v2 — see "Coming soon" pill)
 - 🚧 5N ID KYC verification (credential issuance + on-ledger proof — in progress)
-
----
-
-## Contributing
-
-PRs welcome. The repo is split into three independently shippable units — the **desktop app**, the **frontend**, and the **scripts/** smoke tests — so a small change usually only needs `npm install` in one of them.
-
-```bash
-git clone https://github.com/tamago-labs/tamaflow
-cd tamaflow
-```
-
-Then follow the **Quick Start** steps above for whichever app you're touching.
 
 ---
 
