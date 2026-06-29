@@ -1,7 +1,16 @@
 // Inline edit form rendered inside <CanvasCard> when `editing === true`.
 //
-// Two card categories only — `source` and `payee` — so the form just
-// switches on `card.category` between two field shapes.
+// Three card categories — `source`, `payee`, `payment` — so the form
+// switches on `card.category` between three field shapes:
+//
+//   • source   — wallet party id (read-only) + live CC balance +
+//                baseCurrency equivalent in a footer BELOW the
+//                Cancel/Save buttons (SourceBalanceFooter).
+//   • payee    — employee summary (read-only — the binding is locked
+//                at creation) + the auto-fetched FX rate + the
+//                LastPaidSection history below the Cancel/Save buttons.
+//   • payment  — per-card memo only. The amount comes from the
+//                employee's salary and is NOT editable here.
 //
 // The form is contained in a div with `data-card-edit="1"` so
 // click/pointer-down/double-click events stopPropagation and don't
@@ -12,26 +21,44 @@
 // the end of the pre-filled text. Enter saves, Escape cancels — both
 // bubble through `onKeyDown` from the parent.
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { BLUE, BORDER, MUTED, NAVY, monoFont, sansFont } from './theme'
 import type {
   CanvasCard as CanvasCardType,
   PayeeFields,
+  PaymentFields,
   SourceFields,
 } from './types'
-import type { Employee } from '../../../preload/index.d'
+import type { Employee, PaymentTemplate } from '../../../preload/index.d'
+import PaymentFieldsForm from './PaymentFieldsForm'
+import LastPaidSection from './LastPaidSection'
+import { useWallet } from '../context/WalletContext'
+import { useCompany } from '../context/CompanyContext'
+import { usePrice } from '../context/PriceContext'
 
 interface EditFormProps {
   card: CanvasCardType
   title: string
   source: SourceFields
   payee: PayeeFields
+  payment: PaymentFields
   /** Roster used by the Payee card to resolve employeeId → Employee. */
   employees: Employee[]
   /** Drives the Source section's "no wallet set up" warning. */
   walletReady: boolean
+  /**
+   * Resolved payment template for a Payment card. `null` for Direct
+   * Payment (no template) OR when the referenced templateId was deleted
+   * from Settings (stale — PaymentFieldsForm surfaces the warning).
+   * Drives the template identity strip + memo placeholder at the top of
+   * the payment edit form.
+   */
+  paymentTemplate: PaymentTemplate | null
+  /** Flow id — threaded into LastPaidSection so it can subscribe to
+   *  this flow's route progress. */
+  flowId: string
   onTitleChange: (v: string) => void
-  onPayeeChange: (v: PayeeFields) => void
+  onPaymentChange: (v: PaymentFields) => void
   onSave: () => void
   onCancel: () => void
   onKeyDown: (e: React.KeyboardEvent) => void
@@ -142,15 +169,19 @@ export default function EditForm({
   title,
   source,
   payee,
+  payment,
   employees,
   walletReady,
+  paymentTemplate,
+  flowId,
   onTitleChange,
-  onPayeeChange,
+  onPaymentChange,
   onSave,
   onCancel,
   onKeyDown,
 }: EditFormProps) {
   const titleInputRef = useRef<HTMLInputElement>(null)
+  const { profile: companyProfile } = useCompany()
 
   useEffect(() => {
     // Defer focus so the input is fully mounted; place caret at the end
@@ -203,7 +234,16 @@ export default function EditForm({
         <PayeeFieldsForm
           payee={payee}
           employees={employees}
-          onChange={onPayeeChange}
+        />
+      )}
+
+      {card.category === 'payment' && (
+        <PaymentFieldsForm
+          payment={payment}
+          paymentTemplate={paymentTemplate}
+          hasStaleTemplateId={!!(card.paymentFields?.templateId && !paymentTemplate)}
+          fallbackMemo={companyProfile?.directPaymentDefaultMemo ?? ''}
+          onChange={onPaymentChange}
           onKeyDown={onKeyDown}
         />
       )}
@@ -216,11 +256,104 @@ export default function EditForm({
           Save
         </button>
       </div>
+
+      {card.category === 'source' && <SourceBalanceFooter />}
+      {card.category === 'payee' && card.payeeFields?.employeeId && (
+        <LastPaidSection
+          flowId={flowId}
+          employeeId={card.payeeFields.employeeId}
+        />
+      )}
     </div>
   )
 }
 
 // ─── Per-category field forms ─────────────────────────────────────
+
+/**
+ * Balance footer for the Source card's edit form.
+ *
+ * Shows the live CC balance from the wallet, plus the same amount
+ * converted to the company's base currency. Rendered BELOW the
+ * Cancel/Save button row so the user sees the converted number only
+ * when they're actively editing the source card.
+ */
+function SourceBalanceFooter() {
+  const { holdings } = useWallet()
+  const { profile } = useCompany()
+  const { convert, formatConverted } = usePrice()
+  const baseCurrency = profile?.baseCurrency ?? 'USD'
+
+  const ccBalance = useMemo(() => {
+    const ccHolding = holdings.find((h) => h.symbol === 'CC')
+    if (!ccHolding) return null
+    const n = Number(ccHolding.amount)
+    return Number.isFinite(n) ? n : null
+  }, [holdings])
+
+  const baseEquivalent = useMemo(() => {
+    if (ccBalance === null) return null
+    return convert(ccBalance, 'CC', baseCurrency as 'CC' | 'USD' | 'EUR' | 'JPY' | 'THB')
+  }, [ccBalance, baseCurrency, convert])
+
+  if (ccBalance === null) {
+    return (
+      <div
+        style={{
+          marginTop: 4,
+          paddingTop: 6,
+          borderTop: '1px dashed ' + BORDER,
+          fontFamily: monoFont,
+          fontSize: 9,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: MUTED,
+          textAlign: 'center',
+        }}
+      >
+        Balance unavailable
+      </div>
+    )
+  }
+
+  return (
+    <div
+      style={{
+        marginTop: 4,
+        paddingTop: 6,
+        borderTop: '1px dashed ' + BORDER,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 1,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: monoFont,
+          fontSize: 11,
+          fontWeight: 700,
+          color: NAVY,
+          letterSpacing: '0.02em',
+        }}
+      >
+        {formatConverted(ccBalance, 'CC')} CC
+      </div>
+      {baseEquivalent !== null && (
+        <div
+          style={{
+            fontFamily: monoFont,
+            fontSize: 10,
+            color: MUTED,
+            letterSpacing: '0.04em',
+          }}
+        >
+          {formatConverted(baseEquivalent, baseCurrency as 'CC' | 'USD' | 'EUR' | 'JPY' | 'THB')} {baseCurrency}
+        </div>
+      )}
+    </div>
+  )
+}
 
 /**
  * Source card has only one editable field of substance — the wallet
@@ -281,22 +414,38 @@ function SourceFields({
 function PayeeFieldsForm({
   payee,
   employees,
-  onChange,
-  onKeyDown,
 }: {
   payee: PayeeFields
   employees: Employee[]
-  onChange: (v: PayeeFields) => void
-  onKeyDown: (e: React.KeyboardEvent) => void
 }) {
   // Payee cards are created with a specific employee already bound from
   // the palette, so the binding is shown read-only here. To rebind, the
   // user deletes this card and drops a new Payee tile for the other
   // employee — this keeps "one card = one employee" invariant intact.
+  //
+  // The FX rate is NOT user-editable. It's auto-fetched from
+  // `priceProvider` (USD-relative, 2-step via USD bridge) and surfaced
+  // as a read-only helper line so the user can sanity-check the rate
+  // against the price provider before running the flow.
+  const { convert, formatConverted } = usePrice()
   const selected = payee.employeeId
     ? employees.find((e) => e.id === payee.employeeId) ?? null
     : null
   const selectedIsGhost = payee.employeeId.length > 0 && !selected
+
+  // 1 unit of `payCurrency` → CC. e.g. for USD with the table's
+  // PRICE_TABLE = { USD: 1.0, CC: 0.15 }, the helper shows
+  // "1 USD ≈ 0.15 CC". Multiplied through the bridge:
+  //   ccPerUnit = convert(1, payCurrency, 'CC')
+  const fxHelper = useMemo(() => {
+    if (!selected) return null
+    const payCcy = (selected.payCurrency ?? '') as 'CC' | 'USD' | 'EUR' | 'JPY' | 'THB'
+    if (!payCcy) return null
+    if (payCcy === 'CC') return 'paid in CC — no FX applied'
+    const ccPerUnit = convert(1, payCcy, 'CC')
+    if (ccPerUnit === null) return null
+    return `1 ${payCcy} ≈ ${formatConverted(ccPerUnit, 'CC')} CC · auto from price provider`
+  }, [selected, convert, formatConverted])
 
   return (
     <>
@@ -396,43 +545,21 @@ function PayeeFieldsForm({
         </div>
       )}
 
-      <Field label="FX rate" hint="CC per 1 unit of payCurrency">
-        <input
-          type="text"
-          inputMode="decimal"
-          value={payee.fxRate ?? ''}
-          onChange={(e) => onChange({ ...payee, fxRate: e.target.value })}
-          onKeyDown={onKeyDown}
-          placeholder="e.g. 0.087 (CC per USD)"
-          style={textInputStyle}
-        />
-      </Field>
-
-      <Field
-        label="Amount override"
-        hint="leave blank to use employee's salary"
-      >
-        <input
-          type="text"
-          inputMode="decimal"
-          value={payee.amountOverride ?? ''}
-          onChange={(e) => onChange({ ...payee, amountOverride: e.target.value })}
-          onKeyDown={onKeyDown}
-          placeholder="e.g. 1000 (in payCurrency)"
-          style={textInputStyle}
-        />
-      </Field>
-
-      <Field label="Note">
-        <input
-          type="text"
-          value={payee.note ?? ''}
-          onChange={(e) => onChange({ ...payee, note: e.target.value })}
-          onKeyDown={onKeyDown}
-          placeholder="optional note"
-          style={textInputStyle}
-        />
-      </Field>
+      {fxHelper && (
+        <div
+          style={{
+            fontFamily: monoFont,
+            fontSize: 8,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: MUTED,
+            lineHeight: 1.4,
+            paddingTop: 2,
+          }}
+        >
+          {fxHelper}
+        </div>
+      )}
     </>
   )
 }

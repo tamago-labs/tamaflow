@@ -19,6 +19,7 @@ import { registerWalletIpcHandlers } from './wallet'
 import { registerCompanyIpcHandlers } from './company'
 import { registerEmployeeIpcHandlers } from './employee'
 import { registerFlowIpcHandlers } from './flows'
+import { flowWorker } from './flowWorker'
 
 app.commandLine.appendSwitch('no-sandbox')
 
@@ -230,6 +231,12 @@ app.whenReady().then(() => {
   // `models:progress` / `models:error` events.
   setMainWindow(win)
 
+  // Boot the payroll worker. It ticks every 1.5s, processes active
+  // flows one route at a time, and pushes `flows:onProgress` for
+  // every status transition. Started AFTER the window so the very
+  // first tick has somewhere to emit to.
+  flowWorker.start()
+
   console.log('[App] Tamaflow ready')
 
   app.on('activate', function () {
@@ -244,6 +251,9 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', async () => {
+  // Stop the payroll worker so it doesn't fire mid-shutdown.
+  flowWorker.stop()
+
   // Cancel any in-flight request with clearCache so partial files
   // are unlinked at the SDK level.
   try {

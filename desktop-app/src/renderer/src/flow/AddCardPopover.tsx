@@ -25,11 +25,13 @@ import {
   PALETTE_CARDS,
   TONE_COLORS,
   payeeTemplatesFor,
+  paymentTemplateSubtitle,
+  paymentTemplatesFor,
   shortPartyId,
   toneForCategory,
 } from '../data/flowCards'
 import type { SimCardTemplate } from './types'
-import type { Employee } from '../../../preload/index.d'
+import type { Employee, PaymentTemplate } from '../../../preload/index.d'
 
 interface AddCardPopoverProps {
   open: boolean
@@ -49,6 +51,13 @@ interface AddCardPopoverProps {
    * `hasEmployees` is false (pass `[]`) so the prop type stays stable.
    */
   employees: Employee[]
+  /**
+   * User-defined payment templates — each becomes its own palette tile
+   * alongside the built-in Direct Payment. Default `[]` keeps the prop
+   * optional for callers that haven't been wired up yet (the popover
+   * gracefully shows an empty-state hint in that case).
+   */
+  paymentTemplates?: PaymentTemplate[]
   onPick: (template: SimCardTemplate) => void
   onClose: () => void
 }
@@ -56,6 +65,7 @@ interface AddCardPopoverProps {
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   source: 'Where funds originate',
   payee: 'Who gets paid (employee / contractor)',
+  payment: 'The on-ledger transfer (terminal)',
 }
 
 export default function AddCardPopover({
@@ -64,6 +74,7 @@ export default function AddCardPopover({
   walletPartyId,
   hasEmployees,
   employees,
+  paymentTemplates = [],
   onPick,
   onClose,
 }: AddCardPopoverProps) {
@@ -113,6 +124,7 @@ export default function AddCardPopover({
     const catAvailable: Record<string, boolean> = {
       source: hasWallet,
       payee: hasEmployees,
+      payment: true,
     }
     const out: Record<string, SimCardTemplate[]> = {}
     for (const cat of CATEGORY_ORDER) {
@@ -120,17 +132,26 @@ export default function AddCardPopover({
         out[cat] = []
         continue
       }
-      // Payee section is dynamic — one tile per employee. Source comes
-      // from the static palette catalog.
-      const all = cat === 'payee'
-        ? payeeTemplatesFor(employees)
-        : PALETTE_CARDS.filter((c) => c.category === cat)
+      // Payee section is dynamic — one tile per employee.
+      // Payment section is dynamic — Direct Payment tile (always
+      // present, from PALETTE_CARDS) PLUS one tile per user-defined
+      // template from `paymentTemplatesFor`. Source is a single fixed
+      // tile from the catalog.
+      const all =
+        cat === 'payee'
+          ? payeeTemplatesFor(employees)
+          : cat === 'payment'
+            ? [
+                ...PALETTE_CARDS.filter((c) => c.category === 'payment'),
+                ...paymentTemplatesFor(paymentTemplates),
+              ]
+            : PALETTE_CARDS.filter((c) => c.category === cat)
       out[cat] = all.filter(
         (c) => q === '' || c.title.toLowerCase().includes(q),
       )
     }
     return out
-  }, [query, hasWallet, hasEmployees, employees])
+  }, [query, hasWallet, hasEmployees, employees, paymentTemplates])
 
   if (!open) return null
 
@@ -197,6 +218,7 @@ export default function AddCardPopover({
           const catAvailable: Record<string, boolean> = {
             source: hasWallet,
             payee: hasEmployees,
+            payment: true,
           }
           const prereqMissing = !catAvailable[cat]
           if ((!items || items.length === 0) && !prereqMissing) return null
@@ -254,22 +276,47 @@ export default function AddCardPopover({
                     : 'Add employees in Employees to add a Payee card'}
                 </div>
               ) : (
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 6,
-                  }}
-                >
-                  {items!.map((c) => (
-                    <PopoverTile
-                      key={c.id}
-                      template={c}
-                      employees={employees}
-                      walletPartyId={walletPartyId}
-                      onClick={() => onPick(c)}
-                    />
-                  ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: 6,
+                    }}
+                  >
+                    {items!.map((c) => (
+                      <PopoverTile
+                        key={c.id}
+                        template={c}
+                        employees={employees}
+                        paymentTemplates={paymentTemplates}
+                        walletPartyId={walletPartyId}
+                        onClick={() => onPick(c)}
+                      />
+                    ))}
+                  </div>
+                  {/* Empty-state hint under the Direct Payment tile when
+                      the user hasn't defined any custom templates yet.
+                      Mirrors the source/payee prereq hints. */}
+                  {cat === 'payment' && paymentTemplates.length === 0 && (
+                    <div
+                      style={{
+                        fontFamily: monoFont,
+                        fontSize: 9,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        color: '#a5a5c4',
+                        padding: '6px 8px',
+                        background: '#f7f7fc',
+                        borderRadius: 4,
+                        border: '1px dashed ' + BORDER,
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      Create payment templates in Settings → Payment templates
+                      to add a custom Payment tile here.
+                    </div>
+                  )}
                 </div>
               )}
             </section>
@@ -297,11 +344,13 @@ export default function AddCardPopover({
 function PopoverTile({
   template,
   employees,
+  paymentTemplates,
   walletPartyId,
   onClick,
 }: {
   template: SimCardTemplate
   employees: Employee[]
+  paymentTemplates: PaymentTemplate[]
   walletPartyId: string
   onClick: () => void
 }) {
@@ -312,7 +361,10 @@ function PopoverTile({
   // One-line subtitle per category — short context about what this card
   // represents. For Payee, look up the bound employee to show their
   // country + pay currency (e.g. "US · USD"). For Source, just label
-  // it as the treasury wallet.
+  // it as the treasury wallet. For Payment, the Direct Payment tile
+  // shows "No deductions" and custom template tiles summarise their
+  // own rules (rates + memo) so the user can tell apart two templates
+  // with similar names without clicking each one.
   const subtitle = (() => {
     if (template.category === 'source') return 'Treasury wallet'
     if (template.category === 'payee') {
@@ -321,6 +373,13 @@ function PopoverTile({
       const emp = employees.find((e) => e.id === employeeId)
       if (!emp) return 'Payee'
       return `${emp.country ?? '?'} · ${emp.payCurrency ?? '?'}`
+    }
+    if (template.category === 'payment') {
+      const tid = template.paymentFields?.templateId
+      if (!tid) return 'No deductions'
+      const tpl = paymentTemplates.find((t) => t.id === tid)
+      if (!tpl) return 'Template missing'
+      return paymentTemplateSubtitle(tpl)
     }
     return ''
   })()

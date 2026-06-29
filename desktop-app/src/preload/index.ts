@@ -24,6 +24,8 @@ import type {
   FlowDefinition,
   FlowFile,
   FlowSummary,
+  RouteSummary,
+  RouteRecord,
 } from './index.d'
 
 // Custom APIs for renderer
@@ -137,10 +139,28 @@ const api = {
     ): Promise<FlowFile> => ipcRenderer.invoke('flows:save', flow),
     remove: (id: string): Promise<FlowSummary[]> =>
       ipcRenderer.invoke('flows:remove', id),
+    start: (id: string): Promise<{ ok: true } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('flows:start', id),
+    stop: (id: string): Promise<{ ok: true } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('flows:stop', id),
+    routes: {
+      list: (flowId: string): Promise<RouteSummary[]> =>
+        ipcRenderer.invoke('flows:routes:list', flowId),
+      listAll: (): Promise<RouteSummary[]> =>
+        ipcRenderer.invoke('flows:routes:listAll'),
+      get: (flowId: string, routeId: string): Promise<RouteRecord | null> =>
+        ipcRenderer.invoke('flows:routes:get', flowId, routeId),
+    },
     onChange: (callback: (list: FlowSummary[]) => void) => {
       const handler = (_: unknown, list: FlowSummary[]) => callback(list)
       ipcRenderer.on('flows:onChange', handler)
       return () => ipcRenderer.removeListener('flows:onChange', handler)
+    },
+    onProgress: (callback: (flowId: string, routes: RouteSummary[]) => void) => {
+      const handler = (_: unknown, flowId: string, routes: RouteSummary[]) =>
+        callback(flowId, routes)
+      ipcRenderer.on('flows:onProgress', handler)
+      return () => ipcRenderer.removeListener('flows:onProgress', handler)
     },
   },
 }

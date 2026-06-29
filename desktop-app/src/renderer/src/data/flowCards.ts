@@ -1,39 +1,52 @@
 // Flow builder card catalog and connection rules.
 //
-// Two categories only — `source` (treasury wallet) and `payee`
-// (employee to be paid). Source connects directly to Payee; Payee
-// is terminal. The compute step derives gross pay from the employee
-// roster and converts to CC via the FX rate stamped on the Payee.
+// Three categories: `source` (treasury wallet), `payee` (employee to
+// be paid), `payment` (terminal node — the actual on-ledger transfer).
+// Deduction rules (withholding, social security) live on the linked
+// payment template (`CompanyProfile.paymentTemplates`); Direct Payment
+// is always available as a fixed palette tile with no deductions.
+//
+// Connection chain: source → payee → payment. Payment is terminal.
 //
 // Each card on the canvas is a `PlacedCard` — a `SimCardTemplate` with
 // a unique `placementId` and a `tone` chosen at placement time.
 
 import type { PlacedCard, SimCardTemplate, SimCategory, SimTone } from '../flow/types'
-import type { Employee } from '../../../preload/index.d'
+import type { Employee, PaymentTemplate } from '../../../preload/index.d'
 
-export const CATEGORY_ORDER: SimCategory[] = ['source', 'payee']
+export const CATEGORY_ORDER: SimCategory[] = ['source', 'payee', 'payment']
 
 export const CATEGORY_LABELS: Record<SimCategory, string> = {
   source: 'Source',
   payee: 'Payee',
+  payment: 'Payment',
 }
 
 export const CATEGORY_PREFIX: Record<SimCategory, string> = {
   source: 'SOURCE',
   payee: 'PAYEE',
+  payment: 'PAYMENT',
 }
 
 // Palette entries — the user picks one of these from the popover to add
-// a card to the canvas. Source has 1 static tile; Payee is NOT here —
-// tiles are generated per-employee at popover render time (see
-// `payeeTemplatesFor`) so the user picks the specific employee from the
-// palette rather than dropping a generic "Payee" card and binding it
-// later.
+// a card to the canvas.
+//
+// • Source has 1 static tile (the live wallet).
+// • Payee is generated per-employee at popover render time (see
+//   `payeeTemplatesFor`) so the user picks the specific employee from
+//   the palette rather than dropping a generic "Payee" card and binding
+//   it later.
+// • Payment has 1 fixed tile (Direct Payment, always present, no
+//   deductions) PLUS one tile per user-defined payment template (see
+//   `paymentTemplatesFor`). The user picks the specific template at
+//   drop time.
 //
 // The Source template's title is intentionally left empty: FlowBuilder
 // fills it in from the live wallet partyId at the moment the card is
 // dropped, so the card immediately shows which wallet funds originate
 // from instead of a "Treasury Wallet" placeholder.
+export const DIRECT_PAYMENT_PALETTE_ID = 'pay-direct'
+
 export const PALETTE_CARDS: SimCardTemplate[] = [
   {
     id: 'src-treasury',
@@ -50,14 +63,24 @@ export const PALETTE_CARDS: SimCardTemplate[] = [
       partyId: '',
     },
   },
+  {
+    id: DIRECT_PAYMENT_PALETTE_ID,
+    category: 'payment',
+    title: 'Direct Payment',
+    // `templateId` undefined → built-in Direct Payment (no deductions).
+    // Memo is set per-card by the user via PaymentFieldsForm.
+    paymentFields: {
+      memo: '',
+    },
+  },
 ]
 
 /**
  * Build one Payee palette tile per employee. The user picks a specific
- * employee from the popover and the resulting card carries that employee's
- * id from the moment of creation — no separate "bind to employee at edit
- * time" step. The card's title defaults to the employee's displayName
- * (user-renamable via the inline edit form).
+ * employee from the popover and the resulting card carries that
+ * employee's id from the moment of creation — no separate "bind to
+ * employee at edit time" step. The card's title defaults to the
+ * employee's displayName (user-renamable via the inline edit form).
  */
 export function payeeTemplatesFor(employees: Employee[]): SimCardTemplate[] {
   return employees.map((e) => ({
@@ -68,6 +91,73 @@ export function payeeTemplatesFor(employees: Employee[]): SimCardTemplate[] {
       employeeId: e.id,
     },
   }))
+}
+
+/**
+ * Build one Payment palette tile per user-defined payment template.
+ * Returns tiles sorted alphabetically by template name so the palette
+ * stays stable as templates are added / renamed. The Direct Payment
+ * tile lives in `PALETTE_CARDS` and is added separately by the
+ * popover so this function does NOT include it.
+ *
+ * The `templateId` baked into each tile becomes the card's
+ * `paymentFields.templateId` at drop time and is later used by
+ * `enumerateRoutes` to look up which rules apply.
+ */
+export function paymentTemplatesFor(templates: PaymentTemplate[]): SimCardTemplate[] {
+  return templates
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((t) => ({
+      id: 'pay-template-' + t.id,
+      category: 'payment',
+      title: t.name,
+      paymentFields: {
+        templateId: t.id,
+        memo: '',
+      },
+    }))
+}
+
+/**
+ * Subtitle shown under a payment-template palette tile. Summarises the
+ * rules at-a-glance so the user can tell apart two templates with
+ * similar names without clicking each one. Rate percentages are shown
+ * with no leading zero; empty rates render as `—`.
+ *
+ * Examples:
+ *   "22% WHT · 5% SS · memo \"March payroll\""
+ *   "no deductions · memo \"Bonus\""
+ *   "10% WHT · —"
+ *   "— · memo \"Q1 contractor\""
+ */
+export function paymentTemplateSubtitle(t: PaymentTemplate): string {
+  const wht = t.withholdingRate && t.withholdingRate.trim() !== ''
+    ? `${formatRatePct(t.withholdingRate)}% WHT`
+    : null
+  const ss = t.socialSecurityRate && t.socialSecurityRate.trim() !== ''
+    ? `${formatRatePct(t.socialSecurityRate)}% SS`
+    : null
+  const deductions =
+    wht && ss ? `${wht} · ${ss}`
+    : wht ? wht
+    : ss ? ss
+    : 'no deductions'
+  const memoPart = t.defaultMemo ? `memo "${t.defaultMemo}"` : '—'
+  return `${deductions} · ${memoPart}`
+}
+
+/** Format a 0–1 decimal rate as a percentage string with no trailing
+ *  zeros, e.g. "0.05" → "5", "0.225" → "22.5", "0.1234" → "12.34". */
+function formatRatePct(rate: string): string {
+  const num = Number(rate)
+  if (!Number.isFinite(num)) return rate
+  const pct = num * 100
+  // toFixed(2) then strip trailing zeros / dangling dot.
+  return pct
+    .toFixed(2)
+    .replace(/0+$/, '')
+    .replace(/\.$/, '')
 }
 
 /**
@@ -93,7 +183,7 @@ const TONE_VALUES: SimTone[] = ['blue', 'teal', 'navy', 'muted']
 
 /**
  * Pick a stable tone per category. Keeps the canvas visually consistent
- * — Source → blue, Payee → teal. No random hashing.
+ * — Source → blue, Payee → teal, Payment → navy.
  */
 export function toneForCategory(category: SimCategory): SimTone {
   switch (category) {
@@ -101,6 +191,8 @@ export function toneForCategory(category: SimCategory): SimTone {
       return 'blue'
     case 'payee':
       return 'teal'
+    case 'payment':
+      return 'navy'
   }
 }
 
@@ -118,10 +210,11 @@ export function randomToneForTile(seed: string): SimTone {
   return TONE_VALUES[Math.abs(hash) % TONE_VALUES.length]
 }
 
-/** Connection rules (Source → Payee; Payee is terminal). */
+/** Connection chain: Source → Payee → Payment. Payment is terminal. */
 const VALID_CONNECTIONS: Record<SimCategory, SimCategory[]> = {
   source: ['payee'],
-  payee: [],
+  payee: ['payment'],
+  payment: [],
 }
 
 export function canConnect(from: SimCategory, to: SimCategory): boolean {
@@ -141,13 +234,14 @@ export function toPlacedCard(template: SimCardTemplate, placementId: string): Pl
   return { ...template, placementId, tone: toneForCategory(template.category) }
 }
 
+/** Cards that have an input port (can be connected TO). */
 export function cardHasInput(category: SimCategory): boolean {
-  // Only Payee accepts a connection from Source. Source is the head of
-  // the pipeline.
-  return category === 'payee'
+  // Payee and Payment both have inputs. Source is the head of the chain.
+  return category === 'payee' || category === 'payment'
 }
 
+/** Cards that have an output port (can be connected FROM). */
 export function cardHasOutput(category: SimCategory): boolean {
-  // Only Source has an output port (it connects downstream to Payees).
-  return category === 'source'
+  // Source → Payee (only). Payment is terminal.
+  return category === 'source' || category === 'payee'
 }

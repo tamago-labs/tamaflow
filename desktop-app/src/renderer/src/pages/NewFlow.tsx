@@ -67,6 +67,7 @@ export default function NewFlow() {
         try {
           const file = await save({
             name: DEFAULT_NAME,
+            status: 'draft',
             cards: [],
             connections: [],
           })
@@ -98,6 +99,7 @@ export default function NewFlow() {
       try {
         const file = await save({
           name: DEFAULT_NAME,
+          status: 'draft',
           cards: [],
           connections: [],
         })

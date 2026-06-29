@@ -153,6 +153,14 @@ export default function CompanyForm({
         // the Company Profile page's "On-ledger" tab, not here.
         settlementCurrency: 'CC',
         fiscalYearStart: fiscalMonth,
+        // Payment templates live on the Settings → Payment templates
+        // tab now (each becomes its own palette tile). Carry through
+        // whatever's already on the profile so the form doesn't
+        // accidentally blank them out on a profile-only edit.
+        paymentTemplates: initial?.paymentTemplates ?? [],
+        // Default memo for Direct Payment cards (which have no
+        // template). Optional — leave blank to require a per-card memo.
+        directPaymentDefaultMemo: initial?.directPaymentDefaultMemo ?? '',
         createdAt: initial?.createdAt ?? '',
         updatedAt: initial?.updatedAt ?? ''
       })

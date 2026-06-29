@@ -1,23 +1,30 @@
 // Pre-submit preview modal.
 //
 // Computes one row per Payee card on the canvas using the same
-// `enumerateOutcomes` + `computeOutcome` modules the worker will use
-// (Phase 4) — guarantees the preview matches the eventual settlement
-// byte-for-byte. The user reviews the table before clicking Submit
+// `enumerateRoutes` + `computeOutcome` modules the worker uses —
+// guarantees the preview matches the eventual settlement
+// byte-for-byte. The user reviews the table before clicking Start
 // (Phase 4) so surprises don't show up on Canton.
 //
-// Centered modal — backdrop click closes. Width is generous — the
-// table needs ~5 columns to show the per-Payee breakdown clearly.
+// Columns: Payee | Country | Gross | Deductions | FX | CC amount
+// Footer: total CC + total in `company.baseCurrency` via PriceProvider.
+//
+// Backdrop click closes. Width is generous — 6 columns need room.
 
 import { useMemo } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import type { CanvasCard as PreloadCanvasCard, Employee, CompanyProfile } from '../../../preload/index.d'
+import type {
+  CanvasCard as PreloadCanvasCard,
+  Employee,
+  CompanyProfile,
+} from '../../../preload/index.d'
 import type { CanvasState } from './types'
-import { enumerateOutcomes } from '../../../shared/flowPaths'
+import { enumerateRoutes } from '../../../shared/flowPaths'
 import { type PayCurrency } from '../../../shared/computeOutcome'
+import { usePrice } from '../context/PriceContext'
 import { BLUE, MUTED, NAVY, monoFont, sansFont } from './theme'
 
-interface OutcomesPreviewModalProps {
+interface RoutesPreviewModalProps {
   open: boolean
   onClose: () => void
   flowId: string
@@ -26,17 +33,18 @@ interface OutcomesPreviewModalProps {
   companyProfile: CompanyProfile | null
 }
 
-export default function OutcomesPreviewModal({
+export default function RoutesPreviewModal({
   open,
   onClose,
   flowId,
   canvas,
   employees,
   companyProfile,
-}: OutcomesPreviewModalProps) {
-  const { outcomes, warnings } = useMemo(
+}: RoutesPreviewModalProps) {
+  const { convert, formatConverted, updated } = usePrice()
+  const { routes, warnings } = useMemo(
     () =>
-      enumerateOutcomes({
+      enumerateRoutes({
         flowId,
         // Cast the renderer's strictly-typed `CanvasCard` to the
         // preload's loose shape — they share the same runtime keys
@@ -50,6 +58,21 @@ export default function OutcomesPreviewModal({
     [flowId, canvas.cards, canvas.connections, employees, companyProfile],
   )
 
+  // Sum total CC across all routes + convert to baseCurrency for the
+  // footer. We sum the numeric value then format — totals don't need
+  // to be ledger-grade (this is preview-only; the worker re-runs the
+  // same compute per-route).
+  const totals = useMemo(() => {
+    let totalCC = 0
+    for (const r of routes) {
+      const n = Number(r.amountCC)
+      if (Number.isFinite(n)) totalCC += n
+    }
+    const baseCurrency = companyProfile?.baseCurrency ?? 'USD'
+    const totalBase = convert(totalCC, 'CC', baseCurrency)
+    return { totalCC, totalBase, baseCurrency }
+  }, [routes, companyProfile?.baseCurrency])
+
   return (
     <AnimatePresence>
       {open && (
@@ -57,7 +80,7 @@ export default function OutcomesPreviewModal({
           {/* Backdrop — clicking cancels (no destructive action; we
               don't want a user closing-and-losing to feel heavy). */}
           <motion.div
-            key="outcomes-backdrop"
+            key="routes-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -71,7 +94,7 @@ export default function OutcomesPreviewModal({
             }}
           />
           <motion.div
-            key="outcomes-card"
+            key="routes-card"
             // The -50% / -50% translation lives on framer-motion's own
             // x/y values, NOT on the inline `transform`. Reason:
             // framer-motion animates `scale` by writing its own transform
@@ -87,7 +110,7 @@ export default function OutcomesPreviewModal({
               position: 'fixed',
               top: '50%',
               left: '50%',
-              width: 760,
+              width: 880,
               maxHeight: '85vh',
               background: '#fff',
               borderRadius: 8,
@@ -116,7 +139,7 @@ export default function OutcomesPreviewModal({
                   fontWeight: 700,
                 }}
               >
-                Preview outcomes
+                Preview routes
               </p>
               <h2
                 style={{
@@ -128,7 +151,7 @@ export default function OutcomesPreviewModal({
                   letterSpacing: '0.01em',
                 }}
               >
-                {outcomes.length} {outcomes.length === 1 ? 'payment' : 'payments'} ready to send
+                {routes.length} {routes.length === 1 ? 'payment' : 'payments'} ready to send
               </h2>
               <p
                 style={{
@@ -140,8 +163,9 @@ export default function OutcomesPreviewModal({
                 }}
               >
                 One row per Payee. Each row shows the gross amount in the
-                employee's pay currency, the FX rate used, and the final
-                on-ledger amount in CC.
+                employee&apos;s pay currency, the deductions applied
+                (withholding + social security, when applicable), the FX
+                rate used, and the final on-ledger amount in CC.
               </p>
             </div>
 
@@ -207,15 +231,16 @@ export default function OutcomesPreviewModal({
                     <th style={thStyle}>Payee</th>
                     <th style={thStyle}>Country</th>
                     <th style={thRightStyle}>Gross</th>
+                    <th style={thStyle}>Deductions</th>
                     <th style={thRightStyle}>FX</th>
                     <th style={thRightStyle}>CC amount</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {outcomes.length === 0 && (
+                  {routes.length === 0 && (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={6}
                         style={{
                           padding: '24px 22px',
                           textAlign: 'center',
@@ -223,17 +248,28 @@ export default function OutcomesPreviewModal({
                           fontStyle: 'italic',
                         }}
                       >
-                        No outcomes to preview — add Payee cards on the canvas
-                        and connect them to a Source.
+                        No routes to preview — add Payee + Payment cards on
+                        the canvas and connect them to a Source.
                       </td>
                     </tr>
                   )}
-                  {outcomes.map((o) => {
-                    const employee = employees.find((e) => e.id === o.employeeId)
-                    const payee = canvas.cards.find((c) => c.placementId === o.payeePlacementId)
+                  {routes.map((r) => {
+                    const employee = employees.find((e) => e.id === r.employeeId)
+                    const payee = canvas.cards.find(
+                      (c) => c.placementId === r.payeePlacementId,
+                    )
+                    const deductionsLabel = (() => {
+                      const w = r.withholdingAmount
+                      const s = r.socialSecurityAmount
+                      if (!w && !s) return '—'
+                      const parts: string[] = []
+                      if (w) parts.push(`−${w}`)
+                      if (s) parts.push(`−${s} SS`)
+                      return parts.join(' · ')
+                    })()
                     return (
                       <tr
-                        key={o.id}
+                        key={r.id}
                         style={{
                           borderTop: '1px solid #ececf5',
                         }}
@@ -243,7 +279,7 @@ export default function OutcomesPreviewModal({
                             {employee?.displayName ?? '(unknown)'}
                           </div>
                           <div style={{ fontSize: 10, color: MUTED }}>
-                            {payee?.title ?? 'Payee'} · {o.payeePlacementId.slice(0, 12)}
+                            {payee?.title ?? 'Payee'} · {r.payeePlacementId.slice(0, 12)}
                           </div>
                         </td>
                         <td style={tdStyle}>
@@ -253,21 +289,34 @@ export default function OutcomesPreviewModal({
                         </td>
                         <td style={tdRightStyle}>
                           <span style={{ color: NAVY, fontWeight: 600 }}>
-                            {o.effectiveGrossPay ?? o.grossPay}
+                            {r.grossPay}
                           </span>{' '}
                           <span style={{ color: MUTED, fontSize: 10 }}>
-                            {currencyLabel(o.payCurrency)}
+                            {currencyLabel(r.payCurrency)}
                           </span>
-                          {o.effectiveGrossPay && (
-                            <div style={{ fontSize: 9, color: '#8a5a18', marginTop: 2 }}>
-                              override (base {o.grossPay})
+                        </td>
+                        <td style={tdStyle}>
+                          <span
+                            style={{
+                              fontSize: 10,
+                              color:
+                                deductionsLabel === '—' ? MUTED : '#8a5a18',
+                              fontFamily: monoFont,
+                              letterSpacing: '0.02em',
+                            }}
+                          >
+                            {deductionsLabel}
+                          </span>
+                          {deductionsLabel !== '—' && (
+                            <div style={{ fontSize: 9, color: MUTED, marginTop: 2 }}>
+                              from linked template
                             </div>
                           )}
                         </td>
                         <td style={tdRightStyle}>
-                          {o.fxRate ? (
+                          {r.fxRate ? (
                             <span style={{ color: MUTED, fontSize: 10 }}>
-                              {o.fxRate}
+                              {r.fxRate}
                             </span>
                           ) : (
                             <span style={{ color: MUTED }}>—</span>
@@ -275,7 +324,7 @@ export default function OutcomesPreviewModal({
                         </td>
                         <td style={tdRightStyle}>
                           <span style={{ color: NAVY, fontWeight: 700 }}>
-                            {o.amountCC}
+                            {r.amountCC}
                           </span>{' '}
                           <span style={{ color: MUTED, fontSize: 10 }}>CC</span>
                         </td>
@@ -283,6 +332,49 @@ export default function OutcomesPreviewModal({
                     )
                   })}
                 </tbody>
+                {routes.length > 0 && (
+                  <tfoot>
+                    <tr
+                      style={{
+                        borderTop: '2px solid #ececf5',
+                        background: '#fafaff',
+                      }}
+                    >
+                      <td
+                        colSpan={5}
+                        style={{
+                          ...tdStyle,
+                          textAlign: 'right',
+                          fontFamily: monoFont,
+                          fontSize: 10,
+                          letterSpacing: '0.12em',
+                          textTransform: 'uppercase',
+                          color: MUTED,
+                          fontWeight: 700,
+                        }}
+                      >
+                        Total
+                      </td>
+                      <td style={tdRightStyle}>
+                        <div style={{ color: NAVY, fontWeight: 700 }}>
+                          {formatConverted(totals.totalCC, 'CC')} CC
+                        </div>
+                        {totals.totalBase !== null && (
+                          <div
+                            style={{
+                              fontSize: 10,
+                              color: MUTED,
+                              fontFamily: monoFont,
+                              marginTop: 2,
+                            }}
+                          >
+                            ≈ {formatConverted(totals.totalBase, totals.baseCurrency)} {totals.baseCurrency}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
 
@@ -307,7 +399,7 @@ export default function OutcomesPreviewModal({
                   margin: 0,
                 }}
               >
-                Preview only — nothing has been sent yet
+                Preview only · price as of {updated}
               </p>
               <button
                 type="button"

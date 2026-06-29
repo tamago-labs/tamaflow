@@ -1,15 +1,19 @@
-// Flow builder shared types. Two card categories only:
+// Flow builder shared types. Three card categories:
 //
-//   source  → payee
-//   payee   (terminal)
+//   source  → payee → payment (Direct Payment OR a custom template)
+//   payment (terminal)
 //
-// Each Payee is paid from its upstream Source wallet. Gross pay is
-// derived from the employee's roster record and converted to CC at
-// the rate stamped on the Payee card (no Transfer card in MVP).
+// Each Payment pays its upstream Payee from its upstream Source wallet.
+// Gross pay is derived from the employee's roster record; withholding +
+// social security come from the linked `PaymentTemplate`
+// (`CompanyProfile.paymentTemplates[]` — see Settings → Payment
+// templates). Direct Payment carries no deductions. The FX rate is
+// fetched from the price provider at compute time — no per-card rate
+// input.
 
 // ─── Categories ────────────────────────────────────────────
 
-export type SimCategory = 'source' | 'payee'
+export type SimCategory = 'source' | 'payee' | 'payment'
 
 export type SimTone = 'blue' | 'teal' | 'navy' | 'muted'
 
@@ -29,31 +33,44 @@ export interface SourceFields {
   partyId: string
 }
 
+/**
+ * Payee card fields. The only stored value is the employee id — every
+ * other property (name, salary, currency, country) is resolved from the
+ * Employee roster at render time, and the FX rate is auto-fetched from
+ * the price provider. Storing these on the card would let stale snapshots
+ * survive an employee being renamed or removed.
+ */
 export interface PayeeFields {
   /**
    * FK into the employee roster. Set when the card is created from the
-   * palette (one tile per employee) and never rebound at edit time — the
-   * renderer resolves this to a full Employee record (displayName,
-   * cantonPartyId, jurisdiction, etc.) at render time so stale snapshots
-   * can't survive an employee being renamed or removed.
+   * palette (one tile per employee) and never rebound at edit time.
    */
   employeeId: string
-  /**
-   * CC per 1 unit of payCurrency. Required when `payCurrency !== 'CC'`.
-   * The Payee card owns the rate because the rate is a per-payment
-   * decision (it changes with the market) rather than a per-employee
-   * attribute. Optional on the type — runtime validation enforces
-   * presence when the source isn't already CC.
-   */
-  fxRate?: string
-  /**
-   * Override of the gross pay amount (in payCurrency). When set,
-   * compute uses this value instead of `employee.salaryAmount × payFrequency`.
-   * Lets the user pay a one-off amount without editing the employee
-   * record. Optional.
-   */
-  amountOverride?: string
-  note?: string
+}
+
+/**
+ * The Payment card carries a per-card memo + an optional FK into a
+ * user-defined payment template (`CompanyProfile.paymentTemplates`).
+ * When `templateId` is undefined (or `'direct'`), the card runs as
+ * the built-in Direct Payment — no deductions, memo-only.
+ *
+ * Amount comes from the employee's salary — no per-card override.
+ * Deductions (withholding, social security) live on the linked
+ * template (Settings → Payment templates). If the template is later
+ * deleted, the route falls back to Direct Payment and a warning chip
+ * appears on the card.
+ */
+export interface PaymentFields {
+  /** FK into `companyProfile.paymentTemplates[]`. `undefined` (or
+   *  `'direct'`) = built-in Direct Payment. See shared
+   *  `DIRECT_PAYMENT_TEMPLATE_ID` for the sentinel. */
+  templateId?: string
+  /** Optional per-card memo override. Falls back to the linked
+   *  template's `defaultMemo`. Direct Payment has no template so the
+   *  fallback is empty — see
+   *  `CompanyProfile.directPaymentDefaultMemo` if you want a global
+   *  fallback for Direct Payment. */
+  memo?: string
 }
 
 // ─── Connection ──────────────────────────────────────────────────
@@ -72,6 +89,7 @@ export interface SimCardTemplate {
   title: string
   sourceFields?: SourceFields
   payeeFields?: PayeeFields
+  paymentFields?: PaymentFields
 }
 
 // ─── Placed card (a specific instance on the canvas) ──────────────
@@ -100,4 +118,5 @@ export interface CanvasCardEdit {
   title: string
   sourceFields?: SourceFields
   payeeFields?: PayeeFields
+  paymentFields?: PaymentFields
 }

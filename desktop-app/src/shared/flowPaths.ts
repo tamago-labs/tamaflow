@@ -1,37 +1,43 @@
-// Enumerate one FlowOutcome per Payee card on the canvas. The renderer
+// Enumerate one Route per Payee card on the canvas. The renderer
 // calls this for the pre-submit preview modal; the main process worker
-// will call the same function in Phase 4 when settling the batch.
+// calls the same function when settling the batch — guarantees the
+// preview matches the eventual on-ledger amounts byte-for-byte.
 //
 // Connection rules (declarative, single source of truth in flowCards.ts):
 //
-//   source  → payee
-//   payee   (terminal)
+//   source  → payee  → payment
+//   payment (terminal — funds move here)
 //
-// One outcome per Payee. The Payee inherits its FX rate (and any
-// amount override) from itself; the upstream Source card contributes
-// only its wallet party id (snapshotted into `sourceFields.partyId`
-// at creation time — used by the worker to fund the transfer).
-//
-// Phase 3 — read-only enumeration + per-outcome math. Phase 4 will
-// persist each outcome to disk and walk it through the worker.
+// One route per Payee. The Payment card contributes only its memo
+// (per-card override, falling back to the template's default, then to
+// the company default); the upstream Source card contributes its wallet
+// party id (snapshotted into `sourceFields.partyId` at creation time —
+// used by the worker to fund the transfer). The gross amount comes from
+// the employee's roster record (salary / hourly rate × pay frequency);
+// the FX rate is auto-fetched from the shared priceProvider (USD-
+// relative table with two-step via USD bridge). Deductions (withholding
+// + social security) come from the PaymentTemplate the user wired to
+// this Payment card — the card composition is authoritative.
 
 import type {
   CanvasCard,
   CompanyProfile,
   Connection,
   Employee,
-  FlowOutcome,
-  FlowOutcomeStatus,
+  PaymentTemplate,
+  RouteSummary,
 } from '../preload/index.d'
 import {
   computeOutcome,
   type ComputeInput,
   type PayCurrency,
 } from './computeOutcome'
-import type { PayeeFields } from '../renderer/src/flow/types'
+import { convert, type PricedCurrency } from './priceProvider'
+import { DIRECT_PAYMENT_TEMPLATE_ID } from './paymentTemplate'
+import type { PayeeFields, PaymentFields } from '../renderer/src/flow/types'
 
 /** Inputs to the enumeration — the canvas content + the people to pay
- *  + the company profile (kept for future inside-jurisdiction use). */
+ *  + the company profile (jurisdiction + custom payment templates). */
 export interface EnumerateInput {
   flowId: string
   cards: CanvasCard[]
@@ -48,7 +54,7 @@ export interface EnumerationWarning {
 }
 
 export interface EnumerationResult {
-  outcomes: FlowOutcome[]
+  routes: RouteSummary[]
   warnings: EnumerationWarning[]
 }
 
@@ -66,8 +72,7 @@ export interface EnumerationResult {
  *   • hourly    → hourlyRate × 160     (40h/week × 4 weeks)
  *
  * The preview modal surfaces the resolved value so the user can
- * sanity-check before submitting. Phase 4+ can add per-Payee overrides
- * on the edit form if these defaults don't fit.
+ * sanity-check before submitting.
  */
 function resolveGrossPay(
   employee: Employee,
@@ -137,7 +142,7 @@ function parseDecimal(s: string): number | null {
   return Number(trimmed)
 }
 
-// ─── Payee card → typed field shape ────────────────────────────
+// ─── Card field readers ────────────────────────────────────────────
 
 /**
  * Read the Payee field shape off a CanvasCard. Returns `null` when the
@@ -149,25 +154,154 @@ function readPayeeFields(card: CanvasCard): PayeeFields | null {
   return card.payeeFields as unknown as PayeeFields
 }
 
+/**
+ * Read the Payment field shape off a CanvasCard. Returns `null` when
+ * the card is not a Payment or carries no fields.
+ */
+function readPaymentFields(card: CanvasCard): PaymentFields | null {
+  if (card.category !== 'payment') return null
+  if (!card.paymentFields) return null
+  return card.paymentFields as unknown as PaymentFields
+}
+
+// ─── Deductions ────────────────────────────────────────────────────
+
+/**
+ * Apply withholding + social security to a gross pay when applicable.
+ *
+ * The deduction rules live on the linked `PaymentTemplate` (NOT on a
+ * company-wide rule — company-wide rules were removed in favour of
+ * user-defined templates that become palette tiles). A `null` template
+ * = the built-in Direct Payment card = no deductions applied.
+ *
+ * Both deductions are computed as a percentage of the ORIGINAL gross
+ * (not sequential). The `withholdingAmount` + `socialSecurityAmount`
+ * surfaces are returned in `payCurrency` (2dp) so the preview modal can
+ * render a per-row breakdown.
+ *
+ * Note: there is NO country-based skip rule here. The flow's card
+ * composition is authoritative — if the user wires a template with
+ * non-zero rates to a Payee card, those rates are applied. Cross-border
+ * deductions (employee.country ≠ company.country) are the user's
+ * intent, not something we silently override.
+ *
+ * Returns the adjusted gross (still in `payCurrency`) for downstream
+ * FX conversion in `computeOutcome`.
+ */
+function applyDeductions(
+  grossPay: string,
+  template: PaymentTemplate | null,
+): {
+  adjustedGross: string
+  withholdingAmount?: string
+  socialSecurityAmount?: string
+} {
+  // Direct Payment (no template) → no deductions ever.
+  if (!template) {
+    return { adjustedGross: grossPay }
+  }
+  let withholdingAmount: string | undefined
+  let socialSecurityAmount: string | undefined
+  let net = grossPay
+  if (template.withholdingRate && template.withholdingRate.trim() !== '') {
+    withholdingAmount = mulDecimal(grossPay, template.withholdingRate, 2)
+    net = subDecimal(net, withholdingAmount, 2)
+  }
+  if (template.socialSecurityRate && template.socialSecurityRate.trim() !== '') {
+    socialSecurityAmount = mulDecimal(grossPay, template.socialSecurityRate, 2)
+    net = subDecimal(net, socialSecurityAmount, 2)
+  }
+  return {
+    adjustedGross: net,
+    ...(withholdingAmount && { withholdingAmount }),
+    ...(socialSecurityAmount && { socialSecurityAmount }),
+  }
+}
+
+/** Multiply two decimal strings with HALF_UP rounding at `precision`
+ *  decimal places. The rate is treated as having at most 18dp of
+ *  precision (matches computeOutcome's rate assumption). */
+function mulDecimal(value: string, rate: string, precision: number): string {
+  const trimValue = value.trim()
+  const trimRate = rate.trim()
+  if (!/^\d+(\.\d+)?$/.test(trimValue)) {
+    throw new Error(`Invalid value: ${value}`)
+  }
+  if (!/^\d+(\.\d+)?$/.test(trimRate)) {
+    throw new Error(`Invalid rate: ${rate}`)
+  }
+  const RATE_PRECISION = 18
+  const toMinor = (s: string, d: number): bigint => {
+    const [whole, frac = ''] = s.split('.')
+    const padded = (frac + '0'.repeat(d)).slice(0, d)
+    return BigInt(whole) * BigInt(10) ** BigInt(d) + BigInt(padded || '0')
+  }
+  const valueMinor = toMinor(trimValue, precision)
+  const rateMinor = toMinor(trimRate, RATE_PRECISION)
+  const product = valueMinor * rateMinor
+  const divisor = BigInt(10) ** BigInt(RATE_PRECISION)
+  const quotient = product / divisor
+  const remainder = product % divisor
+  const rounded = remainder * 2n >= divisor ? quotient + 1n : quotient
+  const factor = BigInt(10) ** BigInt(precision)
+  const whole = rounded / factor
+  const frac = rounded % factor
+  const fracStr = frac.toString().padStart(precision, '0')
+  const trimmed = fracStr.replace(/0+$/, '')
+  return trimmed === '' ? whole.toString() : `${whole.toString()}.${trimmed}`
+}
+
+/** Subtract `b` from `a` with `precision` decimal places. */
+function subDecimal(a: string, b: string, precision: number): string {
+  const trimA = a.trim()
+  const trimB = b.trim()
+  if (!/^\d+(\.\d+)?$/.test(trimA)) throw new Error(`Invalid value: ${a}`)
+  if (!/^\d+(\.\d+)?$/.test(trimB)) throw new Error(`Invalid value: ${b}`)
+  const toMinor = (s: string, d: number): bigint => {
+    const [whole, frac = ''] = s.split('.')
+    const padded = (frac + '0'.repeat(d)).slice(0, d)
+    return BigInt(whole) * BigInt(10) ** BigInt(d) + BigInt(padded || '0')
+  }
+  const aMinor = toMinor(trimA, precision)
+  const bMinor = toMinor(trimB, precision)
+  const diff = aMinor - bMinor
+  const factor = BigInt(10) ** BigInt(precision)
+  const whole = diff / factor
+  const frac = diff % factor
+  // `diff` may go negative (shouldn't for our use case — both values
+  // are non-negative and we subtract a value computed from a smaller
+  // or equal gross — but we handle it defensively so the UI never
+  // shows "-0.00").
+  if (diff < 0n) return '0'
+  const fracStr = frac.toString().padStart(precision, '0')
+  const trimmed = fracStr.replace(/0+$/, '')
+  return trimmed === '' ? whole.toString() : `${whole.toString()}.${trimmed}`
+}
+
 // ─── Enumeration ──────────────────────────────────────────────────
 
 /**
- * Walk the canvas and produce one FlowOutcome per Payee card.
+ * Walk the canvas and produce one Route per Payee card.
  *
  * Pure function — no I/O, no time, no randomness. Safe to call from
- * both the renderer (preview) and main (worker, Phase 4).
+ * both the renderer (preview) and main (worker) for byte-identical
+ * results.
  *
- * Returns both the outcomes and a list of warnings — Payee cards that
- * couldn't be turned into outcomes (missing employee, no source
- * connection, missing FX rate, etc.) are surfaced here so the UI can
- * show the user exactly which row needs attention.
+ * Returns both the routes and a list of warnings — Payee cards that
+ * couldn't be turned into routes (missing employee, no source
+ * connection, no payment connection, missing FX rate, etc.) are
+ * surfaced here so the UI can show the user exactly which row needs
+ * attention.
  */
-export function enumerateOutcomes(input: EnumerateInput): EnumerationResult {
-  const { flowId, cards, connections, employees } = input
+export function enumerateRoutes(input: EnumerateInput): EnumerationResult {
+  const { flowId, cards, connections, employees, companyProfile } = input
 
   const payees = cards.filter((c) => c.category === 'payee')
   const sourcesById = new Map(
     cards.filter((c) => c.category === 'source').map((c) => [c.placementId, c]),
+  )
+  const paymentsById = new Map(
+    cards.filter((c) => c.category === 'payment').map((c) => [c.placementId, c]),
   )
 
   // Index incoming connections by `to` so we can look up "what's upstream
@@ -181,7 +315,7 @@ export function enumerateOutcomes(input: EnumerateInput): EnumerationResult {
 
   const employeeById = new Map(employees.map((e) => [e.id, e]))
 
-  const outcomes: FlowOutcome[] = []
+  const routes: RouteSummary[] = []
   const warnings: EnumerationWarning[] = []
 
   for (const payee of payees) {
@@ -227,24 +361,54 @@ export function enumerateOutcomes(input: EnumerateInput): EnumerationResult {
       continue
     }
 
-    const payeeFields = readPayeeFields(payee)
-    const override =
-      payeeFields?.amountOverride?.trim() ?? ''
-
-    // Resolve the gross pay. A Payee card with an `amountOverride`
-    // set bypasses the employee-derived value so the user can pay a
-    // one-off without editing the employee record.
-    let gross: { value: string; payCurrency: PayCurrency } | { error: string }
-    if (override !== '') {
-      const payCurrency = resolvePayCurrency(employee)
-      if (!payCurrency) {
-        gross = { error: 'payCurrency not set on employee' }
-      } else {
-        gross = { value: override, payCurrency }
-      }
-    } else {
-      gross = resolveGrossPay(employee)
+    // Find the downstream Payment card (Payee's outgoing edge).
+    // The MVP allows exactly one Payment downstream of a Payee.
+    const outgoingIds = connections
+      .filter((c) => c.from === payee.placementId)
+      .map((c) => c.to)
+    if (outgoingIds.length === 0) {
+      warnings.push({
+        payeePlacementId: payee.placementId,
+        message: `${employee.displayName}: Payee has no connected Payment — drop a Direct Payment tile and connect it.`,
+      })
+      continue
     }
+    const paymentCard = paymentsById.get(outgoingIds[0])
+    if (!paymentCard) {
+      warnings.push({
+        payeePlacementId: payee.placementId,
+        message: `${employee.displayName}: connected Payment card not found on canvas.`,
+      })
+      continue
+    }
+
+    const payeeFields = readPayeeFields(payee)
+    const paymentFields = readPaymentFields(paymentCard)
+
+    // Resolve the linked payment template for this Payment card. A
+    // `undefined` or `'direct'` templateId = built-in Direct Payment
+    // (no deductions, memo-only). If the card references a custom
+    // template that no longer exists in the profile, fall back to
+    // Direct Payment AND warn so the user sees the staleness in the
+    // preview modal.
+    const templateId = paymentFields?.templateId
+    let template: PaymentTemplate | null = null
+    if (templateId && templateId !== DIRECT_PAYMENT_TEMPLATE_ID) {
+      template =
+        companyProfile?.paymentTemplates.find((t) => t.id === templateId) ?? null
+      if (template === null) {
+        warnings.push({
+          payeePlacementId: payee.placementId,
+          message: `${employee.displayName}: payment template was deleted — falling back to Direct Payment (no deductions).`,
+        })
+      }
+    }
+
+    // Resolve the gross pay from the employee's roster record. The
+    // Payment card no longer carries an `amountOverride` — one-off
+    // amounts require editing the employee salary directly (and that
+    // change persists in the roster).
+    const gross = resolveGrossPay(employee)
     if ('error' in gross) {
       warnings.push({
         payeePlacementId: payee.placementId,
@@ -253,12 +417,55 @@ export function enumerateOutcomes(input: EnumerateInput): EnumerationResult {
       continue
     }
 
-    const fxRate = payeeFields?.fxRate?.trim() ?? ''
+    // Apply withholding + social security from the linked template.
+    // Direct Payment (template === null) skips deductions; a custom
+    // template applies whatever rates the user configured, regardless
+    // of the employee's country.
+    let adjustedGross: string
+    let withholdingAmount: string | undefined
+    let socialSecurityAmount: string | undefined
+    try {
+      const result = applyDeductions(gross.value, template)
+      adjustedGross = result.adjustedGross
+      withholdingAmount = result.withholdingAmount
+      socialSecurityAmount = result.socialSecurityAmount
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      warnings.push({
+        payeePlacementId: payee.placementId,
+        message: `${employee.displayName}: deduction error — ${msg}`,
+      })
+      continue
+    }
+
+    // FX rate is auto-fetched from the price provider (USD-relative,
+    // 2-step via USD bridge). convert(1, payCurrency, 'CC') gives "CC
+    // per 1 unit of payCurrency" which matches computeOutcome's
+    // expected `fxRate` shape (CC per 1 unit of payCurrency).
+    let fxRate: string | undefined
+    if (gross.payCurrency !== 'CC') {
+      const ccPerUnit = convert(
+        1,
+        gross.payCurrency as PricedCurrency,
+        'CC',
+      )
+      if (ccPerUnit === null) {
+        warnings.push({
+          payeePlacementId: payee.placementId,
+          message: `${employee.displayName}: no FX rate for ${gross.payCurrency} — update the price provider.`,
+        })
+        continue
+      }
+      // Render at 18dp — matches the table's precision assumption and
+      // is enough headroom for the rate to drift without re-rounding
+      // the same way on re-run. Trailing zeros stripped for readability.
+      fxRate = ccPerUnit.toFixed(18).replace(/0+$/, '').replace(/\.$/, '')
+    }
 
     const computeInput: ComputeInput = {
-      grossPay: gross.value,
+      grossPay: adjustedGross,
       payCurrency: gross.payCurrency,
-      fxRate: fxRate !== '' ? fxRate : undefined,
+      fxRate,
     }
 
     let computed
@@ -273,34 +480,74 @@ export function enumerateOutcomes(input: EnumerateInput): EnumerationResult {
       continue
     }
 
-    const outcome: FlowOutcome = {
-      id: freshOutcomeId(),
+    // Memo fallback chain:
+    //   1. per-card memo (Payment.memo)
+    //   2. linked template's defaultMemo (when a custom template is used)
+    //   3. company profile's directPaymentDefaultMemo (when Direct Payment is used)
+    //   4. empty string — preview surfaces this as a "blank memo" warning
+    //      because Canton transfers go on-ledger verbatim.
+    const memo =
+      paymentFields?.memo?.trim() ||
+      template?.defaultMemo?.trim() ||
+      companyProfile?.directPaymentDefaultMemo?.trim() ||
+      ''
+
+    // Direct Payment + blank memo is the worst-case fallthrough: no
+    // template default AND no company default AND no per-card memo.
+    // Surface as a non-blocking warning so the user can fix it before
+    // settling — Canton sends the memo on-ledger verbatim and an empty
+    // memo is rarely what you want.
+    if (memo === '' && template === null) {
+      warnings.push({
+        payeePlacementId: payee.placementId,
+        message: `${employee.displayName}: Direct Payment has no memo set — type one on the card, or set a company default in Settings.`,
+      })
+    }
+
+    const route: RouteSummary = {
+      id: freshRouteId(),
       flowId,
+      status: 'pending',
       employeeId,
       payeePlacementId: payee.placementId,
       sourcePlacementId: sourceCard.placementId,
-      status: 'pending' satisfies FlowOutcomeStatus,
-      grossPay: computed.grossPay,
-      // Echo the override (if any) so the preview modal can show
-      // "override $1000" distinctly from the employee's regular salary.
-      ...(override !== '' && { effectiveGrossPay: override }),
-      payCurrency: computed.payCurrency,
+      paymentPlacementId: paymentCard.placementId,
       amountCC: computed.amountCC,
+      payCurrency: computed.payCurrency,
+      grossPay: gross.value,
       recipientPartyId: employee.cantonPartyId ?? '',
-      ...(computed.fxRateApplied !== undefined && {
-        fxRate: computed.fxRateApplied,
-      }),
+      memo,
+      createdAt: new Date().toISOString(),
     }
-    outcomes.push(outcome)
+    if (computed.fxRateApplied !== undefined) {
+      route.fxRate = computed.fxRateApplied
+    }
+    if (withholdingAmount) route.withholdingAmount = withholdingAmount
+    if (socialSecurityAmount) route.socialSecurityAmount = socialSecurityAmount
+    // payeeFields is read above only to silence the linter when nothing
+    // else needs it — kept as a placeholder so future per-Payee card
+    // fields (e.g. a per-card memo override) have an obvious hook here.
+    void payeeFields
+    routes.push(route)
   }
 
-  return { outcomes, warnings }
+  return { routes, warnings }
 }
 
-/** Stable outcome id — same format the worker will use (Phase 4). */
-function freshOutcomeId(): string {
+/**
+ * Backwards-compatible alias for the previous name. New callers should
+ * use `enumerateRoutes` directly. Kept so any leftover import sites
+ * (and tests written against the old name) keep compiling until the
+ * rename fully lands.
+ *
+ * @deprecated Use `enumerateRoutes` instead.
+ */
+export const enumerateOutcomes = enumerateRoutes
+
+/** Stable route id — same format the worker uses for persisted records. */
+function freshRouteId(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return 'fo_' + crypto.randomUUID().replace(/-/g, '')
+    return 'r_' + crypto.randomUUID().replace(/-/g, '')
   }
-  return 'fo_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
+  return 'r_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
 }

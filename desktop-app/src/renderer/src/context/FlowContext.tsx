@@ -12,6 +12,7 @@ import type {
   FlowDefinition,
   FlowFile,
   FlowSummary,
+  RouteSummary,
 } from '../../../preload/index.d'
 
 /**
@@ -26,10 +27,16 @@ import type {
  * The FlowContext does NOT own the canvas content for a single flow —
  * that's the responsibility of the page that mounts the builder
  * (`FlowDetail.tsx`). It only holds the index (summaries) plus the
- * CRUD actions. Per-flow load is via `get(id)` on demand.
+ * CRUD actions plus the worker action surface (start / stop / routes).
  */
 
 type LoadStatus = 'absent' | 'present' | 'loading' | 'error'
+
+/** Result of a start / stop call — `{ ok: false, error }` on failure
+ *  (e.g. wallet not set up, flow already active). */
+export type LifecycleResult =
+  | { ok: true }
+  | { ok: false; error: string }
 
 interface FlowContextValue {
   flows: FlowSummary[]
@@ -50,6 +57,36 @@ interface FlowContextValue {
     },
   ) => Promise<FlowFile>
   remove: (id: string) => Promise<void>
+  /** Flip a draft flow to active. Worker picks up the routes on its
+   *  next tick. */
+  start: (id: string) => Promise<LifecycleResult>
+  /** Stop an active flow. In-flight routes flip to `failed`; status
+   *  returns to `draft`. */
+  stop: (id: string) => Promise<LifecycleResult>
+  /** Per-flow routes (summary shape, sorted by createdAt asc). */
+  listRoutes: (flowId: string) => Promise<RouteSummary[]>
+  /**
+   * Cross-flow route aggregator for the Settlement History page.
+   * Sorted by `completedAt` desc (fallback to `createdAt` desc); no
+   * status filter at the IPC layer — the caller decides what to show.
+   */
+  listAllRoutes: () => Promise<RouteSummary[]>
+  /**
+   * Subscribe to per-route status updates the worker emits. Returns an
+   * unsubscribe function. The callback receives the full route list
+   * for the affected flow on every status transition.
+   */
+  onProgress: (
+    cb: (flowId: string, routes: RouteSummary[]) => void,
+  ) => () => void
+  /**
+   * Subscribe to flow-list changes (add / remove / status flip). Returns
+   * an unsubscribe function. The callback receives the full new list.
+   * Exposed for pages that index by flow name (e.g. Settlement
+   * History) — the provider itself subscribes internally too, but this
+   * escape hatch lets external surfaces reload when flows disappear.
+   */
+  onChange: (cb: (list: FlowSummary[]) => void) => () => void
   clearError: () => void
 }
 
@@ -116,8 +153,6 @@ export function FlowProvider({ children }: { children: ReactNode }) {
         throw new Error('Bridge unavailable')
       }
       try {
-        // Optimistic: don't update local list here. The push channel
-        // will fire with the canonical list after the round-trip.
         return await window.api.flows.save(flow)
       } catch (e) {
         const msg = errMsg(e)
@@ -132,13 +167,83 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     if (!window.api?.flows?.remove) return
     try {
       await window.api.flows.remove(id)
-      // Push channel will refresh `flows`; no optimistic update needed.
     } catch (e) {
       const msg = errMsg(e)
       setError(msg)
       throw new Error(msg)
     }
   }, [])
+
+  const start = useCallback(
+    async (id: string): Promise<LifecycleResult> => {
+      if (!window.api?.flows?.start) {
+        return { ok: false, error: 'Bridge unavailable' }
+      }
+      try {
+        return await window.api.flows.start(id)
+      } catch (e) {
+        const msg = errMsg(e)
+        setError(msg)
+        return { ok: false, error: msg }
+      }
+    },
+    [],
+  )
+
+  const stop = useCallback(
+    async (id: string): Promise<LifecycleResult> => {
+      if (!window.api?.flows?.stop) {
+        return { ok: false, error: 'Bridge unavailable' }
+      }
+      try {
+        return await window.api.flows.stop(id)
+      } catch (e) {
+        const msg = errMsg(e)
+        setError(msg)
+        return { ok: false, error: msg }
+      }
+    },
+    [],
+  )
+
+  const listRoutes = useCallback(
+    async (flowId: string): Promise<RouteSummary[]> => {
+      if (!window.api?.flows?.routes?.list) return []
+      try {
+        return await window.api.flows.routes.list(flowId)
+      } catch (e) {
+        console.error('[FlowContext] listRoutes failed:', e)
+        return []
+      }
+    },
+    [],
+  )
+
+  const listAllRoutes = useCallback(async (): Promise<RouteSummary[]> => {
+    if (!window.api?.flows?.routes?.listAll) return []
+    try {
+      return await window.api.flows.routes.listAll()
+    } catch (e) {
+      console.error('[FlowContext] listAllRoutes failed:', e)
+      return []
+    }
+  }, [])
+
+  const onProgress = useCallback(
+    (cb: (flowId: string, routes: RouteSummary[]) => void): (() => void) => {
+      if (!window.api?.flows?.onProgress) return () => undefined
+      return window.api.flows.onProgress(cb)
+    },
+    [],
+  )
+
+  const onChange = useCallback(
+    (cb: (list: FlowSummary[]) => void): (() => void) => {
+      if (!window.api?.flows?.onChange) return () => undefined
+      return window.api.flows.onChange(cb)
+    },
+    [],
+  )
 
   const clearError = useCallback(() => setError(null), [])
 
@@ -166,9 +271,30 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       get,
       save,
       remove,
+      start,
+      stop,
+      listRoutes,
+      listAllRoutes,
+      onProgress,
+      onChange,
       clearError,
     }),
-    [flows, loadStatus, error, refresh, get, save, remove, clearError],
+    [
+      flows,
+      loadStatus,
+      error,
+      refresh,
+      get,
+      save,
+      remove,
+      start,
+      stop,
+      listRoutes,
+      listAllRoutes,
+      onProgress,
+      onChange,
+      clearError,
+    ],
   )
 
   return <FlowContext.Provider value={value}>{children}</FlowContext.Provider>

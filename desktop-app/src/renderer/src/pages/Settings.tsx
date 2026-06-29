@@ -4,8 +4,9 @@ import PageHeader from '../components/PageHeader'
 import { useAI } from '../context/AIContext'
 import { useWallet } from '../context/WalletContext'
 import { formatSize } from '../utils/modelDisplay'
-import { Cpu, Wallet, GitBranch, RotateCcw, Power, KeyRound, Trash2 } from 'lucide-react'
+import { Cpu, Wallet, GitBranch, RotateCcw, Power, KeyRound, Trash2, Layers } from 'lucide-react'
 import type { ReactNode } from 'react'
+import PaymentTemplatesTab from './Settings/PaymentTemplatesTab'
 
 /**
  * Outlet context shape, set by MainLayout. Settings > AI Model uses
@@ -16,16 +17,19 @@ interface OutletCtx {
 }
 
 /**
- * Settings — three sub-tabs:
- *   • AI Model  — old Ready card (active model + Change / Unload)
- *   • Wallet    — Connect Wallet (Canton)
- *   • Netting   — netting rules / preferences (lives here per your call)
+ * Settings — sub-tabs:
+ *   • AI Model            — old Ready card (active model + Change / Unload)
+ *   • Wallet              — Connect Wallet (Canton)
+ *   • Payment Templates   — user-defined payment templates (each becomes
+ *                           a palette tile on the flow canvas). Direct
+ *                           Payment is built-in and is not editable here.
+ *   • Netting             — netting rules / preferences (placeholder)
  *
  * The Company Profile has moved to its own page (linked from the
  * sidebar footer).
  */
 
-type Tab = 'ai' | 'wallet' | 'netting'
+type Tab = 'ai' | 'wallet' | 'paymentTemplates' | 'netting'
 
 interface TabDef {
   key: Tab
@@ -36,6 +40,7 @@ interface TabDef {
 const TABS: TabDef[] = [
   { key: 'ai', label: 'AI Model', icon: <Cpu size={12} /> },
   { key: 'wallet', label: 'Wallet', icon: <Wallet size={12} /> },
+  { key: 'paymentTemplates', label: 'Payment templates', icon: <Layers size={12} /> },
   { key: 'netting', label: 'Netting', icon: <GitBranch size={12} /> }
 ]
 
@@ -232,6 +237,8 @@ export default function Settings() {
           )}
         </div>
       )}
+
+      {tab === 'paymentTemplates' && <PaymentTemplatesTab />}
 
       {tab === 'netting' && (
         <div className="bg-white border border-brand-border rounded-md p-6 max-w-2xl">

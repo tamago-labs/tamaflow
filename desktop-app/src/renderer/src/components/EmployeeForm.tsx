@@ -22,17 +22,11 @@ import {
  * Used by `<EmployeeFormDrawer>` (right-side slide-in). Mirrors
  * `CompanyForm.tsx` for label/input/button classes.
  *
- * **Jurisdiction radio** is the most important control on this form:
- *
- *   - **Inside jurisdiction** — the employee is paid under the company's
- *     home country. Country + compensation currency are NOT stored on
- *     the employee — they inherit from `company.country` and
- *     `company.baseCurrency` at display time. If the company later
- *     moves jurisdictions, all "inside" employees move with it.
- *
- *   - **Outside jurisdiction** — the employee is paid cross-border.
- *     The user picks a country (from the full ISO 3166-1 list) and a
- *     compensation currency manually; both are stored on the row.
+ * Country + compensation currency are both always required on every
+ * employee row — there is no inside/outside-jurisdiction inheritance
+ * from the company profile. The user always picks a country (from the
+ * full ISO 3166-1 list) and a compensation currency manually; both
+ * are stored on the row.
  *
  * Frequency-conditional: `hourly` swaps salary → hourlyRate as the
  * required amount field. `one-off` accepts either, but typically

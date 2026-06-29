@@ -7,6 +7,17 @@
 // Double-click enters inline edit mode (renders <EditForm>). While
 // editing, dnd-kit drag is disabled so typing doesn't accidentally
 // trigger a drag.
+//
+// Three card categories with distinct body content:
+//   source  — wallet party id only (the CC balance + base-currency
+//             equivalent moved to EditForm's SourceBalanceFooter so it
+//             only shows when the user is actively editing this card).
+//   payee   — minimal: displayName + salary per period + country. The
+//             last-paid history moved to EditForm's PayeeFieldsForm
+//             (below the Cancel/Save buttons) so the front face stays
+//             small and matches the Source card's footprint.
+//   payment — per-card memo only. The amount comes from the employee's
+//             salary, deductions live in Settings → Transfers.
 
 import { forwardRef, useEffect, useState } from 'react'
 import { CSS } from '@dnd-kit/utilities'
@@ -24,9 +35,10 @@ import type {
   CanvasCard as CanvasCardType,
   CanvasCardEdit,
   PayeeFields,
+  PaymentFields,
   SourceFields,
 } from './types'
-import type { Employee } from '../../../preload/index.d'
+import type { Employee, PaymentTemplate } from '../../../preload/index.d'
 import EditForm from './EditForm'
 
 export type PortSide = 'in' | 'out'
@@ -36,6 +48,7 @@ interface CanvasCardProps {
   selected: boolean
   isConnectSource: boolean
   editing: boolean
+  flowId: string
   /** Roster used to resolve a Payee card's employeeId → Employee. */
   employees: Employee[]
   /**
@@ -43,6 +56,19 @@ interface CanvasCardProps {
    * card's "no wallet set up" warning when the card has no snapshot.
    */
   walletReady: boolean
+  /**
+   * User-defined payment templates — drives the Payment card's
+   * stale-template warning chip when the card's `templateId` no longer
+   * resolves to an entry in this list (template was deleted in Settings).
+   */
+  paymentTemplates: PaymentTemplate[]
+  /**
+   * Read-only mode — the flow is active. Disables drag listeners and
+   * (defence-in-depth) the inline-edit double-click. The flow-level
+   * overlay already absorbs most pointer events, but dnd-kit's keyboard
+   * activation and stray events can still bypass it.
+   */
+  locked?: boolean
   onSelect: (placementId: string) => void
   onDelete: (placementId: string) => void
   onToggleCollapse: (placementId: string) => void
@@ -52,18 +78,28 @@ interface CanvasCardProps {
   onEditCancel: (placementId: string) => void
 }
 
-export const CARD_WIDTH = 220
-const EXPANDED_HEIGHT = 110
+export const CARD_WIDTH = 240
 const COLLAPSED_HEIGHT = 44
-const EDIT_HEIGHT = 340
+/** Per-category expanded body height. Front face is intentionally minimal
+ *  so all three card types sit at roughly the same size — the heavy
+ *  detail (balance, history, deductions) lives in EditForm. */
+const EXPANDED_HEIGHTS: Record<CanvasCardType['category'], number> = {
+  source: 110,
+  payee: 120,
+  payment: 110,
+}
+const EDIT_HEIGHT = 360
 
 const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCard({
   card,
   selected,
   isConnectSource,
   editing,
+  flowId,
   employees,
   walletReady,
+  paymentTemplates,
+  locked = false,
   onSelect,
   onDelete,
   onToggleCollapse,
@@ -75,7 +111,7 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: 'card-' + card.placementId,
     data: { placementId: card.placementId, kind: 'canvas-card' },
-    disabled: editing,
+    disabled: editing || locked,
   })
 
   // Local draft state for inline edit. Mirrors the card's current values
@@ -87,26 +123,31 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
   const [draftPayee, setDraftPayee] = useState<PayeeFields>(
     card.payeeFields ?? { employeeId: '' },
   )
+  const [draftPayment, setDraftPayment] = useState<PaymentFields>(
+    card.paymentFields ?? {},
+  )
 
   useEffect(() => {
     if (editing) {
       setDraftTitle(card.title)
       setDraftSource(card.sourceFields ?? { partyId: '' })
       setDraftPayee(card.payeeFields ?? { employeeId: '' })
+      setDraftPayment(card.paymentFields ?? {})
     }
-  }, [editing, card.title, card.sourceFields, card.payeeFields])
+  }, [editing, card.title, card.sourceFields, card.payeeFields, card.paymentFields])
 
   function handleSave() {
     const nextTitle = draftTitle.trim() === '' ? card.title : draftTitle
-    onEdit(card.placementId, {
-      title: nextTitle,
-      sourceFields: card.category === 'source' ? pruneEmpty(draftSource) : undefined,
-      payeeFields: card.category === 'payee' ? pruneEmpty(draftPayee) : undefined,
-    })
+    const update: CanvasCardEdit = { title: nextTitle }
+    if (card.category === 'source') update.sourceFields = pruneEmpty(draftSource)
+    if (card.category === 'payee') update.payeeFields = pruneEmpty(draftPayee)
+    if (card.category === 'payment') update.paymentFields = pruneEmpty(draftPayment)
+    onEdit(card.placementId, update)
   }
 
   function handleBodyDoubleClick(e: React.MouseEvent) {
     if (editing) return
+    if (locked) return
     if ((e.target as HTMLElement).closest('[data-card-action],[data-card-port]')) return
     e.stopPropagation()
     onRequestEdit(card.placementId)
@@ -123,7 +164,9 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
   }
 
   const accent = TONE_COLORS[card.tone ?? 'muted']
-  const height = card.collapsed ? COLLAPSED_HEIGHT : EXPANDED_HEIGHT
+  const height = card.collapsed
+    ? COLLAPSED_HEIGHT
+    : EXPANDED_HEIGHTS[card.category] ?? 140
   const hasInput = cardHasInput(card.category)
   const hasOutput = cardHasOutput(card.category)
 
@@ -155,55 +198,9 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
   function handleBodyClick(e: React.MouseEvent) {
     if ((e.target as HTMLElement).closest('[data-card-action],[data-card-port]')) return
     if (editing) return
+    if (locked) return
     onSelect(card.placementId)
   }
-
-  // The summary line under the title — different per category. For
-  // Source it's a "no wallet" hint when the snapshot is empty. For
-  // Payee it's the resolved employee record (displayName + truncated
-  // partyId + jurisdiction) — red when the FK points to a missing
-  // employee.
-  const { summaryLine, summaryTone } = (() => {
-    if (card.category === 'source') {
-      const partyId = card.sourceFields?.partyId?.trim() ?? ''
-      if (!partyId) {
-        return {
-          summaryLine: walletReady
-            ? 'No wallet set on this card'
-            : 'No wallet set up — create one in Assets',
-          summaryTone: 'danger' as const,
-        }
-      }
-      return { summaryLine: '', summaryTone: 'muted' as const }
-    }
-    if (card.category === 'payee') {
-      const employeeId = card.payeeFields?.employeeId?.trim() ?? ''
-      if (!employeeId) {
-        return {
-          summaryLine: 'No employee selected — double-click to bind',
-          summaryTone: 'danger' as const,
-        }
-      }
-      const emp = employees.find((e) => e.id === employeeId)
-      if (!emp) {
-        return {
-          summaryLine: `Employee not found (id: ${employeeId})`,
-          summaryTone: 'danger' as const,
-        }
-      }
-      const party = emp.cantonPartyId ? shortPartyId(emp.cantonPartyId) : 'no party id'
-      const countryLabel = emp.country ?? '?'
-      const fxRate = card.payeeFields?.fxRate?.trim()
-      const fxSuffix = fxRate ? ` · ${fxRate} FX` : ''
-      return {
-        summaryLine: `${party} · ${countryLabel}${fxSuffix}`,
-        summaryTone: 'muted' as const,
-      }
-    }
-    return { summaryLine: '', summaryTone: 'muted' as const }
-  })()
-
-  const summaryColor = summaryTone === 'danger' ? '#c83030' : MUTED
 
   return (
     <div
@@ -211,7 +208,7 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
       style={style}
       onClick={handleBodyClick}
       onDoubleClick={handleBodyDoubleClick}
-      {...(editing ? {} : listeners)}
+      {...(editing || locked ? {} : listeners)}
       {...attributes}
     >
       {editing ? (
@@ -220,10 +217,13 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
           title={draftTitle}
           source={draftSource}
           payee={draftPayee}
+          payment={draftPayment}
           employees={employees}
           walletReady={walletReady}
+          paymentTemplate={resolvePaymentTemplate(card, paymentTemplates)}
+          flowId={flowId}
           onTitleChange={setDraftTitle}
-          onPayeeChange={setDraftPayee}
+          onPaymentChange={setDraftPayment}
           onSave={handleSave}
           onCancel={() => onEditCancel(card.placementId)}
           onKeyDown={handleEditKeyDown}
@@ -301,19 +301,6 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
                   >
                     {card.title}
                   </div>
-                  <div
-                    style={{
-                      fontFamily: monoFont,
-                      fontSize: 10,
-                      color: summaryColor,
-                      marginTop: 3,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {summaryLine}
-                  </div>
                 </>
               )}
             </div>
@@ -349,6 +336,15 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
             </div>
           </div>
 
+          {!card.collapsed && (
+            <CardBody
+              card={card}
+              employees={employees}
+              walletReady={walletReady}
+              paymentTemplates={paymentTemplates}
+            />
+          )}
+
           {hasInput && (
             <Port
               side="in"
@@ -372,6 +368,231 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
 })
 
 export default CanvasCard
+
+// ─── Per-category body ─────────────────────────────────────────────
+
+interface CardBodyProps {
+  card: CanvasCardType
+  employees: Employee[]
+  walletReady: boolean
+  paymentTemplates: PaymentTemplate[]
+}
+
+function CardBody({ card, employees, walletReady, paymentTemplates }: CardBodyProps) {
+  if (card.category === 'source') {
+    return <SourceBody card={card} walletReady={walletReady} />
+  }
+  if (card.category === 'payee') {
+    return <PayeeBody card={card} employees={employees} />
+  }
+  return <PaymentBody card={card} paymentTemplates={paymentTemplates} />
+}
+
+/**
+ * Resolve the `PaymentTemplate` referenced by this card's `templateId`,
+ * or `null` when the card is Direct Payment OR its template was deleted
+ * from Settings (stale). Used by `EditForm` to render the template
+ * identity strip at the top of the payment edit form.
+ */
+function resolvePaymentTemplate(
+  card: CanvasCardType,
+  paymentTemplates: PaymentTemplate[],
+): PaymentTemplate | null {
+  if (card.category !== 'payment') return null
+  const tid = card.paymentFields?.templateId
+  if (!tid) return null
+  return paymentTemplates.find((t) => t.id === tid) ?? null
+}
+
+/**
+ * Source card body — just the wallet party id. The CC balance and
+ * its base-currency equivalent moved to the edit form so they only
+ * appear when the user is actively looking at this card.
+ */
+function SourceBody({
+  card,
+  walletReady,
+}: {
+  card: CanvasCardType
+  walletReady: boolean
+}) {
+  const partyId = card.sourceFields?.partyId?.trim() ?? ''
+  const hasPartyId = partyId.length > 0
+
+  if (!hasPartyId) {
+    return (
+      <div style={{ marginTop: 8 }}>
+        <BodyMuted>
+          {walletReady
+            ? 'No wallet set on this card'
+            : 'No wallet set up — create one in Assets'}
+        </BodyMuted>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <BodyField label="Wallet">
+        <BodyMono>{shortPartyId(partyId)}</BodyMono>
+      </BodyField>
+    </div>
+  )
+}
+
+/**
+ * Payee card body — minimal summary: displayName, salary per period,
+ * country. The FX rate is auto-fetched (not edited) and the last-paid
+ * history moved to EditForm so it only appears when the user is
+ * actively looking at the card.
+ *
+ * Frequency wording matches `resolveGrossPay` in `shared/flowPaths.ts`:
+ *   monthly / one-off → as-is
+ *   biweekly / weekly  → "X per period"
+ *   hourly             → "X / month (160 hrs)"
+ */
+function PayeeBody({
+  card,
+  employees,
+}: {
+  card: CanvasCardType
+  employees: Employee[]
+}) {
+  const employeeId = card.payeeFields?.employeeId?.trim() ?? ''
+  if (!employeeId) {
+    return (
+      <div style={{ marginTop: 8 }}>
+        <BodyMuted danger>No employee selected — double-click to bind</BodyMuted>
+      </div>
+    )
+  }
+  const emp = employees.find((e) => e.id === employeeId)
+  if (!emp) {
+    return (
+      <div style={{ marginTop: 8 }}>
+        <BodyMuted danger>Employee not found (id: {employeeId})</BodyMuted>
+      </div>
+    )
+  }
+  const countryLabel = emp.country ?? '?'
+  const currencyLabel = emp.payCurrency ?? '?'
+  const salaryLine = (() => {
+    if (emp.payFrequency === 'hourly' && emp.hourlyRate) {
+      return `${emp.hourlyRate} ${currencyLabel} / hr · 160 hrs`
+    }
+    if (emp.salaryAmount) {
+      const period =
+        emp.payFrequency === 'biweekly'
+          ? '/ biweekly'
+          : emp.payFrequency === 'weekly'
+            ? '/ week'
+            : emp.payFrequency === 'one-off'
+              ? 'one-off'
+              : '/ month'
+      return `${emp.salaryAmount} ${currencyLabel} ${period}`
+    }
+    return `— ${currencyLabel}`
+  })()
+  return (
+    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <BodyMono>{salaryLine}</BodyMono>
+      <BodyMuted>{countryLabel}</BodyMuted>
+    </div>
+  )
+}
+
+/**
+ * Payment card body — per-card memo only. The amount comes from the
+ * employee's salary and cannot be overridden here. Deductions live on
+ * the linked payment template — when the template was deleted from
+ * Settings, the card shows a stale-template warning chip so the user
+ * knows this route will fall back to Direct Payment at settle time.
+ */
+function PaymentBody({
+  card,
+  paymentTemplates,
+}: {
+  card: CanvasCardType
+  paymentTemplates: PaymentTemplate[]
+}) {
+  const memo = card.paymentFields?.memo?.trim() ?? ''
+  const templateId = card.paymentFields?.templateId
+  const template = templateId
+    ? paymentTemplates.find((t) => t.id === templateId) ?? null
+    : null
+  const isStale = !!templateId && template === null
+  return (
+    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <BodyField label="Memo">
+        {memo ? (
+          <BodyMono>{memo}</BodyMono>
+        ) : (
+          <BodyMuted>— uses template default —</BodyMuted>
+        )}
+      </BodyField>
+      {isStale && (
+        <BodyMuted danger>
+          Template deleted — falling back to Direct Payment
+        </BodyMuted>
+      )}
+    </div>
+  )
+}
+
+// ─── Tiny body primitives ─────────────────────────────────────────
+
+function BodyField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <div
+        style={{
+          fontFamily: monoFont,
+          fontSize: 8,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: MUTED,
+        }}
+      >
+        {label}
+      </div>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+function BodyMono({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontFamily: monoFont,
+        fontSize: 10,
+        color: NAVY,
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function BodyMuted({ children, danger }: { children: React.ReactNode; danger?: boolean }) {
+  return (
+    <div
+      style={{
+        fontFamily: monoFont,
+        fontSize: 9,
+        color: danger ? '#c83030' : MUTED,
+        letterSpacing: '0.04em',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+// ─── Action buttons + ports (unchanged) ───────────────────────────
 
 interface ActionButtonProps {
   label: string

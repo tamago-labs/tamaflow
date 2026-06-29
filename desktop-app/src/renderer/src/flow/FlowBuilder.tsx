@@ -4,6 +4,15 @@
 // and `flowName` (and is responsible for persistence). FlowBuilder owns
 // the transient UI state (selection, connect-source, editing, warning
 // toast, confirm modals).
+//
+// `locked` mode (set when the flow status is `active`):
+//   - Hides the Add Card palette, the inline edit affordances, and
+//     the Preview button (FlowDetail renders its own footer in active
+//     view with Stop/Delete).
+//   - Renders a banner at the top + a translucent overlay over the
+//     canvas that swallows clicks so drag/select/edit/drag-port are
+//     all no-ops from the user's perspective.
+//   - The flow name remains visible but is non-interactive.
 
 import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -14,7 +23,9 @@ import AddCardPopover from './AddCardPopover'
 import {
   BLUE,
   MUTED,
+  NAVY,
   monoFont,
+  sansFont,
 } from './theme'
 import {
   canConnect,
@@ -32,6 +43,7 @@ import type {
 import type { PortSide } from './CanvasCard'
 import { useEmployees } from '../context/EmployeeContext'
 import { useWallet } from '../context/WalletContext'
+import { useCompany } from '../context/CompanyContext'
 
 export interface FlowBuilderProps {
   /** Canonical canvas state — owned by the parent. */
@@ -41,7 +53,12 @@ export interface FlowBuilderProps {
   flowName: string
   onFlowNameChange: (next: string) => void
   /**
-   * Opens the outcomes preview modal owned by the parent. The toolbar's
+   * Flow id — forwarded to the canvas so per-card lookups (LastPaid)
+   * can query the right per-flow routes. Required.
+   */
+  flowId: string
+  /**
+   * Opens the routes preview modal owned by the parent. The toolbar's
    * "Preview" button calls this; the modal itself lives outside the
    * canvas so it can stay centred over the full viewport.
    */
@@ -49,12 +66,18 @@ export interface FlowBuilderProps {
   /**
    * Optional unsaved-state indicator surfaced as a small badge next to
    * the toolbar (e.g. "Saving…" / "Saved"). When omitted, no badge is
-   * rendered (the toolbar stays clean for the in-memory Phase 1 flow).
+   * rendered.
    */
   saveBadge?: {
     label: string
     tone: 'idle' | 'saving' | 'saved' | 'error'
   }
+  /**
+   * Locked (read-only) mode — set when the flow is active. Disables the
+   * palette, the edit affordances, drag, and click-to-select on cards.
+   * Renders a top banner + translucent overlay over the canvas.
+   */
+  locked?: boolean
 }
 
 export default function FlowBuilder({
@@ -62,20 +85,39 @@ export default function FlowBuilder({
   onCanvasChange,
   flowName,
   onFlowNameChange,
+  flowId,
   onRequestPreview,
   saveBadge,
+  locked = false,
 }: FlowBuilderProps) {
   const { employees } = useEmployees()
   const { status: walletStatus, loadStatus: walletLoadStatus } = useWallet()
+  const { profile: companyProfile } = useCompany()
   const walletReady = walletLoadStatus === 'present' && !!walletStatus?.partyId
   const walletPartyId = walletStatus?.partyId ?? ''
   const hasEmployees = employees.length > 0
+  // User-defined payment templates — drives both the AddCardPopover
+  // (one palette tile per template) and the CanvasCard stale-template
+  // warning chip (when a card's templateId no longer resolves).
+  const paymentTemplates = companyProfile?.paymentTemplates ?? []
 
   const [addOpen, setAddOpen] = useState(false)
   const [connectFrom, setConnectFrom] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [warning, setWarning] = useState<string | null>(null)
+
+  // When locking, drop any in-flight transient state — selection,
+  // edit form, palette — so the locked view starts clean.
+  useEffect(() => {
+    if (locked) {
+      setAddOpen(false)
+      setConnectFrom(null)
+      setSelectedId(null)
+      setEditingId(null)
+      setWarning(null)
+    }
+  }, [locked])
 
   // Warning toast auto-dismiss (3s).
   useEffect(() => {
@@ -86,6 +128,7 @@ export default function FlowBuilder({
 
   // ─── Drag (dnd-kit) ────────────────────────────────────────────────
   function handleDragEnd(event: DragEndEvent) {
+    if (locked) return
     const data = event.active.data.current as
       | { placementId?: string; kind?: string }
       | undefined
@@ -107,6 +150,7 @@ export default function FlowBuilder({
 
   // ─── Add / delete / edit ──────────────────────────────────────────
   const handleAddTemplate = useCallback((template: SimCardTemplate) => {
+    if (locked) return
     const id = freshId('card')
     // Drop near the centre of the viewport with a small jitter so
     // back-to-back adds don't stack perfectly.
@@ -145,9 +189,10 @@ export default function FlowBuilder({
     onCanvasChange({ ...canvas, cards: [...canvas.cards, newCard] })
     setSelectedId(id)
     setAddOpen(false)
-  }, [canvas, onCanvasChange, walletPartyId])
+  }, [canvas, onCanvasChange, walletPartyId, locked])
 
   function handleEditCard(id: string, updates: CanvasCardEdit) {
+    if (locked) return
     onCanvasChange({
       ...canvas,
       cards: canvas.cards.map((c) =>
@@ -158,6 +203,7 @@ export default function FlowBuilder({
   }
 
   function handleRequestEdit(id: string) {
+    if (locked) return
     setEditingId(id)
   }
 
@@ -167,11 +213,16 @@ export default function FlowBuilder({
   }
 
   function handleSelectCard(id: string | null) {
+    if (locked) {
+      setSelectedId(null)
+      return
+    }
     setSelectedId(id)
   }
 
   // ─── Connect flow ──────────────────────────────────────────────────
   function handlePortClick(placementId: string, side: PortSide) {
+    if (locked) return
     if (side === 'out') {
       // Output port: always (re)set this card as the source. Clicking
       // the same source again toggles it off.
@@ -219,6 +270,7 @@ export default function FlowBuilder({
 
   // ─── Delete / collapse ─────────────────────────────────────────────
   function handleDeleteCard(id: string) {
+    if (locked) return
     onCanvasChange({
       cards: canvas.cards.filter((c) => c.placementId !== id),
       connections: canvas.connections.filter(
@@ -230,6 +282,7 @@ export default function FlowBuilder({
   }
 
   function handleToggleCollapse(id: string) {
+    if (locked) return
     onCanvasChange({
       ...canvas,
       cards: canvas.cards.map((c) =>
@@ -239,6 +292,7 @@ export default function FlowBuilder({
   }
 
   function handleDeleteConnection(id: string) {
+    if (locked) return
     onCanvasChange({
       ...canvas,
       connections: canvas.connections.filter((c) => c.id !== id),
@@ -261,8 +315,11 @@ export default function FlowBuilder({
           selectedId={selectedId}
           connectFrom={connectFrom}
           editingId={editingId}
+          flowId={flowId}
           employees={employees}
           walletReady={walletReady}
+          paymentTemplates={paymentTemplates}
+          locked={locked}
           onSelectCard={handleSelectCard}
           onDeleteCard={handleDeleteCard}
           onToggleCollapse={handleToggleCollapse}
@@ -275,29 +332,41 @@ export default function FlowBuilder({
         />
       </DndContext>
 
-      <CanvasToolbar
-        flowName={flowName}
-        addOpen={addOpen}
-        onToggleAdd={() => setAddOpen((v) => !v)}
-        onRequestPreview={onRequestPreview}
-        onNameChange={onFlowNameChange}
-      />
+      {locked ? (
+        <LockedBanner flowName={flowName} />
+      ) : (
+        <CanvasToolbar
+          flowName={flowName}
+          addOpen={addOpen}
+          onToggleAdd={() => setAddOpen((v) => !v)}
+          onRequestPreview={onRequestPreview}
+          onNameChange={onFlowNameChange}
+        />
+      )}
 
-      <AddCardPopover
-        open={addOpen}
-        hasWallet={walletReady}
-        walletPartyId={walletPartyId}
-        hasEmployees={hasEmployees}
-        employees={employees}
-        onPick={handleAddTemplate}
-        onClose={() => setAddOpen(false)}
-      />
+      {!locked && (
+        <AddCardPopover
+          open={addOpen}
+          hasWallet={walletReady}
+          walletPartyId={walletPartyId}
+          hasEmployees={hasEmployees}
+          employees={employees}
+          paymentTemplates={paymentTemplates}
+          onPick={handleAddTemplate}
+          onClose={() => setAddOpen(false)}
+        />
+      )}
 
       {/* Save badge — top-right, mirrored from the toolbar on the left.
-          Only renders when the parent supplies `saveBadge`; the in-memory
-          Phase 1 flow (no parent save state) leaves the prop off so the
-          canvas stays clean. */}
-      {saveBadge && <SaveBadge label={saveBadge.label} tone={saveBadge.tone} />}
+          Only renders when the parent supplies `saveBadge`; hidden in
+          locked mode so it doesn't visually compete with the banner. */}
+      {!locked && saveBadge && <SaveBadge label={saveBadge.label} tone={saveBadge.tone} />}
+
+      {/* Locked overlay — translucent layer covering the canvas that
+          swallows all mouse events so drag/edit/port-click are no-ops.
+          Sits BELOW the toolbar/banner (z-index 90) so the banner stays
+          readable and clickable. */}
+      {locked && <LockedOverlay />}
 
       {/* Warning toast (e.g. invalid connection). */}
       <AnimatePresence>
@@ -342,6 +411,105 @@ export default function FlowBuilder({
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────
+
+/**
+ * Locked-mode banner — replaces the toolbar. Shows the flow name as a
+ * static label and a status pill so the user knows the canvas is
+ * intentionally read-only.
+ */
+function LockedBanner({ flowName }: { flowName: string }) {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: 16,
+        left: 16,
+        right: 16,
+        zIndex: 105,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        padding: '10px 14px',
+        background: 'rgba(26,26,232,0.06)',
+        border: '1px solid rgba(26,26,232,0.18)',
+        borderRadius: 8,
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        boxShadow: '0 4px 14px rgba(10,10,92,0.06)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        <span
+          style={{
+            fontFamily: monoFont,
+            fontSize: 9,
+            letterSpacing: '0.18em',
+            color: MUTED,
+            textTransform: 'uppercase',
+          }}
+        >
+          Flow Builder
+        </span>
+        <span
+          style={{
+            fontFamily: sansFont,
+            fontSize: 14,
+            fontWeight: 700,
+            color: NAVY,
+            letterSpacing: '0.02em',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            minWidth: 0,
+          }}
+          title={flowName}
+        >
+          {flowName.trim() ? flowName : 'Untitled flow'}
+        </span>
+      </div>
+      <span
+        style={{
+          fontFamily: monoFont,
+          fontSize: 9,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          fontWeight: 700,
+          color: '#fff',
+          background: BLUE,
+          padding: '4px 10px',
+          borderRadius: 12,
+          flexShrink: 0,
+        }}
+      >
+        Active · editing locked
+      </span>
+    </div>
+  )
+}
+
+/**
+ * Translucent overlay over the canvas. pointerEvents: 'auto' so it
+ * absorbs clicks; visual opacity is intentionally subtle (matches the
+ * brand navy at 4%) so the user can still see the cards underneath.
+ */
+function LockedOverlay() {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(10,10,92,0.04)',
+        zIndex: 90,
+        cursor: 'not-allowed',
+      }}
+    />
+  )
+}
 
 // Save-state badge — top-right corner of the canvas. Tone colour matches
 // the `tone` prop. Kept tiny so it doesn't compete with the toolbar.

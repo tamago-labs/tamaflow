@@ -3,7 +3,7 @@
 // MVP scope (Phase 1):
 //   • Click-to-edit flow name (inline)
 //   • "+ Add Card" toggle that opens <AddCardPopover>
-//   • "Preview" button that opens the OutcomesPreviewModal
+//   • "Preview" button that opens the RoutesPreviewModal
 //
 // Template menu / prompt-to-flow AI are deferred to later phases —
 // they don't exist yet.

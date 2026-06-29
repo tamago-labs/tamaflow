@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAI } from './context/AIContext'
 import { WalletProvider } from './context/WalletContext'
+import { PriceProvider } from './context/PriceContext'
 import ModelSelector from './pages/ModelSelector'
 import LoadingScreen from './pages/LoadingScreen'
 import CompanyGate from './pages/CompanyGate'
@@ -97,6 +98,7 @@ function App() {
     // status IPC runs — the Canton SDK isn't initialised and no
     // validator round-trip is made. Once we're in the routed app,
     // polling kicks in normally.
+    <PriceProvider>
     <WalletProvider enabled={appState === 'app'}>
       {appState === 'loading' && <Splash />}
 
@@ -131,6 +133,7 @@ function App() {
       <ReceiveModal />
       <SendModal />
     </WalletProvider>
+    </PriceProvider>
   )
 }
 

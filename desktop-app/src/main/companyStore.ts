@@ -1,12 +1,14 @@
 import { app } from 'electron'
 import { join } from 'path'
 import { existsSync, readFileSync, writeFileSync, renameSync, mkdirSync, unlinkSync } from 'fs'
+import { randomUUID } from 'crypto'
 import type {
   CompanyProfile,
   CompanyFile,
   CountryCode,
   CurrencyCode,
-  LegalEntityType
+  LegalEntityType,
+  PaymentTemplate,
 } from '../preload/index.d'
 
 /**
@@ -45,6 +47,77 @@ const VALID_LEGAL: ReadonlySet<LegalEntityType> = new Set<LegalEntityType>([
   'non_profit',
   'other'
 ])
+
+/**
+ * Validate a decimal-string rate (e.g. "0.22" for 22%). Accepts either
+ * a non-empty decimal string in [0, 1] or an empty string (meaning
+ * "rule disabled"). Anything else is rejected.
+ */
+function validateRate(value: unknown, field: string): string {
+  if (value === undefined || value === null) return ''
+  const s = String(value).trim()
+  if (s === '') return ''
+  if (!/^\d+(\.\d+)?$/.test(s)) {
+    throw new Error(`${field} must be a decimal like "0.22" (got: "${s}")`)
+  }
+  const num = Number(s)
+  if (!Number.isFinite(num) || num < 0 || num > 1) {
+    throw new Error(`${field} must be between 0 and 1 (got: "${s}")`)
+  }
+  return s
+}
+
+/**
+ * Normalize a single payment template from a partial input. Fills
+ * missing fields, generates a fresh `id` + timestamps when absent
+ * (server-side — never trust client-provided ids), caps memo length,
+ * validates both rate fields.
+ */
+function normalizePaymentTemplate(raw: unknown, now: string): PaymentTemplate {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const name =
+    typeof r.name === 'string'
+      ? r.name.trim().slice(0, 60)
+      : ''
+  const withholdingRate = validateRate(r.withholdingRate, `Template "${name}" withholding rate`)
+  const socialSecurityRate = validateRate(r.socialSecurityRate, `Template "${name}" social security rate`)
+  const defaultMemoRaw = typeof r.defaultMemo === 'string' ? r.defaultMemo.trim() : ''
+  const defaultMemo = defaultMemoRaw.length > 0 ? defaultMemoRaw.slice(0, 200) : ''
+  if (!defaultMemo) {
+    throw new Error(`Template "${name}" requires a default memo (1–200 chars)`)
+  }
+  const id = typeof r.id === 'string' && r.id.trim().length > 0 ? r.id.trim() : freshTemplateId()
+  const createdAt = typeof r.createdAt === 'string' && r.createdAt.trim().length > 0 ? r.createdAt : now
+  const updatedAt = typeof r.updatedAt === 'string' && r.updatedAt.trim().length > 0 ? r.updatedAt : now
+  return {
+    id,
+    name,
+    withholdingRate,
+    socialSecurityRate,
+    defaultMemo,
+    createdAt,
+    updatedAt,
+  }
+}
+
+/**
+ * Normalize the full `paymentTemplates` array. Missing / non-array →
+ * empty list. Throws if any entry fails validation (caller surfaces
+ * to the user via the Settings save error path).
+ */
+function normalizePaymentTemplates(input: unknown, now: string): PaymentTemplate[] {
+  if (!Array.isArray(input)) return []
+  return input.map((t) => normalizePaymentTemplate(t, now))
+}
+
+/** Stable id generator for new payment templates. Mirrors
+ *  `FlowBuilder.freshId` — prefixed for readability in logs. */
+function freshTemplateId(): string {
+  if (typeof randomUUID === 'function') {
+    return 'tpl_' + randomUUID().replace(/-/g, '')
+  }
+  return 'tpl_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8)
+}
 
 export class CompanyStore {
   private filePath: string
@@ -192,6 +265,19 @@ export class CompanyStore {
     // createdAt / updatedAt are optional on input (save() will stamp them).
     const createdAt = typeof p.createdAt === 'string' ? p.createdAt : ''
     const updatedAt = typeof p.updatedAt === 'string' ? p.updatedAt : ''
+    // User-defined payment templates — each becomes a palette tile on
+    // the flow canvas. Missing/legacy → empty list (Direct Payment is
+    // always present in the palette regardless). Throws if any entry
+    // fails validation.
+    const now = new Date().toISOString()
+    const paymentTemplates = normalizePaymentTemplates(p.paymentTemplates, now)
+    // Optional global default memo for Direct Payment cards (which
+    // have no template). Empty by default — see
+    // `PaymentFields.memo` for the per-card fallback chain.
+    const directPaymentDefaultMemo =
+      typeof p.directPaymentDefaultMemo === 'string'
+        ? p.directPaymentDefaultMemo.trim().slice(0, 200)
+        : ''
     return {
       companyName,
       country,
@@ -199,6 +285,8 @@ export class CompanyStore {
       legalEntityType,
       settlementCurrency: 'CC',
       fiscalYearStart,
+      paymentTemplates,
+      directPaymentDefaultMemo,
       createdAt,
       updatedAt
     }
@@ -211,5 +299,7 @@ export class CompanyStore {
     renameSync(tmpPath, this.filePath)
   }
 }
+
+export { validateRate, normalizePaymentTemplate, normalizePaymentTemplates, freshTemplateId }
 
 export const companyStore = new CompanyStore()

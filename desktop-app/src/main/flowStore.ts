@@ -14,9 +14,11 @@ import type {
   Connection,
   FlowDefinition,
   FlowFile,
-  FlowSchedule,
+  FlowStatus,
   FlowSummary,
+  RouteSummary,
 } from '../preload/index.d'
+import { routeStore } from './routeStore'
 
 /**
  * Payroll flows persisted as one JSON file per flow under
@@ -31,16 +33,26 @@ import type {
  *   JSON here would silently lose a flow's draft on the next load.
  * - **Strict validation** — incoming flows are run through
  *   `validate()` against the same allowlists as the renderer
- *   (categories, tones, schedule mode).
+ *   (categories, tones).
+ * - **Status** — each flow has a `status` (`draft` / `active` /
+ *   `completed`) that the worker (Phase 4) drives via `setStatus`.
  * - **Not secret** — flow definitions are non-confidential
  *   business records. No `safeStorage` wrapping.
+ *
+ * Routes per flow live in `routeStore` under
+ * `<userData>/flows/<flowId>/routes/<id>.json`. `FlowStore.list()`
+ * reads both to surface the per-flow progress counts.
+ *
+ * v.1 has no scheduling — flows settle as soon as the worker picks
+ * them up after Start. A future scheduled mode would add a field on
+ * `FlowDefinition` and a worker-side wait — punted.
  */
 const FLOWS_DIR = 'flows'
 const FILE_VERSION = 1
 
-const VALID_CATEGORIES = new Set(['source', 'payee'])
+const VALID_CATEGORIES = new Set(['source', 'payee', 'payment'])
 const VALID_TONES = new Set(['blue', 'teal', 'navy', 'muted'])
-const VALID_SCHEDULE_MODES = new Set(['manual', 'scheduled'])
+const VALID_STATUSES = new Set<FlowStatus>(['draft', 'active', 'completed'])
 
 /** Generate a stable id (`flow_<base36 ts>_<base36 rand>`).
  *  Mirrors `EmployeeStore.newId()` shape. */
@@ -66,22 +78,30 @@ export class FlowStore {
   /**
    * Lightweight summaries — used by the Active Flows list. Iterates
    * the directory and reads each file once. Cards are NOT loaded into
-   * renderer memory; only counts are surfaced.
+   * renderer memory; only counts are surfaced. Route counts come from
+   * `routeStore.listForFlows`.
    */
   list(): FlowSummary[] {
     const summaries: FlowSummary[] = []
     if (!existsSync(this.flowsDir)) return summaries
     const names = readdirSync(this.flowsDir).filter((n) => n.endsWith('.json'))
+    const flows: FlowDefinition[] = []
+    const flowById = new Map<string, FlowDefinition>()
     for (const name of names) {
       try {
         const file = this.readOne(join(this.flowsDir, name))
         if (!file) continue
-        summaries.push(toSummary(file.flow))
+        flows.push(file.flow)
+        flowById.set(file.flow.id, file.flow)
       } catch (err) {
         // A corrupt file should not poison the whole list — log and
         // skip. The user can recover via reset() or manual file edit.
         console.error('[FlowStore] Skipping corrupt flow file:', name, err)
       }
+    }
+    const routesByFlow = routeStore.listForFlows(flows.map((f) => f.id))
+    for (const flow of flows) {
+      summaries.push(toSummary(flow, routesByFlow[flow.id] ?? []))
     }
     // Newest first by updatedAt (ISO strings sort lexicographically).
     summaries.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))
@@ -102,6 +122,12 @@ export class FlowStore {
    * if the incoming flow already has one (subsequent saves); stamps
    * it now otherwise. Always refreshes `updatedAt`.
    *
+   * Status transitions are guarded: an active or completed flow cannot
+   * have its cards mutated through `save()` (use `setStatus` to flip
+   * lifecycle). When the persisted flow is active/completed and the
+   * incoming payload carries a different shape, we reject with a
+   * clear error rather than silently rewriting the running flow.
+   *
    * Returns the persisted file so the IPC handler can hand the post-
    * save state back to the renderer.
    */
@@ -109,6 +135,19 @@ export class FlowStore {
     const now = new Date().toISOString()
     const id = input.id && ID_REGEX.test(input.id) ? input.id : newId()
     const file = FlowStore.validate(input, id)
+    // Lock guard: refuse to mutate an active/completed flow unless the
+    // incoming payload exactly matches what's on disk (cheap identity
+    // check — full equality not required for the save to be a no-op).
+    if (id) {
+      const existing = this.get(id)
+      if (existing && (existing.flow.status === 'active' || existing.flow.status === 'completed')) {
+        if (!shapesEqual(existing.flow, file.flow)) {
+          throw new Error(
+            `Flow is ${existing.flow.status} — stop it from the Active Flow page before editing the canvas.`
+          )
+        }
+      }
+    }
     const next: FlowDefinition = {
       ...file.flow,
       id,
@@ -120,7 +159,28 @@ export class FlowStore {
     return nextFile
   }
 
-  /** Delete the on-disk file. Returns the post-removal summary list. */
+  /**
+   * Lifecycle-only mutation: flip a flow's `status` without touching
+   * any other field. Used by the worker (active → completed) and by the
+   * renderer's `stop` handler (active → draft). Does NOT validate
+   * transitions — the caller is responsible for legal moves.
+   */
+  setStatus(id: string, status: FlowStatus): FlowFile | null {
+    if (!ID_REGEX.test(id)) return null
+    const file = this.get(id)
+    if (!file) return null
+    if (file.flow.status === status) return file
+    const next: FlowDefinition = {
+      ...file.flow,
+      status,
+      updatedAt: new Date().toISOString(),
+    }
+    const nextFile: FlowFile = { version: FILE_VERSION, flow: next }
+    this.atomicWrite(join(this.flowsDir, `${id}.json`), nextFile)
+    return nextFile
+  }
+
+  /** Delete the on-disk file + every route under it. Returns the post-removal summary list. */
   remove(id: string): FlowSummary[] {
     if (ID_REGEX.test(id)) {
       const path = join(this.flowsDir, `${id}.json`)
@@ -129,6 +189,9 @@ export class FlowStore {
       } catch (err) {
         console.error('[FlowStore] Failed to delete flow:', id, err)
       }
+      // Drop the routes subdirectory too — otherwise a re-created flow
+      // with the same id would inherit stale routes.
+      routeStore.removeAllForFlow(id)
     }
     return this.list()
   }
@@ -183,6 +246,13 @@ export class FlowStore {
     if (name.length > 200) {
       throw new Error('Flow name must be 200 characters or fewer')
     }
+    // Status defaults to 'draft' when missing (legacy flows persisted
+    // before the lifecycle field existed).
+    const statusRaw = typeof f.status === 'string' ? f.status : 'draft'
+    if (!VALID_STATUSES.has(statusRaw as FlowStatus)) {
+      throw new Error(`Invalid status: ${statusRaw}`)
+    }
+    const status = statusRaw as FlowStatus
     const cards = Array.isArray(f.cards)
       ? f.cards.map((c, idx) => {
           try {
@@ -203,15 +273,14 @@ export class FlowStore {
           }
         })
       : []
-    const schedule = FlowStore.validateSchedule(f.schedule)
     const createdAt = typeof f.createdAt === 'string' ? f.createdAt : ''
     const updatedAt = typeof f.updatedAt === 'string' ? f.updatedAt : ''
     const flow: FlowDefinition = {
       id,
       name,
+      status,
       cards,
       connections,
-      schedule,
       createdAt,
       updatedAt,
     }
@@ -276,6 +345,7 @@ export class FlowStore {
     // they be plain objects (so JSON.stringify won't blow up later).
     const sourceFields = FlowStore.validateFields(c.sourceFields, 'sourceFields')
     const payeeFields = FlowStore.validateFields(c.payeeFields, 'payeeFields')
+    const paymentFields = FlowStore.validateFields(c.paymentFields, 'paymentFields')
 
     return {
       placementId,
@@ -287,6 +357,7 @@ export class FlowStore {
       collapsed,
       sourceFields,
       payeeFields,
+      paymentFields,
     }
   }
 
@@ -330,48 +401,55 @@ export class FlowStore {
     }
     return { id, from, to }
   }
-
-  private static validateSchedule(
-    input: unknown,
-  ): FlowSchedule | undefined {
-    if (input === undefined || input === null) return undefined
-    if (typeof input !== 'object' || Array.isArray(input)) {
-      throw new Error('Schedule must be a plain object')
-    }
-    const s = input as Record<string, unknown>
-    const mode = String(s.mode ?? '')
-    if (!VALID_SCHEDULE_MODES.has(mode)) {
-      throw new Error(`Invalid schedule mode: ${String(s.mode)}`)
-    }
-    let runAt: string | undefined
-    if (s.runAt !== undefined) {
-      runAt = String(s.runAt)
-      if (Number.isNaN(Date.parse(runAt))) {
-        throw new Error(`Invalid runAt: ${runAt}`)
-      }
-    }
-    if (mode === 'scheduled' && !runAt) {
-      throw new Error('runAt is required when mode is "scheduled"')
-    }
-    return { mode: mode as FlowSchedule['mode'], runAt }
-  }
 }
 
-/** Reduce a `FlowDefinition` to a `FlowSummary` (Active Flows list). */
-function toSummary(flow: FlowDefinition): FlowSummary {
+/** Reduce a `FlowDefinition` + its routes to a `FlowSummary` (Active Flows list). */
+function toSummary(flow: FlowDefinition, routes: RouteSummary[]): FlowSummary {
   let payeeCount = 0
   for (const card of flow.cards) {
     if (card.category === 'payee') payeeCount++
   }
+  let settledCount = 0
+  let failedCount = 0
+  for (const r of routes) {
+    if (r.status === 'settled') settledCount++
+    else if (r.status === 'failed') failedCount++
+  }
   return {
     id: flow.id,
     name: flow.name,
+    status: flow.status,
     cardCount: flow.cards.length,
     payeeCount,
-    schedule: flow.schedule,
+    routeCount: routes.length,
+    settledCount,
+    failedCount,
     createdAt: flow.createdAt,
     updatedAt: flow.updatedAt,
   }
+}
+
+/**
+ * Identity check used by `save()` to detect "the renderer just
+ * re-saved what it loaded" vs "the user actually changed something
+ * while the flow is active". Compares name, cards, connections.
+ * Status is excluded (the worker owns it).
+ */
+function shapesEqual(a: FlowDefinition, b: FlowDefinition): boolean {
+  if (a.name !== b.name) return false
+  if (a.cards.length !== b.cards.length) return false
+  if (a.connections.length !== b.connections.length) return false
+  const aCards = a.cards.map((c) => JSON.stringify(c)).sort()
+  const bCards = b.cards.map((c) => JSON.stringify(c)).sort()
+  for (let i = 0; i < aCards.length; i++) {
+    if (aCards[i] !== bCards[i]) return false
+  }
+  const aConns = a.connections.map((c) => JSON.stringify(c)).sort()
+  const bConns = b.connections.map((c) => JSON.stringify(c)).sort()
+  for (let i = 0; i < aConns.length; i++) {
+    if (aConns[i] !== bConns[i]) return false
+  }
+  return true
 }
 
 export const flowStore = new FlowStore()

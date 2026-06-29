@@ -19,13 +19,14 @@
 export type PayCurrency = 'JPY' | 'THB' | 'USD' | 'EUR'
 
 /**
- * Inputs to the compute step. The caller (`enumerateOutcomes`) is
+ * Inputs to the compute step. The caller (`enumerateRoutes`) is
  * responsible for resolving the employee + Payee card together — this
  * module just does the arithmetic.
  *
- * The gross pay passed in already accounts for any `amountOverride` on
- * the Payee card (the enumarator decides which value to use); compute
- * only handles the FX step.
+ * The gross pay passed in already accounts for deductions (withholding
+ * + social security) applied by the enumerator from the linked
+ * `PaymentTemplate` (or skipped entirely for Direct Payment);
+ * compute only handles the FX step.
  */
 export interface ComputeInput {
   /** Decimal string in pay currency (e.g. "5000.00"). */

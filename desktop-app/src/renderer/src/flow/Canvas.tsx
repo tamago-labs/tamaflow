@@ -13,7 +13,7 @@ import { BLUE, BORDER, LIGHT_BLUE, MUTED, monoFont } from './theme'
 import CanvasCard, { type PortSide } from './CanvasCard'
 import CanvasLines from './CanvasLines'
 import type { CanvasCardEdit, CanvasState } from './types'
-import type { Employee } from '../../../preload/index.d'
+import type { Employee, PaymentTemplate } from '../../../preload/index.d'
 
 interface CanvasProps {
   state: CanvasState
@@ -22,10 +22,29 @@ interface CanvasProps {
   connectFrom: string | null
   /** placementId of the card currently in inline-edit mode, if any. */
   editingId: string | null
+  /**
+   * Flow id — forwarded to each card so the LastPaidSection can query
+   * the right per-flow routes. Empty when the canvas is rendered
+   * without a backing flow (e.g. during a brand-new draft preview).
+   */
+  flowId: string
   /** Roster forwarded to CanvasCard for Payee employeeId → Employee lookup. */
   employees: Employee[]
   /** Whether the desktop wallet is loaded. Drives Source card warnings. */
   walletReady: boolean
+  /**
+   * User-defined payment templates — forwarded to CanvasCard so Payment
+   * cards can show a stale-template warning when their templateId no
+   * longer resolves to an entry in this list.
+   */
+  paymentTemplates: PaymentTemplate[]
+  /**
+   * Read-only mode — the flow is active. Cards ignore clicks (overlay
+   * covers them), keyboard shortcuts for delete are disabled, and the
+   * connect-source banner is suppressed. The canvas still renders so
+   * the user can see what the flow looks like.
+   */
+  locked?: boolean
   onSelectCard: (id: string | null) => void
   onDeleteCard: (id: string) => void
   onToggleCollapse: (id: string) => void
@@ -46,8 +65,11 @@ export default function Canvas({
   selectedId,
   connectFrom,
   editingId,
+  flowId,
   employees,
   walletReady,
+  paymentTemplates,
+  locked = false,
   onSelectCard,
   onDeleteCard,
   onToggleCollapse,
@@ -78,6 +100,9 @@ export default function Canvas({
       }
       const target = e.target as HTMLElement | null
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return
+      // Locked flows: keyboard delete/connect are no-ops; the user must
+      // stop the flow first to edit.
+      if (locked) return
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId && selectedId !== editingId) {
         e.preventDefault()
         onDeleteCard(selectedId)
@@ -85,7 +110,7 @@ export default function Canvas({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [connectFrom, selectedId, editingId, onCancelConnect, onDeleteCard])
+  }, [connectFrom, selectedId, editingId, onCancelConnect, onDeleteCard, locked])
 
   // Wheel zoom — must be a native passive:false listener so we can
   // preventDefault and stop the page from scrolling.
@@ -214,8 +239,11 @@ export default function Canvas({
             selected={selectedId === card.placementId}
             isConnectSource={connectFrom === card.placementId}
             editing={editingId === card.placementId}
+            flowId={flowId}
             employees={employees}
             walletReady={walletReady}
+            paymentTemplates={paymentTemplates}
+            locked={locked}
             onSelect={onSelectCard}
             onDelete={onDeleteCard}
             onToggleCollapse={onToggleCollapse}
@@ -230,7 +258,7 @@ export default function Canvas({
         ))}
       </div>
 
-      {connectFrom && (
+      {connectFrom && !locked && (
         <div
           style={{
             position: 'absolute',
