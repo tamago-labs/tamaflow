@@ -1,0 +1,579 @@
+{
+  "version": 1,
+  "schema": [
+    {
+      "name": "writer",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "key",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "invite",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "invite",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "publicKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "expires",
+          "required": true,
+          "type": "int",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "board",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "name",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "createdAt",
+          "required": true,
+          "type": "int",
+          "version": 1
+        },
+        {
+          "name": "updatedAt",
+          "required": true,
+          "type": "int",
+          "version": 1
+        },
+        {
+          "name": "order",
+          "required": true,
+          "type": "int",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "item",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": 5,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "boardId",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "type",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "x",
+          "required": true,
+          "type": "float64",
+          "version": 1
+        },
+        {
+          "name": "y",
+          "required": true,
+          "type": "float64",
+          "version": 1
+        },
+        {
+          "name": "w",
+          "type": "float64",
+          "version": 1
+        },
+        {
+          "name": "h",
+          "type": "float64",
+          "version": 1
+        },
+        {
+          "name": "text",
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "stroke",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "strokeWidth",
+          "required": true,
+          "type": "float64",
+          "version": 1
+        },
+        {
+          "name": "fill",
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "lineCap",
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "fontSize",
+          "type": "float64",
+          "version": 1
+        },
+        {
+          "name": "start",
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "end",
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "arrowStart",
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "arrowEnd",
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "strokePattern",
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "curve",
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "order",
+          "required": true,
+          "type": "int",
+          "version": 1
+        },
+        {
+          "name": "updatedAt",
+          "required": true,
+          "type": "int",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "chat-msg",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": 2,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "text",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "info",
+          "type": "json",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "board-rename",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "name",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "at",
+          "required": true,
+          "type": "int",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "board-delete",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "item-batch",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "items",
+          "required": true,
+          "type": "json",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "item-update",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "patch",
+          "required": true,
+          "type": "json",
+          "version": 1
+        },
+        {
+          "name": "at",
+          "required": true,
+          "type": "int",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "item-reorder",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "order",
+          "required": true,
+          "type": "int",
+          "version": 1
+        },
+        {
+          "name": "at",
+          "required": true,
+          "type": "int",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "item-remove",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "items-remove",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "ids",
+          "required": true,
+          "type": "json",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "chats-remove",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "ids",
+          "required": true,
+          "type": "json",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "ai-state",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": 1,
+      "fields": [
+        {
+          "name": "writerKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "modelId",
+          "required": false,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "modelName",
+          "required": false,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "loadedAt",
+          "required": false,
+          "type": "int",
+          "version": 1
+        },
+        {
+          "name": "accepting",
+          "required": false,
+          "type": "bool",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "ai-state-update",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": 0,
+      "fields": [
+        {
+          "name": "_writerKey",
+          "required": false,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "modelId",
+          "required": false,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "modelName",
+          "required": false,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "loadedAt",
+          "required": false,
+          "type": "int",
+          "version": 1
+        },
+        {
+          "name": "accepting",
+          "required": false,
+          "type": "bool",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "relay-request",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "requestId",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "fromKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "toKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "messages",
+          "required": true,
+          "type": "json",
+          "version": 1
+        },
+        {
+          "name": "modelId",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "createdAt",
+          "required": true,
+          "type": "int",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "relay-response",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": 4,
+      "fields": [
+        {
+          "name": "requestId",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "fromKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "toKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "kind",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "text",
+          "required": false,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "error",
+          "required": false,
+          "type": "json",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "relay-cancel",
+      "namespace": "tamarind",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "requestId",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "fromKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "toKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        }
+      ]
+    }
+  ]
+}
