@@ -1,7 +1,10 @@
-// P2P-ready data model for Tamarind's canvas. The shape is identical
-// across Phase 1 (local useReducer) and Phase 3 (Autobase / HyperDB):
-// only the storage layer changes. Phase 3 will mirror this union into
-// a hyperschema/hyperdb/hyperdispatch spec.
+// Tamaflow data model — formerly Tamarind's canvas, kept here so the
+// renderer can still serialise / hydrate historical Tamarind board
+// files (the .tamarind.json import path under `data/boardIO.ts`).
+// The Tamaflow data plane no longer carries a canvas: the room
+// worker dropped board + item collections when the project was
+// renamed. This file is on the cleanup list for the frontend pass
+// that strips the canvas UI.
 
 export type GenericShapeType = 'rect' | 'ellipse' | 'connector' | 'text'
 export type ShapeType = GenericShapeType
@@ -89,10 +92,9 @@ export interface ConnectorItem extends ShapeBase {
   label?: ConnectorLabel
 }
 
-// Flat item on the canvas. boardId foreign-keys to a Board. Phase 3
-// will serialise this exact shape through `@tamarind/item` in the
-// HyperDB view; the optional fields collapse to absent-vs-present on
-// the wire via hyperschema's `?` optional encoding.
+// Flat item on the canvas. boardId foreign-keys to a Board. Kept
+// for the `.tamarind.json` import path (legacy board files that
+// users may still have on disk).
 export interface BoardScopedItem {
   id: string
   boardId: string
@@ -131,19 +133,6 @@ export interface ActiveBoard {
   key: 'current'
   boardId: string
 }
-
-// ── Hyperdispatch routes (Phase 3) ───────────────────────────────
-export const ROUTES = {
-  ADD_BOARD: '@tamarind/add-board',
-  RENAME_BOARD: '@tamarind/rename-board',
-  DELETE_BOARD: '@tamarind/delete-board',
-  SET_ACTIVE: '@tamarind/set-active-board',
-  ADD_ITEM: '@tamarind/add-item',
-  MOVE_ITEM: '@tamarind/move-item',
-  REMOVE_ITEM: '@tamarind/remove-item'
-} as const
-
-export type RouteName = (typeof ROUTES)[keyof typeof ROUTES]
 
 // ── Defaults ─────────────────────────────────────────────────────
 export const DEFAULT_BOARD_NAME = 'Untitled'

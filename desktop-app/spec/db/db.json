@@ -3,44 +3,14 @@
   "offset": 0,
   "schema": [
     {
-      "name": "boards",
-      "namespace": "tamarind",
+      "name": "chat",
+      "namespace": "tamaflow",
       "id": 0,
       "type": 1,
       "version": 1,
       "versionField": null,
       "indexes": [],
-      "schema": "@tamarind/board",
-      "derived": false,
-      "key": [
-        "id"
-      ],
-      "trigger": null
-    },
-    {
-      "name": "items",
-      "namespace": "tamarind",
-      "id": 1,
-      "type": 1,
-      "version": 1,
-      "versionField": null,
-      "indexes": [],
-      "schema": "@tamarind/item",
-      "derived": false,
-      "key": [
-        "id"
-      ],
-      "trigger": null
-    },
-    {
-      "name": "chat",
-      "namespace": "tamarind",
-      "id": 2,
-      "type": 1,
-      "version": 1,
-      "versionField": null,
-      "indexes": [],
-      "schema": "@tamarind/chat-msg",
+      "schema": "@tamaflow/chat-msg",
       "derived": false,
       "key": [
         "id"
@@ -49,13 +19,13 @@
     },
     {
       "name": "invites",
-      "namespace": "tamarind",
-      "id": 3,
+      "namespace": "tamaflow",
+      "id": 1,
       "type": 1,
       "version": 1,
       "versionField": null,
       "indexes": [],
-      "schema": "@tamarind/invite",
+      "schema": "@tamaflow/invite",
       "derived": false,
       "key": [
         "id"
@@ -64,13 +34,13 @@
     },
     {
       "name": "ai-state",
-      "namespace": "tamarind",
-      "id": 4,
+      "namespace": "tamaflow",
+      "id": 2,
       "type": 1,
       "version": 1,
       "versionField": null,
       "indexes": [],
-      "schema": "@tamarind/ai-state",
+      "schema": "@tamaflow/ai-state",
       "derived": false,
       "key": [
         "writerKey"
@@ -79,13 +49,13 @@
     },
     {
       "name": "relay-request",
-      "namespace": "tamarind",
-      "id": 5,
+      "namespace": "tamaflow",
+      "id": 3,
       "type": 1,
       "version": 1,
       "versionField": null,
       "indexes": [],
-      "schema": "@tamarind/relay-request",
+      "schema": "@tamaflow/relay-request",
       "derived": false,
       "key": [
         "requestId"
@@ -94,13 +64,13 @@
     },
     {
       "name": "relay-response",
-      "namespace": "tamarind",
-      "id": 6,
+      "namespace": "tamaflow",
+      "id": 4,
       "type": 1,
       "version": 1,
       "versionField": null,
       "indexes": [],
-      "schema": "@tamarind/relay-response",
+      "schema": "@tamaflow/relay-response",
       "derived": false,
       "key": [
         "requestId",
@@ -110,13 +80,13 @@
     },
     {
       "name": "relay-cancel",
-      "namespace": "tamarind",
-      "id": 7,
+      "namespace": "tamaflow",
+      "id": 5,
       "type": 1,
       "version": 1,
       "versionField": null,
       "indexes": [],
-      "schema": "@tamarind/relay-cancel",
+      "schema": "@tamaflow/relay-cancel",
       "derived": false,
       "key": [
         "requestId"

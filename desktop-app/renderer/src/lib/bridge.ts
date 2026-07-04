@@ -94,13 +94,12 @@ export interface BridgeAPI {
       messages: ChatTurn[]
     ): Promise<{ success: boolean; count?: number; error?: string }>
   }
-  // Phase 7+: P2P AI source — list of peers' currently-loaded models
+  // P2P AI source — list of peers' currently-loaded models
   // (and whether they're accepting requests). Surface for the Setup
   // tab's "Chat with this peer" picker. The actual routing of the
-  // completion to a peer is owned by `aiChat.send` (Phase 8 wires
-  // the relay path through the same send function). `loadedAt` is
-  // replicated from the `@tamarind/ai-state` row (Unix ms, null
-  // when no model is loaded).
+  // completion to a peer is owned by `chat.route` (relay path).
+  // `loadedAt` is replicated from the `@tamaflow/ai-state` row
+  // (Unix ms, null when no model is loaded).
   aiSourcePeers(): Promise<
     Array<{
       writerKey: string
@@ -153,10 +152,10 @@ export interface BridgeAPI {
 // `bridge.startWorker(SPEC)` — must match the path arguments in
 // `electron/main.js`'s `getWorker()`.
 export const MAIN_WORKER = '/workers/main.js'
-export const ROOM_WORKER = '/workers/room-entry.js'
+export const ROOM_WORKER = '/workers/tamaflow-room-entry.js'
 
 const noopBridge: BridgeAPI = {
-  pkg: () => ({ name: 'tamarind', productName: 'Tamarind', version: '0.0.0' }),
+  pkg: () => ({ name: 'tamaflow', productName: 'Tamaflow', version: '0.0.0' }),
   applyUpdate: () => Promise.resolve(),
   appAfterUpdate: () => Promise.resolve(),
   startWorker: () => Promise.resolve(false),
@@ -242,7 +241,7 @@ if (typeof window !== 'undefined' && !window.bridge) {
   // Surface the fallback path so we know the renderer is running outside
   // Electron (vite dev / tests / Storybook) — Phase 1 reducer still works,
   // but P2P worker side effects are silently no-op'd.
-  console.warn('[tamarind] bridge: window.bridge missing, using no-op stub')
+  console.warn('[tamaflow] bridge: window.bridge missing, using no-op stub')
 }
 
 declare global {

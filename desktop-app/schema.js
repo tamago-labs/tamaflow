@@ -1,15 +1,20 @@
-// Tamarind hyperschema + hyperdb + hyperdispatch source-of-truth.
+// Tamaflow hyperschema + hyperdb + hyperdispatch source-of-truth.
 //
 // Records, collections, and dispatch routes for the P2P room worker
-// (`workers/tamarind-room.js`). Mirrors the canvasReducer's action
-// surface so each reducer dispatch becomes a single Autobase append,
-// and the full log replays into the reducer's `snapshot` action when
-// a peer joins.
+// (`workers/tamaflow-room.js`). The Tamaflow data plane carries:
 //
-// v1 shortcut: connector endpoints (`start`, `end`) are encoded as
-// opaque JSON strings to dodge a v1 hyperschema any-of restriction.
-// A new peer reads them back via `JSON.parse` in the worker's
-// snapshot path. See `nested-beaming-reef.md` step 11.
+//   • invites — BlindPairing invite codes (one per room)
+//   • chat    — group chat messages (P2P-replicated across peers)
+//   • ai-state — per-writer model metadata (which model each peer
+//     has loaded, whether it's accepting requests)
+//   • relay   — P2P completion routing (peer A asks peer B to run a
+//     completion on peer B's local model)
+//
+// The previous Tamarind codebase also had `board` + `item` collections
+// driving a collaborative canvas. Tamaflow drops the canvas — the
+// frontend is splash + login/invite only, the worker is local-AI +
+// sessions + chat. Schema mirror lives at
+// `C:\Users\pisut\.claude\plans\nested-beaming-reef.md` (legacy).
 
 const Hyperschema = require('hyperschema')
 const HyperdbBuilder = require('hyperdb/builder')
@@ -20,14 +25,9 @@ const DB_DIR = './spec/db'
 const DISPATCH_DIR = './spec/dispatch'
 
 const hyperSchema = Hyperschema.from(SCHEMA_DIR)
-const schema = hyperSchema.namespace('tamarind')
+const schema = hyperSchema.namespace('tamaflow')
 
 // ── Records ─────────────────────────────────────────────────────────
-schema.register({
-  name: 'writer',
-  fields: [{ name: 'key', type: 'buffer', required: true }]
-})
-
 schema.register({
   name: 'invite',
   fields: [
@@ -35,54 +35,6 @@ schema.register({
     { name: 'invite', type: 'buffer', required: true },
     { name: 'publicKey', type: 'buffer', required: true },
     { name: 'expires', type: 'int', required: true }
-  ]
-})
-
-schema.register({
-  name: 'board',
-  fields: [
-    { name: 'id', type: 'buffer', required: true },
-    { name: 'name', type: 'string', required: true },
-    { name: 'createdAt', type: 'int', required: true },
-    { name: 'updatedAt', type: 'int', required: true },
-    { name: 'order', type: 'int', required: true }
-  ]
-})
-
-// `start` / `end` are stored as JSON-encoded ConnectorEnd unions so
-// we don't have to model the discriminated union in hyperschema for
-// v1. See comment at top of file.
-schema.register({
-  name: 'item',
-  fields: [
-    { name: 'id', type: 'buffer', required: true },
-    { name: 'boardId', type: 'buffer', required: true },
-    { name: 'type', type: 'string', required: true },
-    { name: 'x', type: 'float64', required: true },
-    { name: 'y', type: 'float64', required: true },
-    { name: 'w', type: 'float64' },
-    { name: 'h', type: 'float64' },
-    { name: 'text', type: 'string' },
-    { name: 'stroke', type: 'string', required: true },
-    { name: 'strokeWidth', type: 'float64', required: true },
-    { name: 'fill', type: 'string' },
-    { name: 'lineCap', type: 'string' },
-    { name: 'fontSize', type: 'float64' },
-    { name: 'start', type: 'string' },
-    { name: 'end', type: 'string' },
-    // Connector-only styling (Phase 3 — unified `connector` shape).
-    // `arrowStart`/`arrowEnd` mirror `ArrowheadStyle` ('none' | 'arrow').
-    // `strokePattern` mirrors `StrokePattern` ('solid' | 'dashed' | 'dotted').
-    // `curve` mirrors `Curve` ('straight' | 'bezier').
-    // `label` is a JSON-encoded `ConnectorLabel` (v1 hyperschema workaround,
-    // mirrors how `start`/`end` ship as opaque JSON strings).
-    { name: 'arrowStart', type: 'string' },
-    { name: 'arrowEnd', type: 'string' },
-    { name: 'strokePattern', type: 'string' },
-    { name: 'curve', type: 'string' },
-    { name: 'label', type: 'string' },
-    { name: 'order', type: 'int', required: true },
-    { name: 'updatedAt', type: 'int', required: true }
   ]
 })
 
@@ -95,65 +47,15 @@ schema.register({
   ]
 })
 
-schema.register({
-  name: 'board-rename',
-  fields: [
-    { name: 'id', type: 'buffer', required: true },
-    { name: 'name', type: 'string', required: true },
-    { name: 'at', type: 'int', required: true }
-  ]
-})
-
-schema.register({
-  name: 'board-delete',
-  fields: [{ name: 'id', type: 'buffer', required: true }]
-})
-
-// `add-items` is a batch — hyperschema doesn't do arrays-of-named-
-// record for v1, so we serialise the batch as JSON.
-schema.register({
-  name: 'item-batch',
-  fields: [{ name: 'items', type: 'json', required: true }]
-})
-
-schema.register({
-  name: 'item-update',
-  fields: [
-    { name: 'id', type: 'buffer', required: true },
-    { name: 'patch', type: 'json', required: true },
-    { name: 'at', type: 'int', required: true }
-  ]
-})
-
-schema.register({
-  name: 'item-reorder',
-  fields: [
-    { name: 'id', type: 'buffer', required: true },
-    { name: 'order', type: 'int', required: true },
-    { name: 'at', type: 'int', required: true }
-  ]
-})
-
-schema.register({
-  name: 'item-remove',
-  fields: [{ name: 'id', type: 'buffer', required: true }]
-})
-
-schema.register({
-  name: 'items-remove',
-  fields: [{ name: 'ids', type: 'json', required: true }]
-})
-
 // Batch chat deletion — `ids` is a `string[]` of message ids to remove.
-// An empty array means "clear all chat history". Mirrors the
-// `items-remove` batch pattern; hyperschema doesn't do arrays-of-named-
-// record for v1, so we serialise the batch as JSON.
+// An empty array means "clear all chat history". hyperschema doesn't
+// do arrays-of-named-record for v1, so we serialise the batch as JSON.
 schema.register({
   name: 'chats-remove',
   fields: [{ name: 'ids', type: 'json', required: true }]
 })
 
-// Phase 2: per-writer AI state (which model each peer has loaded and
+// Per-writer AI state (which model each peer has loaded and
 // whether it's currently accepting requests). One row per writer,
 // keyed by `writerKey`. `accepting` flips to false during an in-flight
 // completion so peers can see when a model is busy. `modelId` and
@@ -179,14 +81,6 @@ schema.register({
 // JSON-serialised on the pipe; a hex string survives the round-trip
 // whereas a raw Buffer would need base64 wrapping.
 //
-// WHY THIS FIELD IS HERE: The encoder silently drops fields that
-// aren't in the schema. Without this entry, `data._writerKey`
-// arrived as `undefined` in the route handler,
-// `b4a.from(undefined, 'hex')` returned an empty Buffer, and every
-// peer's `peerAiStates` had `writerKey: ""` — making the renderer-
-// side "Pick a source" UI unselectable and the relay route fail
-// with "targetWriterKey required".
-//
 // SCHEMA CHANGES: We're greenfield — no production data to preserve.
 // When you change ANY dispatch or collection schema (add/remove/
 // rename/reorder fields), wipe the local storage dirs before
@@ -206,7 +100,7 @@ schema.register({
   ]
 })
 
-// Phase 3: P2P completion routing. A requester encodes a chat-completion
+// P2P completion routing. A requester encodes a chat-completion
 // payload and pins it at the owner's writer key. The owner runs the
 // local inference and streams the result back as a sequence of
 // `relay-response` records with the same `requestId`. We do NOT
@@ -249,29 +143,17 @@ Hyperschema.toDisk(hyperSchema)
 
 // ── Collections ─────────────────────────────────────────────────────
 const hyperdb = HyperdbBuilder.from(SCHEMA_DIR, DB_DIR)
-const db = hyperdb.namespace('tamarind')
-
-db.collections.register({
-  name: 'boards',
-  schema: '@tamarind/board',
-  key: ['id']
-})
-
-db.collections.register({
-  name: 'items',
-  schema: '@tamarind/item',
-  key: ['id']
-})
+const db = hyperdb.namespace('tamaflow')
 
 db.collections.register({
   name: 'chat',
-  schema: '@tamarind/chat-msg',
+  schema: '@tamaflow/chat-msg',
   key: ['id']
 })
 
 db.collections.register({
   name: 'invites',
-  schema: '@tamarind/invite',
+  schema: '@tamaflow/invite',
   key: ['id']
 })
 
@@ -279,7 +161,7 @@ db.collections.register({
 // this whenever the local writer's AI state changes.
 db.collections.register({
   name: 'ai-state',
-  schema: '@tamarind/ai-state',
+  schema: '@tamaflow/ai-state',
   key: ['writerKey']
 })
 
@@ -289,50 +171,38 @@ db.collections.register({
 // once and removed by the owner.
 db.collections.register({
   name: 'relay-request',
-  schema: '@tamarind/relay-request',
+  schema: '@tamaflow/relay-request',
   key: ['requestId']
 })
 
 db.collections.register({
   name: 'relay-response',
-  schema: '@tamarind/relay-response',
+  schema: '@tamaflow/relay-response',
   key: ['requestId', 'fromKey']
 })
 
 db.collections.register({
   name: 'relay-cancel',
-  schema: '@tamarind/relay-cancel',
+  schema: '@tamaflow/relay-cancel',
   key: ['requestId']
 })
 
 HyperdbBuilder.toDisk(hyperdb)
 
 // ── Dispatch routes ────────────────────────────────────────────────
-// One route per canvasReducer action, plus chat + invite plumbing.
+// Chat + invite plumbing + AI state + P2P completion relay. No board
+// / item routes — the Tamaflow data plane does not carry a canvas.
 const hyperdispatch = Hyperdispatch.from(SCHEMA_DIR, DISPATCH_DIR, { offset: 0 })
-const dispatch = hyperdispatch.namespace('tamarind')
+const dispatch = hyperdispatch.namespace('tamaflow')
 
-dispatch.register({ name: 'add-writer', requestType: '@tamarind/writer' })
-dispatch.register({ name: 'add-invite', requestType: '@tamarind/invite' })
+dispatch.register({ name: 'add-invite', requestType: '@tamaflow/invite' })
 
-dispatch.register({ name: 'add-board', requestType: '@tamarind/board' })
-dispatch.register({ name: 'rename-board', requestType: '@tamarind/board-rename' })
-dispatch.register({ name: 'delete-board', requestType: '@tamarind/board-delete' })
+dispatch.register({ name: 'add-chat', requestType: '@tamaflow/chat-msg' })
+dispatch.register({ name: 'remove-chats', requestType: '@tamaflow/chats-remove' })
 
-dispatch.register({ name: 'add-item', requestType: '@tamarind/item' })
-dispatch.register({ name: 'add-items', requestType: '@tamarind/item-batch' })
-dispatch.register({ name: 'update-item', requestType: '@tamarind/item-update' })
-dispatch.register({ name: 'reorder', requestType: '@tamarind/item-reorder' })
-dispatch.register({ name: 'remove-item', requestType: '@tamarind/item-remove' })
-dispatch.register({ name: 'remove-items', requestType: '@tamarind/items-remove' })
-
-dispatch.register({ name: 'add-chat', requestType: '@tamarind/chat-msg' })
-dispatch.register({ name: 'remove-chats', requestType: '@tamarind/chats-remove' })
-
-
-dispatch.register({ name: 'update-ai-state', requestType: '@tamarind/ai-state-update' })
-dispatch.register({ name: 'relay-request', requestType: '@tamarind/relay-request' })
-dispatch.register({ name: 'relay-response', requestType: '@tamarind/relay-response' })
-dispatch.register({ name: 'relay-cancel', requestType: '@tamarind/relay-cancel' })
+dispatch.register({ name: 'update-ai-state', requestType: '@tamaflow/ai-state-update' })
+dispatch.register({ name: 'relay-request', requestType: '@tamaflow/relay-request' })
+dispatch.register({ name: 'relay-response', requestType: '@tamaflow/relay-response' })
+dispatch.register({ name: 'relay-cancel', requestType: '@tamaflow/relay-cancel' })
 
 Hyperdispatch.toDisk(hyperdispatch)

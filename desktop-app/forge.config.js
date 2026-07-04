@@ -88,11 +88,11 @@ module.exports = {
       name: 'pear-electron-forge-maker-flatpak',
       platforms: ['linux'],
       config: {
-        appId: 'com.tamago.tamarind',
+        appId: 'com.tamago.tamaflow',
         icon: `${packagerConfig.icon}.png`,
         metainfo: 'build/metainfo.xml',
         entrypoint: 'build/entrypoint.sh',
-        comment: 'Tamarind - local-first P2P collaborative whiteboard',
+        comment: 'Tamaflow - AI auto-payroll on Canton',
         categories: ['Office', 'Network']
       }
     },
@@ -101,13 +101,13 @@ module.exports = {
       platforms: ['linux'],
       config: {
         snapcraftYamlPath: 'build/snapcraft.yaml',
-        summary: 'Tamarind - local-first P2P collaborative whiteboard',
+        summary: 'Tamaflow - AI auto-payroll on Canton',
         description:
-          'Tamarind is a local-first, peer-to-peer collaborative whiteboard built on Electron and Pear. Designed for teams working in network-congested environments.',
-        contact: 'hello@dev.tamarind',
+          'Tamaflow is a privacy-first AI payroll platform built for modern companies operating on Canton. It keeps sensitive payroll data entirely within the employer\'s local environment while using AI to automate payroll workflows and Canton to coordinate secure, auditable settlements.',
+        contact: 'hello@tamaflow',
         license: 'Apache-2.0',
-        issues: 'https://github.com/dev-tamarind/tamarind/issues',
-        website: 'https://github.com/dev-tamarind/tamarind',
+        issues: 'https://github.com/tamago-labs/tamaflow/issues',
+        website: 'https://github.com/tamago-labs/tamaflow',
         icon: `${packagerConfig.icon}.png`
       }
     }

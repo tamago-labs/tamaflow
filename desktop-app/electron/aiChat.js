@@ -48,6 +48,14 @@ function getStatus() {
 function isBusy() {
   return currentRequestId !== null
 }
+
+// No-op stub — `accepting` is derived in `qvac.getLocalAiStateSnapshot()`
+// from `isStreamingNow()`, so explicit setAccepting calls would
+// double-track the same state. The setter is kept exported because
+// `sendMessage` and `settle` historically called it (now redundant
+// but harmless), and downstream code (relay routing in main.js) reads
+// the derived value via `getLocalAiStateSnapshot().accepting`.
+function setAccepting(_value) {}
  
 
 async function sendMessage({ messages }) {

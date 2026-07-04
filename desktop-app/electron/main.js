@@ -46,7 +46,7 @@ const { name, productName, version, upgrade } = pkg
 
 const protocol = name
 const mainWorkerSpecifier = '/workers/main.js'
-const roomWorkerSpecifier = '/workers/room-entry.js'
+const roomWorkerSpecifier = '/workers/tamaflow-room-entry.js'
 
 const workers = new Map()
 

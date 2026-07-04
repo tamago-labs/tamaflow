@@ -15,72 +15,32 @@ class Router {
     this._handler4 = null
     this._handler5 = null
     this._handler6 = null
-    this._handler7 = null
-    this._handler8 = null
-    this._handler9 = null
-    this._handler10 = null
-    this._handler11 = null
-    this._handler12 = null
-    this._handler13 = null
-    this._handler14 = null
-    this._handler15 = null
-    this._handler16 = null
 
-    this._missing = 17
+    this._missing = 7
   }
 
   add (name, handler) {
     switch (name) {
-      case '@tamarind/add-writer':
+      case '@tamaflow/add-invite':
         this._handler0 = handler
         break
-      case '@tamarind/add-invite':
+      case '@tamaflow/add-chat':
         this._handler1 = handler
         break
-      case '@tamarind/add-board':
+      case '@tamaflow/remove-chats':
         this._handler2 = handler
         break
-      case '@tamarind/rename-board':
+      case '@tamaflow/update-ai-state':
         this._handler3 = handler
         break
-      case '@tamarind/delete-board':
+      case '@tamaflow/relay-request':
         this._handler4 = handler
         break
-      case '@tamarind/add-item':
+      case '@tamaflow/relay-response':
         this._handler5 = handler
         break
-      case '@tamarind/add-items':
+      case '@tamaflow/relay-cancel':
         this._handler6 = handler
-        break
-      case '@tamarind/update-item':
-        this._handler7 = handler
-        break
-      case '@tamarind/reorder':
-        this._handler8 = handler
-        break
-      case '@tamarind/remove-item':
-        this._handler9 = handler
-        break
-      case '@tamarind/remove-items':
-        this._handler10 = handler
-        break
-      case '@tamarind/add-chat':
-        this._handler11 = handler
-        break
-      case '@tamarind/remove-chats':
-        this._handler12 = handler
-        break
-      case '@tamarind/update-ai-state':
-        this._handler13 = handler
-        break
-      case '@tamarind/relay-request':
-        this._handler14 = handler
-        break
-      case '@tamarind/relay-response':
-        this._handler15 = handler
-        break
-      case '@tamarind/relay-cancel':
-        this._handler16 = handler
         break
       default:
         throw DispatchError.NONEXISTENT_ROUTE(name)
@@ -89,23 +49,13 @@ class Router {
   }
 
   _checkAll () {
-    assert(this._handler0 !== null, 'Missing handler for "@tamarind/add-writer"')
-    assert(this._handler1 !== null, 'Missing handler for "@tamarind/add-invite"')
-    assert(this._handler2 !== null, 'Missing handler for "@tamarind/add-board"')
-    assert(this._handler3 !== null, 'Missing handler for "@tamarind/rename-board"')
-    assert(this._handler4 !== null, 'Missing handler for "@tamarind/delete-board"')
-    assert(this._handler5 !== null, 'Missing handler for "@tamarind/add-item"')
-    assert(this._handler6 !== null, 'Missing handler for "@tamarind/add-items"')
-    assert(this._handler7 !== null, 'Missing handler for "@tamarind/update-item"')
-    assert(this._handler8 !== null, 'Missing handler for "@tamarind/reorder"')
-    assert(this._handler9 !== null, 'Missing handler for "@tamarind/remove-item"')
-    assert(this._handler10 !== null, 'Missing handler for "@tamarind/remove-items"')
-    assert(this._handler11 !== null, 'Missing handler for "@tamarind/add-chat"')
-    assert(this._handler12 !== null, 'Missing handler for "@tamarind/remove-chats"')
-    assert(this._handler13 !== null, 'Missing handler for "@tamarind/update-ai-state"')
-    assert(this._handler14 !== null, 'Missing handler for "@tamarind/relay-request"')
-    assert(this._handler15 !== null, 'Missing handler for "@tamarind/relay-response"')
-    assert(this._handler16 !== null, 'Missing handler for "@tamarind/relay-cancel"')
+    assert(this._handler0 !== null, 'Missing handler for "@tamaflow/add-invite"')
+    assert(this._handler1 !== null, 'Missing handler for "@tamaflow/add-chat"')
+    assert(this._handler2 !== null, 'Missing handler for "@tamaflow/remove-chats"')
+    assert(this._handler3 !== null, 'Missing handler for "@tamaflow/update-ai-state"')
+    assert(this._handler4 !== null, 'Missing handler for "@tamaflow/relay-request"')
+    assert(this._handler5 !== null, 'Missing handler for "@tamaflow/relay-response"')
+    assert(this._handler6 !== null, 'Missing handler for "@tamaflow/relay-cancel"')
   }
 
   async dispatch (message, context) {
@@ -132,26 +82,6 @@ class Router {
         return this._handler5(op.value, context)
       case 6:
         return this._handler6(op.value, context)
-      case 7:
-        return this._handler7(op.value, context)
-      case 8:
-        return this._handler8(op.value, context)
-      case 9:
-        return this._handler9(op.value, context)
-      case 10:
-        return this._handler10(op.value, context)
-      case 11:
-        return this._handler11(op.value, context)
-      case 12:
-        return this._handler12(op.value, context)
-      case 13:
-        return this._handler13(op.value, context)
-      case 14:
-        return this._handler14(op.value, context)
-      case 15:
-        return this._handler15(op.value, context)
-      case 16:
-        return this._handler16(op.value, context)
       default:
         throw DispatchError.HANDLER_NOT_FOUND_BY_ID(op.id)
     }
@@ -186,143 +116,63 @@ function decode (buffer, { version = defaultVersion } = {}) {
 }
 
 const route0 = {
-  name: '@tamarind/add-writer',
+  name: '@tamaflow/add-invite',
   id: 0,
-  enc: getEncoding('@tamarind/writer')
+  enc: getEncoding('@tamaflow/invite')
 }
 
 const route1 = {
-  name: '@tamarind/add-invite',
+  name: '@tamaflow/add-chat',
   id: 1,
-  enc: getEncoding('@tamarind/invite')
+  enc: getEncoding('@tamaflow/chat-msg')
 }
 
 const route2 = {
-  name: '@tamarind/add-board',
+  name: '@tamaflow/remove-chats',
   id: 2,
-  enc: getEncoding('@tamarind/board')
+  enc: getEncoding('@tamaflow/chats-remove')
 }
 
 const route3 = {
-  name: '@tamarind/rename-board',
+  name: '@tamaflow/update-ai-state',
   id: 3,
-  enc: getEncoding('@tamarind/board-rename')
+  enc: getEncoding('@tamaflow/ai-state-update')
 }
 
 const route4 = {
-  name: '@tamarind/delete-board',
+  name: '@tamaflow/relay-request',
   id: 4,
-  enc: getEncoding('@tamarind/board-delete')
+  enc: getEncoding('@tamaflow/relay-request')
 }
 
 const route5 = {
-  name: '@tamarind/add-item',
+  name: '@tamaflow/relay-response',
   id: 5,
-  enc: getEncoding('@tamarind/item')
+  enc: getEncoding('@tamaflow/relay-response')
 }
 
 const route6 = {
-  name: '@tamarind/add-items',
+  name: '@tamaflow/relay-cancel',
   id: 6,
-  enc: getEncoding('@tamarind/item-batch')
-}
-
-const route7 = {
-  name: '@tamarind/update-item',
-  id: 7,
-  enc: getEncoding('@tamarind/item-update')
-}
-
-const route8 = {
-  name: '@tamarind/reorder',
-  id: 8,
-  enc: getEncoding('@tamarind/item-reorder')
-}
-
-const route9 = {
-  name: '@tamarind/remove-item',
-  id: 9,
-  enc: getEncoding('@tamarind/item-remove')
-}
-
-const route10 = {
-  name: '@tamarind/remove-items',
-  id: 10,
-  enc: getEncoding('@tamarind/items-remove')
-}
-
-const route11 = {
-  name: '@tamarind/add-chat',
-  id: 11,
-  enc: getEncoding('@tamarind/chat-msg')
-}
-
-const route12 = {
-  name: '@tamarind/remove-chats',
-  id: 12,
-  enc: getEncoding('@tamarind/chats-remove')
-}
-
-const route13 = {
-  name: '@tamarind/update-ai-state',
-  id: 13,
-  enc: getEncoding('@tamarind/ai-state-update')
-}
-
-const route14 = {
-  name: '@tamarind/relay-request',
-  id: 14,
-  enc: getEncoding('@tamarind/relay-request')
-}
-
-const route15 = {
-  name: '@tamarind/relay-response',
-  id: 15,
-  enc: getEncoding('@tamarind/relay-response')
-}
-
-const route16 = {
-  name: '@tamarind/relay-cancel',
-  id: 16,
-  enc: getEncoding('@tamarind/relay-cancel')
+  enc: getEncoding('@tamaflow/relay-cancel')
 }
 
 function getRouteByName (name) {
   switch (name) {
-    case '@tamarind/add-writer':
+    case '@tamaflow/add-invite':
       return route0
-    case '@tamarind/add-invite':
+    case '@tamaflow/add-chat':
       return route1
-    case '@tamarind/add-board':
+    case '@tamaflow/remove-chats':
       return route2
-    case '@tamarind/rename-board':
+    case '@tamaflow/update-ai-state':
       return route3
-    case '@tamarind/delete-board':
+    case '@tamaflow/relay-request':
       return route4
-    case '@tamarind/add-item':
+    case '@tamaflow/relay-response':
       return route5
-    case '@tamarind/add-items':
+    case '@tamaflow/relay-cancel':
       return route6
-    case '@tamarind/update-item':
-      return route7
-    case '@tamarind/reorder':
-      return route8
-    case '@tamarind/remove-item':
-      return route9
-    case '@tamarind/remove-items':
-      return route10
-    case '@tamarind/add-chat':
-      return route11
-    case '@tamarind/remove-chats':
-      return route12
-    case '@tamarind/update-ai-state':
-      return route13
-    case '@tamarind/relay-request':
-      return route14
-    case '@tamarind/relay-response':
-      return route15
-    case '@tamarind/relay-cancel':
-      return route16
     default:
       throw DispatchError.ROUTE_NOT_FOUND_BY_NAME(name)
   }
@@ -344,26 +194,6 @@ function getRouteById (id) {
       return route5
     case 6:
       return route6
-    case 7:
-      return route7
-    case 8:
-      return route8
-    case 9:
-      return route9
-    case 10:
-      return route10
-    case 11:
-      return route11
-    case 12:
-      return route12
-    case 13:
-      return route13
-    case 14:
-      return route14
-    case 15:
-      return route15
-    case 16:
-      return route16
     default:
       throw DispatchError.HANDLER_NOT_FOUND_BY_ID(id)
   }

@@ -6,9 +6,9 @@ const { version, getEncoding, setVersion } = require('./messages.js')
 
 const versions = { schema: version, db: 1 }
 
-// '@tamarind/boards' collection key
+// '@tamaflow/chat' collection key
 const collection0_key = new IndexEncoder([
-  IndexEncoder.BUFFER
+  IndexEncoder.STRING
 ], { prefix: 0 })
 
 function collection0_indexify (record) {
@@ -16,10 +16,10 @@ function collection0_indexify (record) {
   return a === undefined ? [] : [a]
 }
 
-// '@tamarind/boards' value encoding
-const collection0_enc = getEncoding('@tamarind/board/hyperdb#0')
+// '@tamaflow/chat' value encoding
+const collection0_enc = getEncoding('@tamaflow/chat-msg/hyperdb#0')
 
-// '@tamarind/boards' reconstruction function
+// '@tamaflow/chat' reconstruction function
 function collection0_reconstruct (schemaVersion, keyBuf, valueBuf) {
   const key = collection0_key.decode(keyBuf)
   setVersion(schemaVersion)
@@ -31,7 +31,7 @@ function collection0_reconstruct (schemaVersion, keyBuf, valueBuf) {
   record.id = key[0]
   return record
 }
-// '@tamarind/boards' key reconstruction function
+// '@tamaflow/chat' key reconstruction function
 function collection0_reconstruct_key (keyBuf) {
   const key = collection0_key.decode(keyBuf)
   return {
@@ -39,9 +39,9 @@ function collection0_reconstruct_key (keyBuf) {
   }
 }
 
-// '@tamarind/boards'
+// '@tamaflow/chat'
 const collection0 = {
-  name: '@tamarind/boards',
+  name: '@tamaflow/chat',
   id: 0,
   version: 1,
   encodeKey (record) {
@@ -73,7 +73,7 @@ const collection0 = {
   decodedVersion: 0
 }
 
-// '@tamarind/items' collection key
+// '@tamaflow/invites' collection key
 const collection1_key = new IndexEncoder([
   IndexEncoder.BUFFER
 ], { prefix: 1 })
@@ -83,10 +83,10 @@ function collection1_indexify (record) {
   return a === undefined ? [] : [a]
 }
 
-// '@tamarind/items' value encoding
-const collection1_enc = getEncoding('@tamarind/item/hyperdb#1')
+// '@tamaflow/invites' value encoding
+const collection1_enc = getEncoding('@tamaflow/invite/hyperdb#1')
 
-// '@tamarind/items' reconstruction function
+// '@tamaflow/invites' reconstruction function
 function collection1_reconstruct (schemaVersion, keyBuf, valueBuf) {
   const key = collection1_key.decode(keyBuf)
   setVersion(schemaVersion)
@@ -98,7 +98,7 @@ function collection1_reconstruct (schemaVersion, keyBuf, valueBuf) {
   record.id = key[0]
   return record
 }
-// '@tamarind/items' key reconstruction function
+// '@tamaflow/invites' key reconstruction function
 function collection1_reconstruct_key (keyBuf) {
   const key = collection1_key.decode(keyBuf)
   return {
@@ -106,9 +106,9 @@ function collection1_reconstruct_key (keyBuf) {
   }
 }
 
-// '@tamarind/items'
+// '@tamaflow/invites'
 const collection1 = {
-  name: '@tamarind/items',
+  name: '@tamaflow/invites',
   id: 1,
   version: 1,
   encodeKey (record) {
@@ -140,20 +140,20 @@ const collection1 = {
   decodedVersion: 0
 }
 
-// '@tamarind/chat' collection key
+// '@tamaflow/ai-state' collection key
 const collection2_key = new IndexEncoder([
-  IndexEncoder.STRING
+  IndexEncoder.BUFFER
 ], { prefix: 2 })
 
 function collection2_indexify (record) {
-  const a = record.id
+  const a = record.writerKey
   return a === undefined ? [] : [a]
 }
 
-// '@tamarind/chat' value encoding
-const collection2_enc = getEncoding('@tamarind/chat-msg/hyperdb#2')
+// '@tamaflow/ai-state' value encoding
+const collection2_enc = getEncoding('@tamaflow/ai-state/hyperdb#2')
 
-// '@tamarind/chat' reconstruction function
+// '@tamaflow/ai-state' reconstruction function
 function collection2_reconstruct (schemaVersion, keyBuf, valueBuf) {
   const key = collection2_key.decode(keyBuf)
   setVersion(schemaVersion)
@@ -162,24 +162,24 @@ function collection2_reconstruct (schemaVersion, keyBuf, valueBuf) {
   if (type !== 0) throw new Error('Unknown collection type: ' + type)
   collection2.decodedVersion = c.uint.decode(state)
   const record = collection2_enc.decode(state)
-  record.id = key[0]
+  record.writerKey = key[0]
   return record
 }
-// '@tamarind/chat' key reconstruction function
+// '@tamaflow/ai-state' key reconstruction function
 function collection2_reconstruct_key (keyBuf) {
   const key = collection2_key.decode(keyBuf)
   return {
-    id: key[0]
+    writerKey: key[0]
   }
 }
 
-// '@tamarind/chat'
+// '@tamaflow/ai-state'
 const collection2 = {
-  name: '@tamarind/chat',
+  name: '@tamaflow/ai-state',
   id: 2,
   version: 1,
   encodeKey (record) {
-    const key = [record.id]
+    const key = [record.writerKey]
     return collection2_key.encode(key)
   },
   encodeKeyRange ({ gt, lt, gte, lte } = {}) {
@@ -207,20 +207,20 @@ const collection2 = {
   decodedVersion: 0
 }
 
-// '@tamarind/invites' collection key
+// '@tamaflow/relay-request' collection key
 const collection3_key = new IndexEncoder([
-  IndexEncoder.BUFFER
+  IndexEncoder.STRING
 ], { prefix: 3 })
 
 function collection3_indexify (record) {
-  const a = record.id
+  const a = record.requestId
   return a === undefined ? [] : [a]
 }
 
-// '@tamarind/invites' value encoding
-const collection3_enc = getEncoding('@tamarind/invite/hyperdb#3')
+// '@tamaflow/relay-request' value encoding
+const collection3_enc = getEncoding('@tamaflow/relay-request/hyperdb#3')
 
-// '@tamarind/invites' reconstruction function
+// '@tamaflow/relay-request' reconstruction function
 function collection3_reconstruct (schemaVersion, keyBuf, valueBuf) {
   const key = collection3_key.decode(keyBuf)
   setVersion(schemaVersion)
@@ -229,24 +229,24 @@ function collection3_reconstruct (schemaVersion, keyBuf, valueBuf) {
   if (type !== 0) throw new Error('Unknown collection type: ' + type)
   collection3.decodedVersion = c.uint.decode(state)
   const record = collection3_enc.decode(state)
-  record.id = key[0]
+  record.requestId = key[0]
   return record
 }
-// '@tamarind/invites' key reconstruction function
+// '@tamaflow/relay-request' key reconstruction function
 function collection3_reconstruct_key (keyBuf) {
   const key = collection3_key.decode(keyBuf)
   return {
-    id: key[0]
+    requestId: key[0]
   }
 }
 
-// '@tamarind/invites'
+// '@tamaflow/relay-request'
 const collection3 = {
-  name: '@tamarind/invites',
+  name: '@tamaflow/relay-request',
   id: 3,
   version: 1,
   encodeKey (record) {
-    const key = [record.id]
+    const key = [record.requestId]
     return collection3_key.encode(key)
   },
   encodeKeyRange ({ gt, lt, gte, lte } = {}) {
@@ -274,20 +274,30 @@ const collection3 = {
   decodedVersion: 0
 }
 
-// '@tamarind/ai-state' collection key
+// '@tamaflow/relay-response' collection key
 const collection4_key = new IndexEncoder([
+  IndexEncoder.STRING,
   IndexEncoder.BUFFER
 ], { prefix: 4 })
 
 function collection4_indexify (record) {
-  const a = record.writerKey
-  return a === undefined ? [] : [a]
+  const arr = []
+
+  const a0 = record.requestId
+  if (a0 === undefined) return arr
+  arr.push(a0)
+
+  const a1 = record.fromKey
+  if (a1 === undefined) return arr
+  arr.push(a1)
+
+  return arr
 }
 
-// '@tamarind/ai-state' value encoding
-const collection4_enc = getEncoding('@tamarind/ai-state/hyperdb#4')
+// '@tamaflow/relay-response' value encoding
+const collection4_enc = getEncoding('@tamaflow/relay-response/hyperdb#4')
 
-// '@tamarind/ai-state' reconstruction function
+// '@tamaflow/relay-response' reconstruction function
 function collection4_reconstruct (schemaVersion, keyBuf, valueBuf) {
   const key = collection4_key.decode(keyBuf)
   setVersion(schemaVersion)
@@ -296,24 +306,26 @@ function collection4_reconstruct (schemaVersion, keyBuf, valueBuf) {
   if (type !== 0) throw new Error('Unknown collection type: ' + type)
   collection4.decodedVersion = c.uint.decode(state)
   const record = collection4_enc.decode(state)
-  record.writerKey = key[0]
+  record.requestId = key[0]
+  record.fromKey = key[1]
   return record
 }
-// '@tamarind/ai-state' key reconstruction function
+// '@tamaflow/relay-response' key reconstruction function
 function collection4_reconstruct_key (keyBuf) {
   const key = collection4_key.decode(keyBuf)
   return {
-    writerKey: key[0]
+    requestId: key[0],
+    fromKey: key[1]
   }
 }
 
-// '@tamarind/ai-state'
+// '@tamaflow/relay-response'
 const collection4 = {
-  name: '@tamarind/ai-state',
+  name: '@tamaflow/relay-response',
   id: 4,
   version: 1,
   encodeKey (record) {
-    const key = [record.writerKey]
+    const key = [record.requestId, record.fromKey]
     return collection4_key.encode(key)
   },
   encodeKeyRange ({ gt, lt, gte, lte } = {}) {
@@ -341,7 +353,7 @@ const collection4 = {
   decodedVersion: 0
 }
 
-// '@tamarind/relay-request' collection key
+// '@tamaflow/relay-cancel' collection key
 const collection5_key = new IndexEncoder([
   IndexEncoder.STRING
 ], { prefix: 5 })
@@ -351,10 +363,10 @@ function collection5_indexify (record) {
   return a === undefined ? [] : [a]
 }
 
-// '@tamarind/relay-request' value encoding
-const collection5_enc = getEncoding('@tamarind/relay-request/hyperdb#5')
+// '@tamaflow/relay-cancel' value encoding
+const collection5_enc = getEncoding('@tamaflow/relay-cancel/hyperdb#5')
 
-// '@tamarind/relay-request' reconstruction function
+// '@tamaflow/relay-cancel' reconstruction function
 function collection5_reconstruct (schemaVersion, keyBuf, valueBuf) {
   const key = collection5_key.decode(keyBuf)
   setVersion(schemaVersion)
@@ -366,7 +378,7 @@ function collection5_reconstruct (schemaVersion, keyBuf, valueBuf) {
   record.requestId = key[0]
   return record
 }
-// '@tamarind/relay-request' key reconstruction function
+// '@tamaflow/relay-cancel' key reconstruction function
 function collection5_reconstruct_key (keyBuf) {
   const key = collection5_key.decode(keyBuf)
   return {
@@ -374,9 +386,9 @@ function collection5_reconstruct_key (keyBuf) {
   }
 }
 
-// '@tamarind/relay-request'
+// '@tamaflow/relay-cancel'
 const collection5 = {
-  name: '@tamarind/relay-request',
+  name: '@tamaflow/relay-cancel',
   id: 5,
   version: 1,
   encodeKey (record) {
@@ -408,161 +420,13 @@ const collection5 = {
   decodedVersion: 0
 }
 
-// '@tamarind/relay-response' collection key
-const collection6_key = new IndexEncoder([
-  IndexEncoder.STRING,
-  IndexEncoder.BUFFER
-], { prefix: 6 })
-
-function collection6_indexify (record) {
-  const arr = []
-
-  const a0 = record.requestId
-  if (a0 === undefined) return arr
-  arr.push(a0)
-
-  const a1 = record.fromKey
-  if (a1 === undefined) return arr
-  arr.push(a1)
-
-  return arr
-}
-
-// '@tamarind/relay-response' value encoding
-const collection6_enc = getEncoding('@tamarind/relay-response/hyperdb#6')
-
-// '@tamarind/relay-response' reconstruction function
-function collection6_reconstruct (schemaVersion, keyBuf, valueBuf) {
-  const key = collection6_key.decode(keyBuf)
-  setVersion(schemaVersion)
-  const state = { start: 0, end: valueBuf.byteLength, buffer: valueBuf }
-  const type = c.uint.decode(state)
-  if (type !== 0) throw new Error('Unknown collection type: ' + type)
-  collection6.decodedVersion = c.uint.decode(state)
-  const record = collection6_enc.decode(state)
-  record.requestId = key[0]
-  record.fromKey = key[1]
-  return record
-}
-// '@tamarind/relay-response' key reconstruction function
-function collection6_reconstruct_key (keyBuf) {
-  const key = collection6_key.decode(keyBuf)
-  return {
-    requestId: key[0],
-    fromKey: key[1]
-  }
-}
-
-// '@tamarind/relay-response'
-const collection6 = {
-  name: '@tamarind/relay-response',
-  id: 6,
-  version: 1,
-  encodeKey (record) {
-    const key = [record.requestId, record.fromKey]
-    return collection6_key.encode(key)
-  },
-  encodeKeyRange ({ gt, lt, gte, lte } = {}) {
-    return collection6_key.encodeRange({
-      gt: gt ? collection6_indexify(gt) : null,
-      lt: lt ? collection6_indexify(lt) : null,
-      gte: gte ? collection6_indexify(gte) : null,
-      lte: lte ? collection6_indexify(lte) : null
-    })
-  },
-  encodeValue (schemaVersion, collectionVersion, record) {
-    setVersion(schemaVersion)
-    const state = { start: 0, end: 2, buffer: null }
-    collection6_enc.preencode(state, record)
-    state.buffer = b4a.allocUnsafe(state.end)
-    state.buffer[state.start++] = 0
-    state.buffer[state.start++] = collectionVersion
-    collection6_enc.encode(state, record)
-    return state.buffer
-  },
-  trigger: null,
-  reconstruct: collection6_reconstruct,
-  reconstructKey: collection6_reconstruct_key,
-  indexes: [],
-  decodedVersion: 0
-}
-
-// '@tamarind/relay-cancel' collection key
-const collection7_key = new IndexEncoder([
-  IndexEncoder.STRING
-], { prefix: 7 })
-
-function collection7_indexify (record) {
-  const a = record.requestId
-  return a === undefined ? [] : [a]
-}
-
-// '@tamarind/relay-cancel' value encoding
-const collection7_enc = getEncoding('@tamarind/relay-cancel/hyperdb#7')
-
-// '@tamarind/relay-cancel' reconstruction function
-function collection7_reconstruct (schemaVersion, keyBuf, valueBuf) {
-  const key = collection7_key.decode(keyBuf)
-  setVersion(schemaVersion)
-  const state = { start: 0, end: valueBuf.byteLength, buffer: valueBuf }
-  const type = c.uint.decode(state)
-  if (type !== 0) throw new Error('Unknown collection type: ' + type)
-  collection7.decodedVersion = c.uint.decode(state)
-  const record = collection7_enc.decode(state)
-  record.requestId = key[0]
-  return record
-}
-// '@tamarind/relay-cancel' key reconstruction function
-function collection7_reconstruct_key (keyBuf) {
-  const key = collection7_key.decode(keyBuf)
-  return {
-    requestId: key[0]
-  }
-}
-
-// '@tamarind/relay-cancel'
-const collection7 = {
-  name: '@tamarind/relay-cancel',
-  id: 7,
-  version: 1,
-  encodeKey (record) {
-    const key = [record.requestId]
-    return collection7_key.encode(key)
-  },
-  encodeKeyRange ({ gt, lt, gte, lte } = {}) {
-    return collection7_key.encodeRange({
-      gt: gt ? collection7_indexify(gt) : null,
-      lt: lt ? collection7_indexify(lt) : null,
-      gte: gte ? collection7_indexify(gte) : null,
-      lte: lte ? collection7_indexify(lte) : null
-    })
-  },
-  encodeValue (schemaVersion, collectionVersion, record) {
-    setVersion(schemaVersion)
-    const state = { start: 0, end: 2, buffer: null }
-    collection7_enc.preencode(state, record)
-    state.buffer = b4a.allocUnsafe(state.end)
-    state.buffer[state.start++] = 0
-    state.buffer[state.start++] = collectionVersion
-    collection7_enc.encode(state, record)
-    return state.buffer
-  },
-  trigger: null,
-  reconstruct: collection7_reconstruct,
-  reconstructKey: collection7_reconstruct_key,
-  indexes: [],
-  decodedVersion: 0
-}
-
 const collections = [
   collection0,
   collection1,
   collection2,
   collection3,
   collection4,
-  collection5,
-  collection6,
-  collection7
+  collection5
 ]
 
 const indexes = [
@@ -572,14 +436,12 @@ module.exports = { versions, collections, indexes, resolveCollection, resolveInd
 
 function resolveCollection (name) {
   switch (name) {
-    case '@tamarind/boards': return collection0
-    case '@tamarind/items': return collection1
-    case '@tamarind/chat': return collection2
-    case '@tamarind/invites': return collection3
-    case '@tamarind/ai-state': return collection4
-    case '@tamarind/relay-request': return collection5
-    case '@tamarind/relay-response': return collection6
-    case '@tamarind/relay-cancel': return collection7
+    case '@tamaflow/chat': return collection0
+    case '@tamaflow/invites': return collection1
+    case '@tamaflow/ai-state': return collection2
+    case '@tamaflow/relay-request': return collection3
+    case '@tamaflow/relay-response': return collection4
+    case '@tamaflow/relay-cancel': return collection5
     default: return null
   }
 }

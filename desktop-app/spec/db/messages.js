@@ -11,25 +11,8 @@ const VERSION = 1
 // eslint-disable-next-line no-unused-vars
 let version = VERSION
 
-// @tamarind/writer
+// @tamaflow/invite
 const encoding0 = {
-  preencode(state, m) {
-    c.buffer.preencode(state, m.key)
-  },
-  encode(state, m) {
-    c.buffer.encode(state, m.key)
-  },
-  decode(state) {
-    const r0 = c.buffer.decode(state)
-
-    return {
-      key: r0
-    }
-  }
-}
-
-// @tamarind/invite
-const encoding1 = {
   preencode(state, m) {
     c.buffer.preencode(state, m.id)
     c.buffer.preencode(state, m.invite)
@@ -57,160 +40,8 @@ const encoding1 = {
   }
 }
 
-// @tamarind/board
-const encoding2 = {
-  preencode(state, m) {
-    c.buffer.preencode(state, m.id)
-    c.string.preencode(state, m.name)
-    c.int.preencode(state, m.createdAt)
-    c.int.preencode(state, m.updatedAt)
-    c.int.preencode(state, m.order)
-  },
-  encode(state, m) {
-    c.buffer.encode(state, m.id)
-    c.string.encode(state, m.name)
-    c.int.encode(state, m.createdAt)
-    c.int.encode(state, m.updatedAt)
-    c.int.encode(state, m.order)
-  },
-  decode(state) {
-    const r0 = c.buffer.decode(state)
-    const r1 = c.string.decode(state)
-    const r2 = c.int.decode(state)
-    const r3 = c.int.decode(state)
-    const r4 = c.int.decode(state)
-
-    return {
-      id: r0,
-      name: r1,
-      createdAt: r2,
-      updatedAt: r3,
-      order: r4
-    }
-  }
-}
-
-// @tamarind/item
-const encoding3 = {
-  preencode(state, m) {
-    const flags =
-      (m.w ? 1 : 0) |
-      (m.h ? 2 : 0) |
-      (m.text ? 4 : 0) |
-      (m.fill ? 8 : 0) |
-      (m.lineCap ? 16 : 0) |
-      (m.fontSize ? 32 : 0) |
-      (m.start ? 64 : 0) |
-      (m.end ? 128 : 0) |
-      (m.arrowStart ? 256 : 0) |
-      (m.arrowEnd ? 512 : 0) |
-      (m.strokePattern ? 1024 : 0) |
-      (m.curve ? 2048 : 0) |
-      (m.label ? 4096 : 0)
-
-    c.buffer.preencode(state, m.id)
-    c.buffer.preencode(state, m.boardId)
-    c.string.preencode(state, m.type)
-    c.float64.preencode(state, m.x)
-    c.float64.preencode(state, m.y)
-    c.uint.preencode(state, flags)
-
-    if (m.w) c.float64.preencode(state, m.w)
-    if (m.h) c.float64.preencode(state, m.h)
-    if (m.text) c.string.preencode(state, m.text)
-    c.string.preencode(state, m.stroke)
-    c.float64.preencode(state, m.strokeWidth)
-    if (m.fill) c.string.preencode(state, m.fill)
-    if (m.lineCap) c.string.preencode(state, m.lineCap)
-    if (m.fontSize) c.float64.preencode(state, m.fontSize)
-    if (m.start) c.string.preencode(state, m.start)
-    if (m.end) c.string.preencode(state, m.end)
-    if (m.arrowStart) c.string.preencode(state, m.arrowStart)
-    if (m.arrowEnd) c.string.preencode(state, m.arrowEnd)
-    if (m.strokePattern) c.string.preencode(state, m.strokePattern)
-    if (m.curve) c.string.preencode(state, m.curve)
-    if (m.label) c.string.preencode(state, m.label)
-    c.int.preencode(state, m.order)
-    c.int.preencode(state, m.updatedAt)
-  },
-  encode(state, m) {
-    const flags =
-      (m.w ? 1 : 0) |
-      (m.h ? 2 : 0) |
-      (m.text ? 4 : 0) |
-      (m.fill ? 8 : 0) |
-      (m.lineCap ? 16 : 0) |
-      (m.fontSize ? 32 : 0) |
-      (m.start ? 64 : 0) |
-      (m.end ? 128 : 0) |
-      (m.arrowStart ? 256 : 0) |
-      (m.arrowEnd ? 512 : 0) |
-      (m.strokePattern ? 1024 : 0) |
-      (m.curve ? 2048 : 0) |
-      (m.label ? 4096 : 0)
-
-    c.buffer.encode(state, m.id)
-    c.buffer.encode(state, m.boardId)
-    c.string.encode(state, m.type)
-    c.float64.encode(state, m.x)
-    c.float64.encode(state, m.y)
-    c.uint.encode(state, flags)
-
-    if (m.w) c.float64.encode(state, m.w)
-    if (m.h) c.float64.encode(state, m.h)
-    if (m.text) c.string.encode(state, m.text)
-    c.string.encode(state, m.stroke)
-    c.float64.encode(state, m.strokeWidth)
-    if (m.fill) c.string.encode(state, m.fill)
-    if (m.lineCap) c.string.encode(state, m.lineCap)
-    if (m.fontSize) c.float64.encode(state, m.fontSize)
-    if (m.start) c.string.encode(state, m.start)
-    if (m.end) c.string.encode(state, m.end)
-    if (m.arrowStart) c.string.encode(state, m.arrowStart)
-    if (m.arrowEnd) c.string.encode(state, m.arrowEnd)
-    if (m.strokePattern) c.string.encode(state, m.strokePattern)
-    if (m.curve) c.string.encode(state, m.curve)
-    if (m.label) c.string.encode(state, m.label)
-    c.int.encode(state, m.order)
-    c.int.encode(state, m.updatedAt)
-  },
-  decode(state) {
-    const r0 = c.buffer.decode(state)
-    const r1 = c.buffer.decode(state)
-    const r2 = c.string.decode(state)
-    const r3 = c.float64.decode(state)
-    const r4 = c.float64.decode(state)
-    const flags = c.uint.decode(state)
-
-    return {
-      id: r0,
-      boardId: r1,
-      type: r2,
-      x: r3,
-      y: r4,
-      w: (flags & 1) !== 0 ? c.float64.decode(state) : 0,
-      h: (flags & 2) !== 0 ? c.float64.decode(state) : 0,
-      text: (flags & 4) !== 0 ? c.string.decode(state) : null,
-      stroke: c.string.decode(state),
-      strokeWidth: c.float64.decode(state),
-      fill: (flags & 8) !== 0 ? c.string.decode(state) : null,
-      lineCap: (flags & 16) !== 0 ? c.string.decode(state) : null,
-      fontSize: (flags & 32) !== 0 ? c.float64.decode(state) : 0,
-      start: (flags & 64) !== 0 ? c.string.decode(state) : null,
-      end: (flags & 128) !== 0 ? c.string.decode(state) : null,
-      arrowStart: (flags & 256) !== 0 ? c.string.decode(state) : null,
-      arrowEnd: (flags & 512) !== 0 ? c.string.decode(state) : null,
-      strokePattern: (flags & 1024) !== 0 ? c.string.decode(state) : null,
-      curve: (flags & 2048) !== 0 ? c.string.decode(state) : null,
-      label: (flags & 4096) !== 0 ? c.string.decode(state) : null,
-      order: c.int.decode(state),
-      updatedAt: c.int.decode(state)
-    }
-  }
-}
-
-// @tamarind/chat-msg
-const encoding4 = {
+// @tamaflow/chat-msg
+const encoding1 = {
   preencode(state, m) {
     c.string.preencode(state, m.id)
     c.string.preencode(state, m.text)
@@ -240,120 +71,8 @@ const encoding4 = {
   }
 }
 
-// @tamarind/board-rename
-const encoding5 = {
-  preencode(state, m) {
-    c.buffer.preencode(state, m.id)
-    c.string.preencode(state, m.name)
-    c.int.preencode(state, m.at)
-  },
-  encode(state, m) {
-    c.buffer.encode(state, m.id)
-    c.string.encode(state, m.name)
-    c.int.encode(state, m.at)
-  },
-  decode(state) {
-    const r0 = c.buffer.decode(state)
-    const r1 = c.string.decode(state)
-    const r2 = c.int.decode(state)
-
-    return {
-      id: r0,
-      name: r1,
-      at: r2
-    }
-  }
-}
-
-// @tamarind/board-delete
-const encoding6 = {
-  preencode(state, m) {
-    c.buffer.preencode(state, m.id)
-  },
-  encode(state, m) {
-    c.buffer.encode(state, m.id)
-  },
-  decode(state) {
-    const r0 = c.buffer.decode(state)
-
-    return {
-      id: r0
-    }
-  }
-}
-
-// @tamarind/item-batch
-const encoding7 = {
-  preencode(state, m) {
-    c.json.preencode(state, m.items)
-  },
-  encode(state, m) {
-    c.json.encode(state, m.items)
-  },
-  decode(state) {
-    const r0 = c.json.decode(state)
-
-    return {
-      items: r0
-    }
-  }
-}
-
-// @tamarind/item-update
-const encoding8 = {
-  preencode(state, m) {
-    c.buffer.preencode(state, m.id)
-    c.json.preencode(state, m.patch)
-    c.int.preencode(state, m.at)
-  },
-  encode(state, m) {
-    c.buffer.encode(state, m.id)
-    c.json.encode(state, m.patch)
-    c.int.encode(state, m.at)
-  },
-  decode(state) {
-    const r0 = c.buffer.decode(state)
-    const r1 = c.json.decode(state)
-    const r2 = c.int.decode(state)
-
-    return {
-      id: r0,
-      patch: r1,
-      at: r2
-    }
-  }
-}
-
-// @tamarind/item-reorder
-const encoding9 = {
-  preencode(state, m) {
-    c.buffer.preencode(state, m.id)
-    c.int.preencode(state, m.order)
-    c.int.preencode(state, m.at)
-  },
-  encode(state, m) {
-    c.buffer.encode(state, m.id)
-    c.int.encode(state, m.order)
-    c.int.encode(state, m.at)
-  },
-  decode(state) {
-    const r0 = c.buffer.decode(state)
-    const r1 = c.int.decode(state)
-    const r2 = c.int.decode(state)
-
-    return {
-      id: r0,
-      order: r1,
-      at: r2
-    }
-  }
-}
-
-// @tamarind/item-remove
-const encoding10 = encoding6
-
-// @tamarind/items-remove
-const encoding11 = {
+// @tamaflow/chats-remove
+const encoding2 = {
   preencode(state, m) {
     c.json.preencode(state, m.ids)
   },
@@ -369,11 +88,8 @@ const encoding11 = {
   }
 }
 
-// @tamarind/chats-remove
-const encoding12 = encoding11
-
-// @tamarind/ai-state
-const encoding13 = {
+// @tamaflow/ai-state
+const encoding3 = {
   preencode(state, m) {
     c.buffer.preencode(state, m.writerKey)
     state.end++ // max flag is 8 so always one byte
@@ -407,8 +123,8 @@ const encoding13 = {
   }
 }
 
-// @tamarind/ai-state-update
-const encoding14 = {
+// @tamaflow/ai-state-update
+const encoding4 = {
   preencode(state, m) {
     state.end++ // max flag is 16 so always one byte
 
@@ -445,8 +161,8 @@ const encoding14 = {
   }
 }
 
-// @tamarind/relay-request
-const encoding15 = {
+// @tamaflow/relay-request
+const encoding5 = {
   preencode(state, m) {
     c.string.preencode(state, m.requestId)
     c.buffer.preencode(state, m.fromKey)
@@ -482,8 +198,8 @@ const encoding15 = {
   }
 }
 
-// @tamarind/relay-response
-const encoding16 = {
+// @tamaflow/relay-response
+const encoding6 = {
   preencode(state, m) {
     c.string.preencode(state, m.requestId)
     c.buffer.preencode(state, m.fromKey)
@@ -524,8 +240,8 @@ const encoding16 = {
   }
 }
 
-// @tamarind/relay-cancel
-const encoding17 = {
+// @tamaflow/relay-cancel
+const encoding7 = {
   preencode(state, m) {
     c.string.preencode(state, m.requestId)
     c.buffer.preencode(state, m.fromKey)
@@ -549,154 +265,8 @@ const encoding17 = {
   }
 }
 
-// @tamarind/board/hyperdb#0
-const encoding18 = {
-  preencode(state, m) {
-    c.string.preencode(state, m.name)
-    c.int.preencode(state, m.createdAt)
-    c.int.preencode(state, m.updatedAt)
-    c.int.preencode(state, m.order)
-  },
-  encode(state, m) {
-    c.string.encode(state, m.name)
-    c.int.encode(state, m.createdAt)
-    c.int.encode(state, m.updatedAt)
-    c.int.encode(state, m.order)
-  },
-  decode(state) {
-    const r1 = c.string.decode(state)
-    const r2 = c.int.decode(state)
-    const r3 = c.int.decode(state)
-    const r4 = c.int.decode(state)
-
-    return {
-      id: null,
-      name: r1,
-      createdAt: r2,
-      updatedAt: r3,
-      order: r4
-    }
-  }
-}
-
-// @tamarind/item/hyperdb#1
-const encoding19 = {
-  preencode(state, m) {
-    const flags =
-      (m.w ? 1 : 0) |
-      (m.h ? 2 : 0) |
-      (m.text ? 4 : 0) |
-      (m.fill ? 8 : 0) |
-      (m.lineCap ? 16 : 0) |
-      (m.fontSize ? 32 : 0) |
-      (m.start ? 64 : 0) |
-      (m.end ? 128 : 0) |
-      (m.arrowStart ? 256 : 0) |
-      (m.arrowEnd ? 512 : 0) |
-      (m.strokePattern ? 1024 : 0) |
-      (m.curve ? 2048 : 0) |
-      (m.label ? 4096 : 0)
-
-    c.buffer.preencode(state, m.boardId)
-    c.string.preencode(state, m.type)
-    c.float64.preencode(state, m.x)
-    c.float64.preencode(state, m.y)
-    c.uint.preencode(state, flags)
-
-    if (m.w) c.float64.preencode(state, m.w)
-    if (m.h) c.float64.preencode(state, m.h)
-    if (m.text) c.string.preencode(state, m.text)
-    c.string.preencode(state, m.stroke)
-    c.float64.preencode(state, m.strokeWidth)
-    if (m.fill) c.string.preencode(state, m.fill)
-    if (m.lineCap) c.string.preencode(state, m.lineCap)
-    if (m.fontSize) c.float64.preencode(state, m.fontSize)
-    if (m.start) c.string.preencode(state, m.start)
-    if (m.end) c.string.preencode(state, m.end)
-    if (m.arrowStart) c.string.preencode(state, m.arrowStart)
-    if (m.arrowEnd) c.string.preencode(state, m.arrowEnd)
-    if (m.strokePattern) c.string.preencode(state, m.strokePattern)
-    if (m.curve) c.string.preencode(state, m.curve)
-    if (m.label) c.string.preencode(state, m.label)
-    c.int.preencode(state, m.order)
-    c.int.preencode(state, m.updatedAt)
-  },
-  encode(state, m) {
-    const flags =
-      (m.w ? 1 : 0) |
-      (m.h ? 2 : 0) |
-      (m.text ? 4 : 0) |
-      (m.fill ? 8 : 0) |
-      (m.lineCap ? 16 : 0) |
-      (m.fontSize ? 32 : 0) |
-      (m.start ? 64 : 0) |
-      (m.end ? 128 : 0) |
-      (m.arrowStart ? 256 : 0) |
-      (m.arrowEnd ? 512 : 0) |
-      (m.strokePattern ? 1024 : 0) |
-      (m.curve ? 2048 : 0) |
-      (m.label ? 4096 : 0)
-
-    c.buffer.encode(state, m.boardId)
-    c.string.encode(state, m.type)
-    c.float64.encode(state, m.x)
-    c.float64.encode(state, m.y)
-    c.uint.encode(state, flags)
-
-    if (m.w) c.float64.encode(state, m.w)
-    if (m.h) c.float64.encode(state, m.h)
-    if (m.text) c.string.encode(state, m.text)
-    c.string.encode(state, m.stroke)
-    c.float64.encode(state, m.strokeWidth)
-    if (m.fill) c.string.encode(state, m.fill)
-    if (m.lineCap) c.string.encode(state, m.lineCap)
-    if (m.fontSize) c.float64.encode(state, m.fontSize)
-    if (m.start) c.string.encode(state, m.start)
-    if (m.end) c.string.encode(state, m.end)
-    if (m.arrowStart) c.string.encode(state, m.arrowStart)
-    if (m.arrowEnd) c.string.encode(state, m.arrowEnd)
-    if (m.strokePattern) c.string.encode(state, m.strokePattern)
-    if (m.curve) c.string.encode(state, m.curve)
-    if (m.label) c.string.encode(state, m.label)
-    c.int.encode(state, m.order)
-    c.int.encode(state, m.updatedAt)
-  },
-  decode(state) {
-    const r1 = c.buffer.decode(state)
-    const r2 = c.string.decode(state)
-    const r3 = c.float64.decode(state)
-    const r4 = c.float64.decode(state)
-    const flags = c.uint.decode(state)
-
-    return {
-      id: null,
-      boardId: r1,
-      type: r2,
-      x: r3,
-      y: r4,
-      w: (flags & 1) !== 0 ? c.float64.decode(state) : 0,
-      h: (flags & 2) !== 0 ? c.float64.decode(state) : 0,
-      text: (flags & 4) !== 0 ? c.string.decode(state) : null,
-      stroke: c.string.decode(state),
-      strokeWidth: c.float64.decode(state),
-      fill: (flags & 8) !== 0 ? c.string.decode(state) : null,
-      lineCap: (flags & 16) !== 0 ? c.string.decode(state) : null,
-      fontSize: (flags & 32) !== 0 ? c.float64.decode(state) : 0,
-      start: (flags & 64) !== 0 ? c.string.decode(state) : null,
-      end: (flags & 128) !== 0 ? c.string.decode(state) : null,
-      arrowStart: (flags & 256) !== 0 ? c.string.decode(state) : null,
-      arrowEnd: (flags & 512) !== 0 ? c.string.decode(state) : null,
-      strokePattern: (flags & 1024) !== 0 ? c.string.decode(state) : null,
-      curve: (flags & 2048) !== 0 ? c.string.decode(state) : null,
-      label: (flags & 4096) !== 0 ? c.string.decode(state) : null,
-      order: c.int.decode(state),
-      updatedAt: c.int.decode(state)
-    }
-  }
-}
-
-// @tamarind/chat-msg/hyperdb#2
-const encoding20 = {
+// @tamaflow/chat-msg/hyperdb#0
+const encoding8 = {
   preencode(state, m) {
     c.string.preencode(state, m.text)
     state.end++ // max flag is 1 so always one byte
@@ -723,8 +293,8 @@ const encoding20 = {
   }
 }
 
-// @tamarind/invite/hyperdb#3
-const encoding21 = {
+// @tamaflow/invite/hyperdb#1
+const encoding9 = {
   preencode(state, m) {
     c.buffer.preencode(state, m.invite)
     c.buffer.preencode(state, m.publicKey)
@@ -749,8 +319,8 @@ const encoding21 = {
   }
 }
 
-// @tamarind/ai-state/hyperdb#4
-const encoding22 = {
+// @tamaflow/ai-state/hyperdb#2
+const encoding10 = {
   preencode(state, m) {
     state.end++ // max flag is 8 so always one byte
 
@@ -781,8 +351,8 @@ const encoding22 = {
   }
 }
 
-// @tamarind/relay-request/hyperdb#5
-const encoding23 = {
+// @tamaflow/relay-request/hyperdb#3
+const encoding11 = {
   preencode(state, m) {
     c.buffer.preencode(state, m.fromKey)
     c.buffer.preencode(state, m.toKey)
@@ -815,8 +385,8 @@ const encoding23 = {
   }
 }
 
-// @tamarind/relay-response/hyperdb#6
-const encoding24 = {
+// @tamaflow/relay-response/hyperdb#4
+const encoding12 = {
   preencode(state, m) {
     c.buffer.preencode(state, m.toKey)
     c.string.preencode(state, m.kind)
@@ -851,8 +421,8 @@ const encoding24 = {
   }
 }
 
-// @tamarind/relay-cancel/hyperdb#7
-const encoding25 = {
+// @tamaflow/relay-cancel/hyperdb#5
+const encoding13 = {
   preencode(state, m) {
     c.buffer.preencode(state, m.fromKey)
     c.buffer.preencode(state, m.toKey)
@@ -896,58 +466,34 @@ function getEnum(name) {
 
 function getEncoding(name) {
   switch (name) {
-    case '@tamarind/writer':
+    case '@tamaflow/invite':
       return encoding0
-    case '@tamarind/invite':
+    case '@tamaflow/chat-msg':
       return encoding1
-    case '@tamarind/board':
+    case '@tamaflow/chats-remove':
       return encoding2
-    case '@tamarind/item':
+    case '@tamaflow/ai-state':
       return encoding3
-    case '@tamarind/chat-msg':
+    case '@tamaflow/ai-state-update':
       return encoding4
-    case '@tamarind/board-rename':
+    case '@tamaflow/relay-request':
       return encoding5
-    case '@tamarind/board-delete':
+    case '@tamaflow/relay-response':
       return encoding6
-    case '@tamarind/item-batch':
+    case '@tamaflow/relay-cancel':
       return encoding7
-    case '@tamarind/item-update':
+    case '@tamaflow/chat-msg/hyperdb#0':
       return encoding8
-    case '@tamarind/item-reorder':
+    case '@tamaflow/invite/hyperdb#1':
       return encoding9
-    case '@tamarind/item-remove':
+    case '@tamaflow/ai-state/hyperdb#2':
       return encoding10
-    case '@tamarind/items-remove':
+    case '@tamaflow/relay-request/hyperdb#3':
       return encoding11
-    case '@tamarind/chats-remove':
+    case '@tamaflow/relay-response/hyperdb#4':
       return encoding12
-    case '@tamarind/ai-state':
+    case '@tamaflow/relay-cancel/hyperdb#5':
       return encoding13
-    case '@tamarind/ai-state-update':
-      return encoding14
-    case '@tamarind/relay-request':
-      return encoding15
-    case '@tamarind/relay-response':
-      return encoding16
-    case '@tamarind/relay-cancel':
-      return encoding17
-    case '@tamarind/board/hyperdb#0':
-      return encoding18
-    case '@tamarind/item/hyperdb#1':
-      return encoding19
-    case '@tamarind/chat-msg/hyperdb#2':
-      return encoding20
-    case '@tamarind/invite/hyperdb#3':
-      return encoding21
-    case '@tamarind/ai-state/hyperdb#4':
-      return encoding22
-    case '@tamarind/relay-request/hyperdb#5':
-      return encoding23
-    case '@tamarind/relay-response/hyperdb#6':
-      return encoding24
-    case '@tamarind/relay-cancel/hyperdb#7':
-      return encoding25
     default:
       throw new Error('Encoder not found ' + name)
   }

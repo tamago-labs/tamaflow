@@ -1,7 +1,7 @@
 {
   "multisig": {
     "publicKeys": ["<PUBKEY_HERE>", "<PUBKEY_HERE>", "<PUBKEY_HERE>"],
-    "namespace": "dev.tamarind/tamarind",
+    "namespace": "dev.tamaflow/tamaflow",
     "quorum": 2
   }
 }
