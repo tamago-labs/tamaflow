@@ -1,36 +1,38 @@
-// Chat page — three panels side-by-side (collapse to a single
-// column on narrow viewports):
+// Chat page — Slack/Discord-style 2-pane split with a global
+// settings popover (Workspace content).
 //
-//   ┌─────────────────┬─────────────────┬──────────────────┐
-//   │ Team chat       │ AI assistant     │ Workspace          │
-//   │ (P2P history     │ (local model /   │ (invite code +     │
-//   │ + send input)   │  relay-to-peer)  │  AI source picker) │
-//   └─────────────────┴─────────────────┴──────────────────┘
+//   ┌──────────────────────────────────────────────────────┐
+//   │  [TEAM CHAT]  [AI ASSISTANT]              [⚙ Settings]│  ← top bar
+//   ├──────────────────────┬───────────────────────────────┤
+//   │                      │                               │
+//   │   Team chat          │   AI assistant                │
+//   │                      │                               │
+//   │   [input]            │   [input]                     │
+//   └──────────────────────┴───────────────────────────────┘
 //
-// All three panels are full-height flex columns so the chat input
-// stays pinned at the bottom of the chat surface and the peer list
-// stays scrollable in the Workspace rail.
+// Message rendering: Slack/Discord-style. Avatar circle on the
+// left, sender name + timestamp in the header row, message body
+// below. Consecutive messages from the same sender share the
+// avatar slot (only the first shows the name + timestamp).
 //
-// Replaces the old RightDrawer (which had 3 tabs — Workspace / Team
-// chat / AI assistant — sitting inside the Flow Builder's canvas).
-// The right column on the Flow Builder is now removed; chat + AI
-// source picker live here on the Chat page since they're closely
-// related to peer-to-peer messaging.
+// Settings popover (gear icon top-right) holds the Workspace
+// content that used to live in the right drawer on the Flow
+// Builder page: invite code + AI source picker + wallet state.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Check,
   Copy,
   Loader2,
   MessageSquare,
   Send,
+  Settings as SettingsIcon,
   Sparkles,
   Trash2,
   Users,
   Wallet,
   X
 } from 'lucide-react'
-import { PageHeader } from '../PageHeader'
 import { useAI } from '../../hooks/useAI'
 import { useAIChat } from '../../hooks/useAIChat'
 import { useRoom } from '../../hooks/useRoom'
@@ -38,52 +40,162 @@ import { useWallet } from '../../context/WalletContext'
 import type { ChatMessage } from '../../lib/chat'
 
 // ============================================
-// 3-column responsive grid
+// Page chrome — full-bleed, no padding, no header
 // ============================================
-// xl / 2xl viewport → 3 columns (team | AI | workspace).
-// lg            → 2 columns (team + AI), workspace wraps below.
-// md and below  → single column (team → AI → workspace stacked).
-function ChatGrid({ children }: { children: React.ReactNode }) {
+//
+// The AppShell normally wraps the page in a p-8 main padding.
+// We opt out of that for the Chat page so the two chat panes
+// can use the entire viewport height. We override the margin with
+// a negative left/right to break out of the main padding.
+
+function ChatShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className='grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-[1fr_1fr_320px]'>
+    <div className='-mx-8 -mt-2 flex h-[calc(100vh-7rem)] flex-col'>
       {children}
     </div>
   )
 }
 
-// Shared panel chrome — white card with brand-border + sticky header.
-function Panel({
-  title,
-  icon: Icon,
-  badge,
-  children,
-  footer
+function ChatTopBar({
+  active,
+  onActive,
+  rightAction
 }: {
-  title: string
-  icon: React.ComponentType<{ size?: number; className?: string }>
-  badge?: React.ReactNode
-  children: React.ReactNode
-  footer?: React.ReactNode
+  active: 'team' | 'ai'
+  onActive: (which: 'team' | 'ai') => void
+  rightAction: React.ReactNode
 }) {
   return (
-    <section className='flex h-[calc(100vh-13rem)] min-h-[480px] flex-col overflow-hidden rounded-md border border-brand-border bg-white'>
-      <header className='flex flex-shrink-0 items-center justify-between border-b border-brand-border bg-brand-light px-4 py-2.5'>
-        <div className='flex items-center gap-2'>
-          <Icon size={14} className='text-brand-navy' />
-          <h2 className='font-mono text-[11px] font-bold uppercase tracking-wider2 text-brand-navy'>
-            {title}
-          </h2>
-          {badge}
-        </div>
-      </header>
-      <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>{children}</div>
-      {footer && (
-        <div className='flex-shrink-0 border-t border-brand-border bg-white p-3'>
-          {footer}
-        </div>
-      )}
-    </section>
+    <div className='flex h-12 flex-shrink-0 items-center justify-between border-b border-brand-border bg-white px-4'>
+      <div className='flex items-center gap-1'>
+        <ChannelTab
+          active={active === 'team'}
+          onClick={() => onActive('team')}
+          icon={MessageSquare}
+          label='Team chat'
+        />
+        <ChannelTab
+          active={active === 'ai'}
+          onClick={() => onActive('ai')}
+          icon={Sparkles}
+          label='AI assistant'
+        />
+      </div>
+      {rightAction}
+    </div>
   )
+}
+
+function ChannelTab({
+  active,
+  onClick,
+  icon: Icon,
+  label
+}: {
+  active: boolean
+  onClick: () => void
+  icon: React.ComponentType<{ size?: number; className?: string }>
+  label: string
+}) {
+  return (
+    <button
+      type='button'
+      onClick={onClick}
+      aria-pressed={active}
+      className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+        active
+          ? 'bg-brand-blue text-white'
+          : 'text-brand-navy hover:bg-brand-light'
+      }`}
+    >
+      <Icon size={12} className={active ? 'text-white' : 'text-brand-muted'} />
+      {label}
+    </button>
+  )
+}
+
+// ============================================
+// Slack-style message list
+// ============================================
+//
+// One MessageGroup per "burst" of consecutive messages from the
+// same sender (consecutive = same `info.key`, no >5min gap in v1).
+// The first message in a group renders the avatar + name + timestamp
+// header; subsequent messages render just the text body indented
+// to align with the first message's body.
+
+interface MessageGroup {
+  sender: string
+  senderKey: string
+  firstAt: number
+  messages: ChatMessage[]
+}
+
+function groupMessages(messages: ChatMessage[]): MessageGroup[] {
+  if (messages.length === 0) return []
+  const groups: MessageGroup[] = []
+  let current: MessageGroup | null = null
+  for (const m of messages) {
+    const senderKey = m.info?.key ?? 'unknown'
+    const sender = m.info?.name ?? 'Peer'
+    if (!current || current.senderKey !== senderKey) {
+      current = {
+        sender,
+        senderKey,
+        firstAt: m.info?.at ?? Date.now(),
+        messages: [m]
+      }
+      groups.push(current)
+    } else {
+      current.messages.push(m)
+    }
+  }
+  return groups
+}
+
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+function formatTimeShort(ts: number): string {
+  const d = new Date(ts)
+  const today = new Date()
+  const isToday =
+    d.getFullYear() === today.getFullYear() &&
+    d.getMonth() === today.getMonth() &&
+    d.getDate() === today.getDate()
+  if (isToday) {
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+}
+
+function formatTimeLong(ts: number): string {
+  return new Date(ts).toLocaleString([], {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// Color palette for sender avatars — pick a stable color from the
+// sender's writer key. A handful of brand-tinted backgrounds.
+const AVATAR_PALETTE = [
+  { bg: 'bg-brand-blue', text: 'text-white' },
+  { bg: 'bg-brand-teal', text: 'text-brand-navy' },
+  { bg: 'bg-brand-ok', text: 'text-white' },
+  { bg: 'bg-brand-err', text: 'text-white' },
+  { bg: 'bg-amber-500', text: 'text-white' }
+]
+function avatarFor(key: string): { bg: string; text: string } {
+  let hash = 0
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0
+  return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length]
 }
 
 // ============================================
@@ -99,6 +211,7 @@ function TeamChatPanel() {
 
   const messages = room.chat
   const me = room.me
+  const groups = useMemo(() => groupMessages(messages), [messages])
 
   // Auto-scroll to the bottom on new messages.
   useEffect(() => {
@@ -119,13 +232,38 @@ function TeamChatPanel() {
   }
 
   return (
-    <Panel
-      title='Team chat'
-      icon={MessageSquare}
-      badge={
-        <span className='font-mono text-[10px] font-semibold uppercase tracking-wider2 text-brand-muted'>
-          {messages.length} {messages.length === 1 ? 'msg' : 'msgs'}
-        </span>
+    <ChatPane
+      headerRight={
+        messages.length > 0 && writable ? (
+          confirmingClear ? (
+            <div className='flex items-center gap-1.5'>
+              <span className='text-xs text-brand-err'>Clear all?</span>
+              <button
+                type='button'
+                onClick={() => setConfirmingClear(false)}
+                className='rounded border border-brand-border bg-white px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider2 text-brand-navy hover:bg-brand-light'
+              >
+                Cancel
+              </button>
+              <button
+                type='button'
+                onClick={handleClear}
+                className='rounded border border-brand-err bg-white px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider2 text-brand-err hover:bg-brand-errBg'
+              >
+                Confirm
+              </button>
+            </div>
+          ) : (
+            <button
+              type='button'
+              onClick={() => setConfirmingClear(true)}
+              className='inline-flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted hover:text-brand-err'
+            >
+              <Trash2 size={10} />
+              Clear all
+            </button>
+          )
+        ) : null
       }
       footer={
         !writable ? (
@@ -174,128 +312,95 @@ function TeamChatPanel() {
         )
       }
     >
-      <div
-        ref={listRef}
-        className='flex-1 overflow-y-auto p-4'
-      >
+      <div ref={listRef} className='flex-1 overflow-y-auto px-4 py-3'>
         {messages.length === 0 ? (
-          <EmptyChat label='No messages yet. Say hi to the team.' />
+          <EmptyPane
+            icon={MessageSquare}
+            title='No messages yet'
+            body='Say hi to the team — your messages are P2P-encrypted and only visible to peers in this teamspace.'
+          />
         ) : (
           <ul className='flex flex-col gap-3'>
-            {messages.map((m) => (
-              <MessageRow
-                key={m.id}
-                message={m}
-                isFromMe={!!me && m.info?.key === me.key}
+            {groups.map((g, gi) => (
+              <MessageGroupRow
+                key={`${gi}-${g.senderKey}`}
+                group={g}
+                isFromMe={!!me && g.senderKey === me.key}
                 canRemove={writable}
-                onRemove={() => room.removeChats([m.id])}
+                onRemove={(id) => room.removeChats([id])}
               />
             ))}
           </ul>
         )}
       </div>
-      {messages.length > 0 && writable && (
-        <div className='flex flex-shrink-0 items-center justify-between border-t border-brand-border bg-brand-light px-3 py-2'>
-          {confirmingClear ? (
-            <div className='flex w-full items-center justify-between gap-2'>
-              <p className='text-xs text-brand-err'>Clear all messages?</p>
-              <div className='flex items-center gap-1.5'>
-                <button
-                  type='button'
-                  onClick={() => setConfirmingClear(false)}
-                  className='rounded border border-brand-border bg-white px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider2 text-brand-navy hover:bg-brand-light'
-                >
-                  Cancel
-                </button>
-                <button
-                  type='button'
-                  onClick={handleClear}
-                  className='rounded border border-brand-err bg-white px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider2 text-brand-err hover:bg-brand-errBg'
-                >
-                  Confirm
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type='button'
-              onClick={() => setConfirmingClear(true)}
-              className='inline-flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted hover:text-brand-err'
-            >
-              <Trash2 size={10} />
-              Clear all
-            </button>
-          )}
-        </div>
-      )}
-    </Panel>
+    </ChatPane>
   )
 }
 
-function MessageRow({
-  message,
+function MessageGroupRow({
+  group,
   isFromMe,
   canRemove,
   onRemove
 }: {
-  message: ChatMessage
+  group: MessageGroup
   isFromMe: boolean
   canRemove: boolean
-  onRemove: () => void
+  onRemove: (id: string) => void
 }) {
+  const av = avatarFor(group.senderKey)
   return (
     <li
-      className={`flex flex-col gap-0.5 rounded-md border px-3 py-2 ${
-        isFromMe
-          ? 'border-brand-blue/30 bg-brand-blue/5'
-          : 'border-brand-border bg-brand-light/50'
+      className={`group relative flex gap-3 rounded-md px-2 py-1 transition-colors ${
+        isFromMe ? 'bg-brand-blue/5' : 'hover:bg-brand-light/40'
       }`}
     >
-      <div className='flex items-baseline justify-between gap-2'>
-        <span
-          className={`truncate font-sans text-xs font-semibold ${
-            isFromMe ? 'text-brand-blue' : 'text-brand-navy'
-          }`}
-          title={message.info?.name ?? 'Peer'}
+      <div className='flex w-9 flex-shrink-0 flex-col items-center pt-0.5'>
+        <div
+          className={`flex h-9 w-9 items-center justify-center rounded-full font-mono text-[11px] font-bold ${av.bg} ${av.text}`}
         >
-          {message.info?.name ?? 'Peer'}
-        </span>
-        <div className='flex items-center gap-2'>
-          <span className='font-mono text-[10px] uppercase tracking-wider2 text-brand-muted'>
-            {message.info?.at
-              ? new Date(message.info.at).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })
-              : ''}
-          </span>
-          {canRemove && (
-            <button
-              type='button'
-              onClick={onRemove}
-              aria-label='Delete message'
-              className='text-brand-muted hover:text-brand-err'
-            >
-              <X size={10} />
-            </button>
-          )}
+          {initialsOf(group.sender)}
         </div>
       </div>
-      <p className='m-0 break-words font-sans text-sm text-brand-navy'>
-        {message.text}
-      </p>
-    </li>
-  )
-}
-
-function EmptyChat({ label }: { label: string }) {
-  return (
-    <div className='flex h-full flex-col items-center justify-center text-center'>
-      <div className='mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-brand-border bg-brand-light'>
-        <MessageSquare size={18} className='text-brand-muted' />
+      <div className='min-w-0 flex-1'>
+        <div className='flex items-baseline gap-2'>
+          <span
+            className={`truncate font-sans text-[13px] font-semibold ${
+              isFromMe ? 'text-brand-blue' : 'text-brand-navy'
+            }`}
+          >
+            {group.sender}
+          </span>
+          <span
+            className='font-mono text-[10px] uppercase tracking-wider2 text-brand-muted'
+            title={formatTimeLong(group.firstAt)}
+          >
+            {formatTimeShort(group.firstAt)}
+          </span>
+        </div>
+        <div className='mt-0.5 space-y-0.5'>
+          {group.messages.map((m, mi) => (
+            <div
+              key={m.id}
+              className='group/msg relative break-words pr-6 font-sans text-sm text-brand-navy'
+            >
+              {m.text}
+              {canRemove && mi === 0 && (
+                <button
+                  type='button'
+                  onClick={() => onRemove(m.id)}
+                  aria-label='Delete message'
+                  className='absolute right-0 top-0 hidden rounded p-0.5 text-brand-muted opacity-0 transition-opacity hover:bg-brand-border hover:text-brand-err group-hover:opacity-100 group-hover/msg:flex group-hover:block'
+                  title='Delete'
+                >
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-      <p className='m-0 max-w-xs font-sans text-sm text-brand-muted'>{label}</p>
-    </div>
+    </li>
   )
 }
 
@@ -305,7 +410,6 @@ function EmptyChat({ label }: { label: string }) {
 function AIChatPanel() {
   const ai = useAI()
   const chat = useAIChat()
-  const room = useRoom()
   const [draft, setDraft] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -313,13 +417,11 @@ function AIChatPanel() {
   const isStreaming = chat.isStreaming
   const aiSource = chat.aiSource
   const modelName = chat.aiSource?.modelName ?? null
-  const isRelay = aiSource?.kind === 'peer'
 
-  // Auto-scroll on new messages.
   useEffect(() => {
     const el = listRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [messages.length])
+  }, [messages.length, isStreaming])
 
   const handleSend = () => {
     const text = draft.trim()
@@ -329,26 +431,31 @@ function AIChatPanel() {
   }
 
   return (
-    <Panel
-      title='AI assistant'
-      icon={Sparkles}
-      badge={
+    <ChatPane
+      headerRight={
         <span
           className={`font-mono text-[10px] font-semibold uppercase tracking-wider2 ${
-            isStreaming ? 'text-brand-teal' : 'text-brand-muted'
+            isStreaming ? 'text-brand-teal' : modelName ? 'text-brand-muted' : 'text-brand-err'
           }`}
         >
-          {isStreaming ? 'streaming…' : modelName ? `· ${modelName}` : '· no source'}
+          {isStreaming
+            ? 'streaming…'
+            : modelName
+              ? modelName
+              : 'no source'}
         </span>
       }
       footer={
         <div className='flex flex-col gap-2'>
           {!aiSource && (
             <div className='flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-900'>
-              <Sparkles size={12} className='mt-0.5 flex-shrink-0 text-amber-700' />
+              <Sparkles
+                size={12}
+                className='mt-0.5 flex-shrink-0 text-amber-700'
+              />
               <span>
-                Pick an AI source in the Workspace panel → the chat
-                surface will stream responses from there.
+                Pick an AI source in <span className='font-mono'>Settings → AI Model</span> or via
+                the gear icon in the top bar to start.
               </span>
             </div>
           )}
@@ -385,40 +492,24 @@ function AIChatPanel() {
         </div>
       }
     >
-      <div ref={listRef} className='flex-1 overflow-y-auto p-4'>
+      <div ref={listRef} className='flex-1 overflow-y-auto px-4 py-3'>
         {messages.length === 0 ? (
-          <EmptyChat
-            label={
+          <EmptyPane
+            icon={Sparkles}
+            title={aiSource ? `Ask ${modelName}` : 'No source selected'}
+            body={
               aiSource
-                ? `Ask ${modelName} anything — the response streams into this panel.`
-                : 'No source selected. Pick one in the Workspace panel to start.'
+                ? 'Streamed responses from this device or a peer land here. Responses are markdown-aware.'
+                : 'Pick an AI source in the gear-icon popover (top-right) to start chatting.'
             }
           />
         ) : (
           <ul className='flex flex-col gap-3'>
             {messages.map((m, i) => (
-              <li
-                key={i}
-                className={`flex flex-col gap-0.5 rounded-md border px-3 py-2 ${
-                  m.role === 'user'
-                    ? 'border-brand-blue/30 bg-brand-blue/5'
-                    : 'border-brand-border bg-brand-light/50'
-                }`}
-              >
-                <span
-                  className={`font-mono text-[10px] font-bold uppercase tracking-wider2 ${
-                    m.role === 'user' ? 'text-brand-blue' : 'text-brand-teal'
-                  }`}
-                >
-                  {m.role === 'user' ? 'You' : modelName ?? 'AI'}
-                </span>
-                <p className='m-0 whitespace-pre-wrap break-words font-sans text-sm text-brand-navy'>
-                  {m.content}
-                </p>
-              </li>
+              <AIMessageRow key={i} message={m} modelName={modelName ?? 'AI'} />
             ))}
             {isStreaming && (
-              <li className='flex items-center gap-2 text-brand-muted'>
+              <li className='flex items-center gap-2 px-2 text-brand-muted'>
                 <Loader2 size={12} className='animate-spin' />
                 <span className='font-mono text-[10px] uppercase tracking-wider2'>
                   {modelName} is thinking…
@@ -430,20 +521,171 @@ function AIChatPanel() {
         {chat.error && (
           <div className='mt-3 rounded-md border border-brand-errBorder bg-brand-errBg px-3 py-2 text-xs text-brand-errDark'>
             <p className='m-0 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err'>
-              {isRelay ? 'Relay error' : 'AI error'}
+              {chat.aiSource?.kind === 'peer' ? 'Relay error' : 'AI error'}
             </p>
             <p className='m-0 mt-1'>{chat.error.message}</p>
           </div>
         )}
       </div>
-    </Panel>
+    </ChatPane>
+  )
+}
+
+function AIMessageRow({
+  message,
+  modelName
+}: {
+  message: { role: 'user' | 'assistant'; content: string }
+  modelName: string
+}) {
+  const isUser = message.role === 'user'
+  const av = isUser
+    ? { bg: 'bg-brand-navy', text: 'text-white' }
+    : { bg: 'bg-brand-blue', text: 'text-white' }
+  return (
+    <li
+      className={`flex gap-3 rounded-md px-2 py-1 ${
+        isUser ? 'bg-brand-blue/5' : ''
+      }`}
+    >
+      <div className='flex w-9 flex-shrink-0 flex-col items-center pt-0.5'>
+        <div
+          className={`flex h-9 w-9 items-center justify-center rounded-full font-mono text-[11px] font-bold ${av.bg} ${av.text}`}
+        >
+          {isUser ? 'You' : initialsOf(modelName)}
+        </div>
+      </div>
+      <div className='min-w-0 flex-1'>
+        <div className='flex items-baseline gap-2'>
+          <span
+            className={`font-sans text-[13px] font-semibold ${
+              isUser ? 'text-brand-navy' : 'text-brand-blue'
+            }`}
+          >
+            {isUser ? 'You' : modelName}
+          </span>
+        </div>
+        <p className='m-0 mt-0.5 whitespace-pre-wrap break-words font-sans text-sm text-brand-navy'>
+          {message.content}
+        </p>
+      </div>
+    </li>
   )
 }
 
 // ============================================
-// Workspace panel (invite + AI source picker)
+// Shared chat-pane chrome — header + body + footer
 // ============================================
-function WorkspacePanel() {
+function ChatPane({
+  headerRight,
+  footer,
+  children
+}: {
+  headerRight?: React.ReactNode
+  footer?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <section className='flex min-h-0 flex-1 flex-col border-r border-brand-border bg-white last:border-r-0'>
+      <header className='flex h-10 flex-shrink-0 items-center justify-between border-b border-brand-border bg-brand-light px-4'>
+        <span className='font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted'>
+          Messages
+        </span>
+        {headerRight}
+      </header>
+      <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>{children}</div>
+      {footer && (
+        <div className='flex-shrink-0 border-t border-brand-border bg-white p-3'>
+          {footer}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function EmptyPane({
+  icon: Icon,
+  title,
+  body
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>
+  title: string
+  body: string
+}) {
+  return (
+    <div className='flex h-full flex-col items-center justify-center px-6 text-center'>
+      <div className='mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-brand-border bg-brand-light'>
+        <Icon size={20} className='text-brand-muted' />
+      </div>
+      <h3 className='m-0 font-sans text-base font-medium text-brand-navy'>
+        {title}
+      </h3>
+      <p className='m-0 mt-1.5 max-w-sm text-xs leading-relaxed text-brand-muted'>
+        {body}
+      </p>
+    </div>
+  )
+}
+
+// ============================================
+// Settings popover (Workspace content) — gear icon top-right
+// ============================================
+function SettingsPopover() {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      if (
+        ref.current &&
+        !ref.current.contains(e.target as Node) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false)
+      }
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div className='relative'>
+      <button
+        ref={triggerRef}
+        type='button'
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup='menu'
+        aria-expanded={open}
+        aria-label='Workspace settings'
+        title='Workspace settings'
+        className='inline-flex h-8 w-8 items-center justify-center rounded-md text-brand-muted transition-colors hover:bg-brand-light hover:text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+      >
+        <SettingsIcon size={14} />
+      </button>
+      {open && (
+        <div
+          ref={ref}
+          role='menu'
+          className='absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-md border border-brand-border bg-white shadow-[0_18px_50px_-12px_rgba(10,10,92,0.25)]'
+        >
+          <WorkspacePanel compact />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function WorkspacePanel({ compact = false }: { compact?: boolean }) {
   const room = useRoom()
   const ai = useAI()
   const chat = useAIChat()
@@ -494,150 +736,182 @@ function WorkspacePanel() {
   const hostHasModel = !!(hostState?.modelId && hostState?.modelName)
   const hostVisible = hostState !== null
 
+  const sectionClass = compact ? 'p-4' : 'p-4'
+  const headerClass =
+    'mb-1.5 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted'
+
   return (
-    <Panel title='Workspace' icon={Users}>
-      <div className='flex flex-1 flex-col gap-5 overflow-y-auto p-4'>
-        {/* ── Invite code ── */}
-        <section>
-          <h3 className='mb-2 font-mono text-[10px] font-semibold uppercase tracking-wider2 text-brand-muted'>
-            Invite code
-          </h3>
-          {room.invite && room.role === 'host' ? (
-            <div className='flex items-center gap-2 rounded-md border border-brand-border bg-white px-2.5 py-1.5'>
-              <code
-                className='flex-1 truncate font-mono text-xs text-brand-navy'
-                title={room.invite}
-              >
-                {room.invite}
-              </code>
-              <button
-                type='button'
-                onClick={handleCopy}
-                aria-label='Copy invite code'
-                className='inline-flex h-7 w-7 items-center justify-center rounded text-brand-muted transition hover:bg-brand-light focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
-              >
-                {copied ? (
-                  <Check size={14} className='text-brand-teal' />
-                ) : (
-                  <Copy size={14} />
-                )}
-              </button>
-            </div>
-          ) : (
-            <p className='m-0 text-xs text-brand-muted'>
-              {room.role === 'guest'
-                ? "Joined the host's room."
-                : room.status === 'ready'
-                  ? 'Minting invite code…'
-                  : 'Starting room…'}
-            </p>
-          )}
-          <p className='m-0 mt-2 text-[10px] text-brand-muted'>
-            {room.role === 'host'
-              ? 'Share this code so peers can join the teamspace.'
-              : room.role === 'guest'
-                ? 'You joined using a host-shared code.'
-                : 'Preparing room…'}
-          </p>
-        </section>
-
-        {/* ── Peers ── */}
-        <section>
-          <h3 className='mb-2 font-mono text-[10px] font-semibold uppercase tracking-wider2 text-brand-muted'>
-            Peers
-          </h3>
-          <p className='m-0 text-xs text-brand-navy'>
-            {room.peers === 0 ? 'No peers connected' : `${room.peers} peer${room.peers > 1 ? 's' : ''}`}
-          </p>
-        </section>
-
-        {/* ── AI source picker ── */}
-        <section>
-          <div className='mb-2 flex items-center justify-between'>
-            <h3 className='font-mono text-[10px] font-semibold uppercase tracking-wider2 text-brand-muted'>
-              AI source
-            </h3>
-            {chat.aiSource && (
-              <button
-                type='button'
-                onClick={clearSource}
-                title='Clear the current source'
-                className='inline-flex items-center gap-1 font-mono text-[10px] font-semibold uppercase tracking-wider2 text-brand-muted transition hover:text-brand-err'
-              >
-                <X size={10} />
-                Clear
-              </button>
-            )}
-          </div>
-          <p className='m-0 mb-2 text-[10px] text-brand-muted'>
-            Select where AI processing runs.
-          </p>
-          <div className='flex flex-col gap-1.5'>
-            <SourceRow
-              kind='local'
-              label='Local'
-              subtitle='This device'
-              modelName={ai.activeModel?.name ?? null}
-              selected={
-                chat.aiSource?.kind === 'local' &&
-                chat.aiSource.modelId === ai.activeModel?.id
-              }
-              onSelect={selectLocal}
-              disabled={!ai.activeModel}
-              disabledReason={!ai.activeModel ? 'No model loaded' : undefined}
-            />
-            <SourceRow
-              kind='host'
-              label='Host'
-              subtitle={hostState ? shortWriterKey(hostState.writerKey) : 'Waiting for host…'}
-              modelName={hostHasModel ? (hostState?.modelName ?? null) : null}
-              selected={
-                chat.aiSource?.kind === 'peer' &&
-                chat.aiSource.writerKey === hostState?.writerKey
-              }
-              onSelect={selectHost}
-              disabled={!hostHasModel}
-              disabledReason={
-                !hostVisible
-                  ? 'Re-checking…'
-                  : !hostHasModel
-                    ? 'Host has no model loaded'
-                    : !hostState?.accepting
-                      ? 'Host is busy'
-                      : undefined
-              }
-            />
-          </div>
-        </section>
-
-        {/* ── Wallet state ── */}
-        <section>
-          <h3 className='mb-2 font-mono text-[10px] font-semibold uppercase tracking-wider2 text-brand-muted'>
-            Wallet
-          </h3>
-          {status?.exists ? (
-            <p className='m-0 text-xs text-brand-navy'>
-              {status.partyHint}::{status.fingerprint?.slice(0, 8)}…
-            </p>
-          ) : (
+    <div className='flex max-h-[70vh] flex-col gap-4 overflow-y-auto p-4'>
+      {/* ── Invite code ── */}
+      <section>
+        <h3 className={headerClass}>Invite code</h3>
+        {room.invite && room.role === 'host' ? (
+          <div className='flex items-center gap-2 rounded-md border border-brand-border bg-white px-2.5 py-1.5'>
+            <code
+              className='flex-1 truncate font-mono text-xs text-brand-navy'
+              title={room.invite}
+            >
+              {room.invite}
+            </code>
             <button
               type='button'
-              onClick={openSetup}
-              className='inline-flex items-center gap-1.5 rounded-md border border-brand-blue bg-white px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-blue hover:bg-brand-light'
+              onClick={handleCopy}
+              aria-label='Copy invite code'
+              className='inline-flex h-7 w-7 items-center justify-center rounded text-brand-muted transition hover:bg-brand-light focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
             >
-              <Wallet size={12} />
-              Setup
+              {copied ? (
+                <Check size={14} className='text-brand-teal' />
+              ) : (
+                <Copy size={14} />
+              )}
+            </button>
+          </div>
+        ) : (
+          <p className='m-0 text-xs text-brand-muted'>
+            {room.role === 'guest'
+              ? "Joined the host's room."
+              : room.status === 'ready'
+                ? 'Minting invite code…'
+                : 'Starting room…'}
+          </p>
+        )}
+      </section>
+
+      {/* ── Peers ── */}
+      <section>
+        <h3 className={headerClass}>Peers</h3>
+        <p className='m-0 text-xs text-brand-navy'>
+          {room.peers === 0
+            ? 'No peers connected'
+            : `${room.peers} peer${room.peers > 1 ? 's' : ''}`}
+        </p>
+      </section>
+
+      {/* ── AI source ── */}
+      <section>
+        <div className='mb-1.5 flex items-center justify-between'>
+          <h3 className={headerClass}>AI source</h3>
+          {chat.aiSource && (
+            <button
+              type='button'
+              onClick={clearSource}
+              className='inline-flex items-center gap-1 font-mono text-[10px] font-semibold uppercase tracking-wider2 text-brand-muted transition hover:text-brand-err'
+            >
+              <X size={10} />
+              Clear
             </button>
           )}
-        </section>
+        </div>
+        <p className='m-0 mb-1.5 text-[10px] text-brand-muted'>
+          Select where AI processing runs.
+        </p>
+        <div className='flex flex-col gap-1.5'>
+          <SourceRow
+            kind='local'
+            label='Local'
+            subtitle='This device'
+            modelName={ai.activeModel?.name ?? null}
+            selected={
+              chat.aiSource?.kind === 'local' &&
+              chat.aiSource.modelId === ai.activeModel?.id
+            }
+            onSelect={selectLocal}
+            disabled={!ai.activeModel}
+            disabledReason={!ai.activeModel ? 'No model loaded' : undefined}
+          />
+          <SourceRow
+            kind='host'
+            label='Host'
+            subtitle={
+              hostState ? shortWriterKey(hostState.writerKey) : 'Waiting for host…'
+            }
+            modelName={hostHasModel ? hostState?.modelName ?? null : null}
+            selected={
+              chat.aiSource?.kind === 'peer' &&
+              chat.aiSource.writerKey === hostState?.writerKey
+            }
+            onSelect={selectHost}
+            disabled={!hostHasModel}
+            disabledReason={
+              !hostVisible
+                ? 'Re-checking…'
+                : !hostHasModel
+                  ? 'Host has no model loaded'
+                  : !hostState?.accepting
+                    ? 'Host is busy'
+                    : undefined
+            }
+          />
+        </div>
+      </section>
 
-        {err && (
-          <div className='rounded-md border border-brand-errBorder bg-brand-errBg px-2.5 py-1.5 text-[10px] text-brand-errDark'>
-            {err}
-          </div>
+      {/* ── Wallet ── */}
+      <section>
+        <h3 className={headerClass}>Wallet</h3>
+        {status?.exists ? (
+          <p className='m-0 break-all font-mono text-xs text-brand-navy'>
+            {status.partyId}
+          </p>
+        ) : (
+          <button
+            type='button'
+            onClick={openSetup}
+            className='inline-flex items-center gap-1.5 rounded-md border border-brand-blue bg-white px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-blue hover:bg-brand-light'
+          >
+            <Wallet size={12} />
+            Setup
+          </button>
         )}
-      </div>
-    </Panel>
+      </section>
+
+      {/* ── Peers (AI source picker) ── */}
+      {room.peers > 0 && (
+        <section>
+          <h3 className={headerClass}>Peers (AI source)</h3>
+          <ul className='flex flex-col gap-1'>
+            {room.peerAiStates.map((s) => (
+              <li
+                key={s.writerKey}
+                className='flex items-center justify-between gap-2 rounded-md border border-brand-border bg-white px-2.5 py-1.5'
+              >
+                <div className='min-w-0'>
+                  <p className='m-0 truncate font-mono text-[10px] text-brand-navy'>
+                    {s.writerKey.slice(0, 10)}…
+                  </p>
+                  <p className='m-0 truncate text-[10px] text-brand-muted'>
+                    {s.modelName ?? 'No model loaded'}
+                  </p>
+                </div>
+                <span
+                  className={`font-mono text-[10px] uppercase tracking-wider2 ${
+                    s.accepting ? 'text-brand-ok' : 'text-brand-muted'
+                  }`}
+                >
+                  {s.accepting ? 'Ready' : 'Busy'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {err && (
+        <div className='rounded-md border border-brand-errBorder bg-brand-errBg px-2.5 py-1.5 text-[10px] text-brand-errDark'>
+          {err}
+        </div>
+      )}
+
+      {!compact && (
+        <section>
+          <h3 className={headerClass}>Team</h3>
+          <p className='m-0 text-xs text-brand-muted'>
+            {room.peers === 0
+              ? 'Share the invite above to bring co-workers into this teamspace.'
+              : 'P2P-encrypted chat + AI on the left.'}
+          </p>
+        </section>
+      )}
+    </div>
   )
 }
 
@@ -693,7 +967,8 @@ function SourceRow({
           )}
         </div>
         <p className='m-0 mt-0.5 truncate text-[10px] text-brand-muted'>
-          {modelName ?? (kind === 'local' ? 'No model loaded' : 'No model loaded on host')}
+          {modelName ??
+            (kind === 'local' ? 'No model loaded' : 'No model loaded on host')}
           {disabled && disabledReason ? ` · ${disabledReason}` : ''}
         </p>
       </div>
@@ -710,19 +985,26 @@ function shortWriterKey(key: string) {
 // Chat page entry
 // ============================================
 export function ChatPage() {
+  // Tab state lives at the page level so the Settings popover stays
+  // accessible from either pane. Default to 'team' (the first-run
+  // experience starts with a teamspace, not the AI panel).
+  const [active, setActive] = useState<'team' | 'ai'>('team')
+
   return (
-    <div className='flex h-full flex-col gap-4'>
-      <PageHeader
-        label='Teamspace'
-        title='Chat'
-        subtitle='Team messages, AI assistant, and teamspace config in one place.'
+    <ChatShell>
+      <ChatTopBar
+        active={active}
+        onActive={setActive}
+        rightAction={<SettingsPopover />}
       />
-      <ChatGrid>
-        <TeamChatPanel />
-        <AIChatPanel />
-        <WorkspacePanel />
-      </ChatGrid>
-    </div>
+      <div className='flex min-h-0 flex-1'>
+        {active === 'team' ? (
+          <TeamChatPanel />
+        ) : (
+          <AIChatPanel />
+        )}
+      </div>
+    </ChatShell>
   )
 }
 
