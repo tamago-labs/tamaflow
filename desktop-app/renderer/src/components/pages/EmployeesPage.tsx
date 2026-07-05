@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { Plus, Search, Pencil, Trash2, Download, Upload } from 'lucide-react'
-import { PageHeader } from '../PageHeader'
 import EmployeeFormDrawer from '../EmployeeFormDrawer'
 import ConfirmDeleteModal from '../ConfirmDeleteModal'
 import { useEmployees } from '../../context/EmployeeContext'
@@ -59,40 +58,39 @@ export function EmployeesPage() {
 
   return (
     <div>
-      <PageHeader
-        label='People'
-        title='Employees'
-        subtitle='Manage the people you pay. Add employees manually or import a roster to seed a new flow.'
-        actions={
-          <div className='flex items-center gap-2'>
-            <button
-              type='button'
-              onClick={handleExport}
-              disabled={!hasAny}
-              className='flex cursor-pointer items-center gap-1.5 rounded-md border border-brand-border bg-white px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-navy hover:bg-brand-light disabled:cursor-not-allowed disabled:opacity-40'
-            >
-              <Download size={11} />
-              Export
-            </button>
-            <button
-              type='button'
-              onClick={handleImport}
-              className='flex cursor-pointer items-center gap-1.5 rounded-md border border-brand-border bg-white px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-navy hover:bg-brand-light'
-            >
-              <Upload size={11} />
-              Import
-            </button>
-            <button
-              type='button'
-              onClick={() => setAddOpen(true)}
-              className='flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-brand-blue px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90'
-            >
-              <Plus size={12} />
-              Add Employee
-            </button>
-          </div>
-        }
-      />
+      {/* Minimal header — title + actions in one row */}
+      <div className='mb-6 flex items-center justify-between'>
+        <h1 className='m-0 text-2xl font-light tracking-tight text-brand-navy'>
+          Employees
+        </h1>
+        <div className='flex items-center gap-2'>
+          <button
+            type='button'
+            onClick={handleExport}
+            disabled={!hasAny}
+            className='flex cursor-pointer items-center gap-1.5 rounded-md border border-brand-border bg-white px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-navy hover:bg-brand-light disabled:cursor-not-allowed disabled:opacity-40'
+          >
+            <Download size={11} />
+            Export
+          </button>
+          <button
+            type='button'
+            onClick={handleImport}
+            className='flex cursor-pointer items-center gap-1.5 rounded-md border border-brand-border bg-white px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-navy hover:bg-brand-light'
+          >
+            <Upload size={11} />
+            Import
+          </button>
+          <button
+            type='button'
+            onClick={() => setAddOpen(true)}
+            className='flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-brand-blue px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90'
+          >
+            <Plus size={12} />
+            Add Employee
+          </button>
+        </div>
+      </div>
 
       <div className='overflow-hidden rounded-md border border-brand-border bg-white'>
         {/* Filter row */}
