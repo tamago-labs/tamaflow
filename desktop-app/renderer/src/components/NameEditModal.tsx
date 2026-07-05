@@ -54,7 +54,7 @@ export function NameEditModal({
       open={open}
       onClose={onClose}
       title='Change display name'
-      hint='Your display name for the session.'
+      hint='Your display name for the teamspace.'
       busy={busy}
       icon={<User className='h-5 w-5 text-brand-teal' aria-hidden='true' />}
       footer={
@@ -63,7 +63,7 @@ export function NameEditModal({
             type='button'
             onClick={onClose}
             disabled={busy}
-            className='inline-flex h-9 items-center rounded-md border border-white/20 bg-white/5 px-4 text-sm font-medium text-white/80 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:cursor-not-allowed disabled:opacity-50'
+            className='inline-flex h-9 items-center rounded-md border border-brand-border bg-white px-4 text-sm font-medium text-brand-navy transition hover:bg-brand-light focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:cursor-not-allowed disabled:opacity-50'
           >
             Cancel
           </button>
@@ -71,7 +71,7 @@ export function NameEditModal({
             type='button'
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className='inline-flex h-9 items-center gap-1.5 rounded-md bg-white px-4 text-sm font-semibold text-brand-navy transition hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:cursor-not-allowed disabled:opacity-50'
+            className='inline-flex h-9 items-center gap-1.5 rounded-md bg-brand-blue px-4 text-sm font-semibold text-white transition hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:cursor-not-allowed disabled:opacity-50'
           >
             {busy && <Loader2 className='h-3.5 w-3.5 animate-spin' aria-hidden='true' />}
             {busy ? 'Saving…' : 'Save'}
@@ -99,7 +99,7 @@ export function NameEditModal({
         autoComplete='off'
         disabled={busy}
         maxLength={32}
-        className='h-9 w-full rounded border border-white/20 bg-white/10 px-3 text-sm text-white placeholder-white/40 focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-60'
+        className='h-9 w-full rounded border border-brand-border bg-white px-3 text-sm text-brand-navy placeholder:text-brand-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:cursor-not-allowed disabled:opacity-60'
       />
     </BaseModal>
   )

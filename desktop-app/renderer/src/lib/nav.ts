@@ -48,7 +48,7 @@ export interface NavCategory {
 export const NAV_CATEGORIES: NavCategory[] = [
   {
     key: 'teamspace',
-    label: 'Team space',
+    label: 'Teamspace',
     items: [
       { id: 'chat', label: 'Chat', icon: MessageSquare },
       { id: 'shareable', label: 'Shareable', icon: Share2 }

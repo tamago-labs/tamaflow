@@ -25,10 +25,13 @@ import { SettlementsPage } from './pages/SettlementsPage'
 import { AssetsPage } from './pages/AssetsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { WalletProvider } from '../context/WalletContext'
+import { PriceProvider } from '../context/PriceContext'
 import { SetupWalletModal } from './wallet/SetupWalletModal'
 import { AccountInfoModal } from './wallet/AccountInfoModal'
 import { ExportKeyModal } from './wallet/ExportKeyModal'
 import { ConfirmDestroyModal } from './wallet/ConfirmDestroyModal'
+import { FaucetModal } from './wallet/FaucetModal'
+import { SendModal } from './wallet/SendModal'
 import type { PageId } from '../lib/nav'
 
 // Page → component map. `null` entries (none right now) would render
@@ -61,49 +64,53 @@ export function AppShell({ initialPage = 'employees' }: AppShellProps) {
   const isFlowBuilder = currentPage === 'flow-builder'
 
   return (
-    <WalletProvider>
-      <div className='flex h-screen min-h-screen flex-col bg-brand-light'>
-        <div className='flex min-h-0 flex-1'>
-          <Sidebar
-            currentPage={currentPage}
-            onNavigate={setCurrentPage}
-          />
-          <div className='ml-[200px] flex flex min-h-screen flex-1 flex-col'>
-            {!isFlowBuilder && (
-              <TopBar
-                currentPage={currentPage}
-                onHome={() => setCurrentPage('employees')}
-              />
-            )}
-            <main
-              className={
-                isFlowBuilder
-                  ? 'flex min-h-0 flex-1 overflow-hidden'
-                  : 'flex-1 overflow-y-auto p-8'
-              }
-            >
-              <Page />
-            </main>
-            {/* Global status footer — AI model pill (left) + worker
-               status pill (right). Lives INSIDE the `ml-[200px]`
-               offset wrapper so it lines up with the TopBar instead
-               of sliding under the sidebar. Renders on every page so
-               the employer always has a glance-able view of "is the
-               local model ready + is the P2P worker online". */}
-            <CanvasFooter />
+    <PriceProvider>
+      <WalletProvider>
+        <div className='flex h-screen min-h-screen flex-col bg-brand-light'>
+          <div className='flex min-h-0 flex-1'>
+            <Sidebar
+              currentPage={currentPage}
+              onNavigate={setCurrentPage}
+            />
+            <div className='ml-[200px] flex flex min-h-screen flex-1 flex-col'>
+              {!isFlowBuilder && (
+                <TopBar
+                  currentPage={currentPage}
+                  onHome={() => setCurrentPage('employees')}
+                />
+              )}
+              <main
+                className={
+                  isFlowBuilder
+                    ? 'flex min-h-0 flex-1 overflow-hidden'
+                    : 'flex-1 overflow-y-auto p-8'
+                }
+              >
+                <Page />
+              </main>
+              {/* Global status footer — AI model pill (left) + worker
+                 status pill (right). Lives INSIDE the `ml-[200px]`
+                 offset wrapper so it lines up with the TopBar instead
+                 of sliding under the sidebar. Renders on every page so
+                 the employer always has a glance-able view of "is the
+                 local model ready + is the P2P worker online". */}
+              <CanvasFooter />
+            </div>
           </div>
+          {/* Canton wallet modals — mounted at the AppShell level so
+             any page (TopBar chip, AccountMenu, Settings page) can
+             open them via the WalletContext. The modals render null
+             when their own `open` flag is false, so there's no DOM
+             cost when closed. */}
+          <SetupWalletModal />
+          <AccountInfoModal />
+          <ExportKeyModal />
+          <ConfirmDestroyModal />
+          <FaucetModal />
+          <SendModal />
         </div>
-        {/* Canton wallet modals — mounted at the AppShell level so
-           any page (TopBar chip, AccountMenu, Settings page) can
-           open them via the WalletContext. The modals render null
-           when their own `open` flag is false, so there's no DOM
-           cost when closed. */}
-        <SetupWalletModal />
-        <AccountInfoModal />
-        <ExportKeyModal />
-        <ConfirmDestroyModal />
-      </div>
-    </WalletProvider>
+      </WalletProvider>
+    </PriceProvider>
   )
 }
 

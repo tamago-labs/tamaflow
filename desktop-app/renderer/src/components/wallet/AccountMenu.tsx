@@ -1,11 +1,12 @@
 // Account menu — small popover anchored to the TopBar wallet chip.
-// Two items in order: Account Info, Export Private Key. Closes on
-// outside click or Escape. (The old AccountMenu also had Receive /
-// Faucet — dropped with the payroll surface.)
+// Three items in order: Account Info, Faucet, Export Private Key.
+// Closes on outside click or Escape. (Receive was dropped with the
+// payroll surface — the wallet now only sends / receives via the
+// flow builder's routed transfers, not a dedicated receive modal.)
 
 import { useEffect, useRef } from 'react'
 import { useWallet } from '../../context/WalletContext'
-import { Info, KeyRound } from 'lucide-react'
+import { Droplets, Info, KeyRound } from 'lucide-react'
 
 interface AccountMenuProps {
   open: boolean
@@ -14,7 +15,7 @@ interface AccountMenuProps {
 
 export function AccountMenu({ open, onClose }: AccountMenuProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const { openAccountInfo, openExportKey } = useWallet()
+  const { openAccountInfo, openFaucet, openExportKey } = useWallet()
 
   useEffect(() => {
     if (!open) return
@@ -38,6 +39,10 @@ export function AccountMenu({ open, onClose }: AccountMenuProps) {
     openAccountInfo()
     onClose()
   }
+  const handleFaucet = () => {
+    openFaucet()
+    onClose()
+  }
   const handleExportKey = () => {
     openExportKey()
     onClose()
@@ -58,6 +63,15 @@ export function AccountMenu({ open, onClose }: AccountMenuProps) {
       >
         <Info size={14} className='flex-shrink-0 text-brand-muted' />
         Account Info
+      </button>
+      <button
+        type='button'
+        role='menuitem'
+        onClick={handleFaucet}
+        className='flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent px-3 py-2 text-left font-sans text-[13px] text-brand-navy hover:bg-brand-light'
+      >
+        <Droplets size={14} className='flex-shrink-0 text-brand-muted' />
+        Faucet
       </button>
       <button
         type='button'

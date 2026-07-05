@@ -147,19 +147,27 @@ export interface BridgeAPI {
     }) => void
   ): () => void
   // Canton wallet (Settings > Wallet tab). Tamaflow v1 surface:
-  // status / create / destroy / exportKey. The old payroll transfer /
-  // faucet / holdings surface was dropped with the rebrand.
+  // status / create / destroy / exportKey / faucet / holdings /
+  // pendingTransfers / accept / reject / transfer. The old payroll
+  // settings surface (Company / Employees / Flows) is dropped with
+  // the rebrand.
   wallet: {
     status(): Promise<WalletStatus>
     create(opts?: { partyHint?: string }): Promise<WalletCreateResult>
     destroy(): Promise<{ success: boolean }>
     exportKey(): Promise<{ success: boolean; privateKey?: string; error?: string }>
+    faucet(amount?: string): Promise<FaucetResult>
+    holdings(): Promise<Holding[]>
+    pendingTransfers(): Promise<PendingTransfer[]>
+    accept(contractId: string): Promise<RecipientResult>
+    reject(contractId: string): Promise<RecipientResult>
+    transfer(params: TransferParams): Promise<TransferResult>
     onChange(cb: () => void): () => void
   }
 }
 
 // Canton wallet types — mirror the JSDoc typedefs in
-// electron/wallet.js (status / create / exportKey surface).
+// electron/wallet.js.
 export interface WalletStatus {
   exists: boolean
   encryptionAvailable: boolean
@@ -177,6 +185,51 @@ export interface WalletCreateResult {
   fingerprint?: string
   error?: string
   errorCode?: 'OS_KEYCHAIN_UNAVAILABLE' | 'SDK_ERROR' | 'AUTH_ERROR'
+}
+
+export interface FaucetResult {
+  success: boolean
+  txHash?: string
+  amount?: string
+  error?: string
+}
+
+export interface Holding {
+  contractId: string
+  instrumentId: string
+  symbol: string
+  amount: string
+}
+
+export interface PendingTransfer {
+  contractId: string
+  sender: string
+  receiver: string
+  amount: string
+  instrumentId: string
+  executeBefore: string
+  memo?: string
+}
+
+export interface RecipientResult {
+  success: boolean
+  updateId?: string
+  contractId?: string
+  error?: string
+}
+
+export interface TransferParams {
+  recipient: string
+  amount: string
+  memo?: string
+}
+
+export interface TransferResult {
+  success: boolean
+  updateId?: string
+  amount?: string
+  recipient?: string
+  error?: string
 }
 
 // Worker specifiers. Picked by the renderer when calling
@@ -275,6 +328,12 @@ const noopBridge: BridgeAPI = {
     create: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     destroy: () => Promise.resolve({ success: false }),
     exportKey: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    faucet: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    holdings: () => Promise.resolve([]),
+    pendingTransfers: () => Promise.resolve([]),
+    accept: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    reject: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    transfer: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     onChange: () => () => {}
   }
 }

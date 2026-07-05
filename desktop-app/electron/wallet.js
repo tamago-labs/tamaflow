@@ -19,7 +19,14 @@ const { app, ipcMain, BrowserWindow, safeStorage } = require('electron')
 const { join } = require('path')
 const { writeFile, readFile, unlink, rename } = require('fs/promises')
 const { SDK } = require('@canton-network/wallet-sdk')
-const { DEVNET, DEFAULT_PARTY_HINT } = require('./devnet')
+const { DEVNET, DEFAULT_PARTY_HINT, DEFAULT_AMULET_AMOUNT } = require('./devnet')
+const { buildTapCommand } = require('./tap')
+const { buildTransferCommand, getAmuletDsoParty } = require('./transfer')
+const {
+  listPendingTransferInstructions,
+  buildAcceptCommand,
+  buildRejectCommand
+} = require('./accept')
 
 // ============================================
 // Hardcoded DevNet OAuth credentials.
@@ -346,6 +353,439 @@ async function createWallet(opts = {}) {
 }
 
 // ============================================
+// Faucet — mint CC to the wallet's party.
+/**
+ * @typedef {Object} FaucetResultJs
+ * @property {boolean} success
+ * @property {string} [txHash]
+ * @property {string} [amount]
+ * @property {string} [error]
+ */
+
+/**
+ * @param {string} [amount]
+ * @returns {Promise<FaucetResultJs>}
+ */
+async function runFaucet(amount = DEFAULT_AMULET_AMOUNT) {
+  const w = await loadWallet()
+  if (!w) return { success: false, error: 'No wallet loaded' }
+  try {
+    const token = await getToken()
+    const sdk = await buildBaseSdk(token)
+    const [command, disclosedContracts] = await buildTapCommand(
+      token,
+      w.partyId,
+      amount
+    )
+    const preparedTx = sdk.ledger.prepare({
+      commands: [command],
+      disclosedContracts,
+      partyId: w.partyId
+    })
+    const result = await preparedTx.sign(w.privateKey).execute({
+      partyId: w.partyId
+    })
+    return {
+      success: true,
+      txHash: result.updateId ?? result.transactionHash,
+      amount
+    }
+  } catch (err) {
+    console.error('[wallet] runFaucet failed:', err)
+    return { success: false, error: errMsg(err) }
+  }
+}
+
+// ============================================
+// Faucet — mint CC to the wallet's party.
+//
+// Note: we do NOT use `sdk.amulet.tap()` here. FiveNorth's hosted
+// DevNet validator does not expose the CIP-0056 token-metadata-v1
+// registry endpoints that the SDK's high-level tap calls into —
+// it 404s with "The requested resource could not be found".
+// Instead we build the `AmuletRules_DevNet_Tap` ExerciseCommand
+// ourselves by fetching AmuletRules + the active OpenMiningRound
+// from the scan-proxy endpoints (which DO work), then pipe through
+// `sdk.ledger.prepare().sign().execute()`. See tap.js.
+// ============================================
+
+/**
+ * @typedef {Object} FaucetResultJs
+ * @property {boolean} success
+ * @property {string} [txHash]
+ * @property {string} [amount]
+ * @property {string} [error]
+ */
+
+/**
+ * @param {string} [amount]
+ * @returns {Promise<FaucetResultJs>}
+ */
+async function runFaucet(amount = DEFAULT_AMULET_AMOUNT) {
+  const w = await loadWallet()
+  if (!w) return { success: false, error: 'No wallet loaded' }
+  try {
+    const token = await getToken()
+    const sdk = await buildBaseSdk(token)
+    const [command, disclosedContracts] = await buildTapCommand(
+      token,
+      w.partyId,
+      amount
+    )
+    const preparedTx = sdk.ledger.prepare({
+      commands: [command],
+      disclosedContracts,
+      partyId: w.partyId
+    })
+    const result = await preparedTx.sign(w.privateKey).execute({
+      partyId: w.partyId
+    })
+    return {
+      success: true,
+      txHash: result.updateId ?? result.transactionHash,
+      amount
+    }
+  } catch (err) {
+    console.error('[wallet] runFaucet failed:', err)
+    return { success: false, error: errMsg(err) }
+  }
+}
+
+// ============================================
+// Holdings — list token UTXOs for the wallet.
+//
+// Canton uses a UTXO model. A party's balance is the sum of all
+// `Holding` contracts in their position. We aggregate by
+// instrumentId (NOT contractId — each UTXO is its own contract) and
+// sum the amounts to produce one row per token for the Assets table.
+// ============================================
+
+/**
+ * @typedef {Object} Holding
+ * @property {string} contractId
+ * @property {string} instrumentId
+ * @property {string} symbol
+ * @property {string} amount
+ */
+
+/** @returns {Promise<Holding[]>} */
+async function getHoldings() {
+  const TAG = '[wallet.getHoldings]'
+  console.log(TAG, 'called')
+  const w = await loadWallet()
+  if (!w) {
+    console.log(TAG, 'no wallet — returning []')
+    return []
+  }
+
+  let sdk
+  try {
+    const token = await getToken()
+    const base = await SDK.create({
+      auth: { method: 'static', token },
+      ledgerClientUrl: DEVNET.ledgerClientUrl
+    })
+    sdk = await base.extend({
+      amulet: {
+        validatorUrl: DEVNET.validatorUrl,
+        scanApiUrl: DEVNET.scanApiUrl,
+        auth: { method: 'static', token },
+        registryUrl: new URL(DEVNET.registryUrl)
+      },
+      token: {
+        validatorUrl: DEVNET.validatorUrl,
+        auth: { method: 'static', token },
+        registries: [DEVNET.registryUrl]
+      }
+    })
+  } catch (sdkErr) {
+    console.error(TAG, 'SDK build failed:', sdkErr)
+    return []
+  }
+
+  let utxos
+  try {
+    utxos = await sdk.token.utxos.list({ partyId: w.partyId })
+  } catch (utxoErr) {
+    console.error(TAG, 'sdk.token.utxos.list failed:', utxoErr)
+    return []
+  }
+
+  // Aggregate by instrumentId.
+  const byInstrument = new Map()
+  for (const u of utxos) {
+    const instrumentIdObj =
+      (typeof u.instrumentId === 'object' ? u.instrumentId : null) ??
+      (typeof u.interfaceViewValue?.instrumentId === 'object'
+        ? u.interfaceViewValue.instrumentId
+        : null)
+    const instrumentId =
+      instrumentIdObj?.id ??
+      (typeof u.instrumentId === 'string' ? u.instrumentId : null) ??
+      (typeof u.interfaceViewValue?.instrumentId === 'string'
+        ? u.interfaceViewValue.instrumentId
+        : null) ??
+      u.instrument?.id ??
+      'unknown'
+
+    const symbol =
+      u.meta?.symbol ??
+      u.interfaceViewValue?.meta?.symbol ??
+      u.symbol ??
+      u.instrument?.symbol ??
+      (instrumentId.toLowerCase().includes('amulet') ? 'CC' : instrumentId)
+
+    const rawAmount = u.amount ?? u.interfaceViewValue?.amount ?? '0'
+    const amount = parseFloat(String(rawAmount))
+    if (!Number.isFinite(amount)) continue
+
+    const existing = byInstrument.get(instrumentId)
+    if (existing) {
+      existing.amount += amount
+    } else {
+      byInstrument.set(instrumentId, {
+        contractId: u.contractId ?? '',
+        instrumentId,
+        symbol,
+        amount
+      })
+    }
+  }
+  return Array.from(byInstrument.values()).map((b) => ({
+    ...b,
+    amount: b.amount.toString()
+  }))
+}
+
+// ============================================
+// Transfer — send CC to another party.
+// ============================================
+
+/**
+ * @typedef {Object} TransferParams
+ * @property {string} recipient
+ * @property {string} amount
+ * @property {string} [memo]
+ */
+
+/**
+ * @typedef {Object} TransferResult
+ * @property {boolean} success
+ * @property {string} [updateId]
+ * @property {string} [amount]
+ * @property {string} [recipient]
+ * @property {string} [error]
+ */
+
+/** CC has 10 decimal places. Pad / truncate a human string to that. */
+function padCantonCoinAmount(input) {
+  const trimmed = String(input).trim()
+  if (trimmed === '' || Number.isNaN(parseFloat(trimmed))) {
+    throw new Error(`Invalid amount: ${input}`)
+  }
+  const [whole, frac = ''] = trimmed.split('.')
+  const padded = (frac + '0'.repeat(10)).slice(0, 10)
+  return `${whole}.${padded}`
+}
+
+/** Reject obviously malformed partyIds before we hit the ledger. */
+function validatePartyId(partyId) {
+  if (!partyId || partyId.length < 10) {
+    throw new Error('Recipient partyId is too short')
+  }
+  if (!/^[\x20-\x7e]+$/.test(partyId)) {
+    throw new Error('Recipient partyId contains invalid characters')
+  }
+}
+
+let cachedDsoParty = null
+async function getCachedDsoParty(token) {
+  if (cachedDsoParty) return cachedDsoParty
+  cachedDsoParty = await getAmuletDsoParty(token)
+  return cachedDsoParty
+}
+
+/** @returns {Promise<TransferResult>} */
+async function transferAmulet(params) {
+  const w = await loadWallet()
+  if (!w) return { success: false, error: 'No wallet loaded' }
+  try {
+    validatePartyId(params.recipient)
+    const amount = padCantonCoinAmount(params.amount)
+    const token = await getToken()
+    const dsoParty = await getCachedDsoParty(token)
+    const [transferCommand, disclosedContracts] = await buildTransferCommand(
+      token,
+      {
+        sender: w.partyId,
+        recipient: params.recipient,
+        amount,
+        dsoParty
+      }
+    )
+    const sdk = await SDK.create({
+      auth: { method: 'static', token },
+      ledgerClientUrl: DEVNET.ledgerClientUrl
+    })
+    const result = await sdk.ledger
+      .prepare({
+        partyId: w.partyId,
+        commands: transferCommand,
+        disclosedContracts
+      })
+      .sign(w.privateKey)
+      .execute({ partyId: w.partyId })
+    const updateId = result.updateId ?? result.transactionHash
+    return { success: true, updateId, amount, recipient: params.recipient }
+  } catch (err) {
+    console.error('[wallet] transferAmulet failed:', err)
+    return { success: false, error: errMsg(err) }
+  }
+}
+
+// ============================================
+// Recipient-side: list / accept / reject pending transfers.
+// ============================================
+
+/**
+ * @typedef {Object} PendingTransfer
+ * @property {string} contractId
+ * @property {string} sender
+ * @property {string} receiver
+ * @property {string} amount
+ * @property {string} instrumentId
+ * @property {string} executeBefore
+ * @property {string} [memo]
+ */
+
+/**
+ * @typedef {Object} RecipientResult
+ * @property {boolean} success
+ * @property {string} [updateId]
+ * @property {string} [contractId]
+ * @property {string} [error]
+ */
+
+/** @returns {Promise<PendingTransfer[]>} */
+async function listPendingTransfers() {
+  const w = await loadWallet()
+  if (!w) return []
+  try {
+    const token = await getToken()
+    const base = await SDK.create({
+      auth: { method: 'static', token },
+      ledgerClientUrl: DEVNET.ledgerClientUrl
+    })
+    const sdk = await base.extend({
+      amulet: {
+        validatorUrl: DEVNET.validatorUrl,
+        scanApiUrl: DEVNET.scanApiUrl,
+        auth: { method: 'static', token },
+        registryUrl: new URL(DEVNET.registryUrl)
+      },
+      token: {
+        validatorUrl: DEVNET.validatorUrl,
+        auth: { method: 'static', token },
+        registries: [DEVNET.registryUrl]
+      }
+    })
+    const { listPendingTransferInstructions } = require('./accept')
+    return listPendingTransferInstructions(sdk, w.partyId)
+  } catch (err) {
+    console.error('[wallet] listPendingTransfers failed:', err)
+    return []
+  }
+}
+
+/** @returns {Promise<RecipientResult>} */
+async function acceptTransfer(contractId) {
+  const w = await loadWallet()
+  if (!w) return { success: false, error: 'No wallet loaded' }
+  try {
+    const token = await getToken()
+    const base = await SDK.create({
+      auth: { method: 'static', token },
+      ledgerClientUrl: DEVNET.ledgerClientUrl
+    })
+    const sdk = await base.extend({
+      amulet: {
+        validatorUrl: DEVNET.validatorUrl,
+        scanApiUrl: DEVNET.scanApiUrl,
+        auth: { method: 'static', token },
+        registryUrl: new URL(DEVNET.registryUrl)
+      },
+      token: {
+        validatorUrl: DEVNET.validatorUrl,
+        auth: { method: 'static', token },
+        registries: [DEVNET.registryUrl]
+      }
+    })
+    const { buildAcceptCommand } = require('./accept')
+    const [cmd, disclosed] = await buildAcceptCommand(sdk, { contractId })
+    const result = await sdk.ledger
+      .prepare({
+        partyId: w.partyId,
+        commands: cmd,
+        disclosedContracts: disclosed
+      })
+      .sign(w.privateKey)
+      .execute({ partyId: w.partyId })
+    return {
+      success: true,
+      updateId: result.updateId ?? result.transactionHash,
+      contractId
+    }
+  } catch (err) {
+    console.error('[wallet] acceptTransfer failed:', err)
+    return { success: false, error: errMsg(err), contractId }
+  }
+}
+
+/** @returns {Promise<RecipientResult>} */
+async function rejectTransfer(contractId) {
+  const w = await loadWallet()
+  if (!w) return { success: false, error: 'No wallet loaded' }
+  try {
+    const token = await getToken()
+    const base = await SDK.create({
+      auth: { method: 'static', token },
+      ledgerClientUrl: DEVNET.ledgerClientUrl
+    })
+    const sdk = await base.extend({
+      amulet: {
+        validatorUrl: DEVNET.validatorUrl,
+        scanApiUrl: DEVNET.scanApiUrl,
+        auth: { method: 'static', token },
+        registryUrl: new URL(DEVNET.registryUrl)
+      },
+      token: {
+        validatorUrl: DEVNET.validatorUrl,
+        auth: { method: 'static', token },
+        registries: [DEVNET.registryUrl]
+      }
+    })
+    const { buildRejectCommand } = require('./accept')
+    const [cmd, disclosed] = await buildRejectCommand(sdk, { contractId })
+    const result = await sdk.ledger
+      .prepare({
+        partyId: w.partyId,
+        commands: cmd,
+        disclosedContracts: disclosed
+      })
+      .sign(w.privateKey)
+      .execute({ partyId: w.partyId })
+    return {
+      success: true,
+      updateId: result.updateId ?? result.transactionHash,
+      contractId
+    }
+  } catch (err) {
+    console.error('[wallet] rejectTransfer failed:', err)
+    return { success: false, error: errMsg(err), contractId }
+  }
+}
+
+// ============================================
 // Export private key — only via this explicit IPC.
 // ============================================
 
@@ -382,6 +822,12 @@ function registerWalletIpcHandlers(_log) {
     return { success: true }
   })
   ipcMain.handle('wallet:exportKey', () => exportPrivateKey())
+  ipcMain.handle('wallet:faucet', (_e, amount) => runFaucet(amount))
+  ipcMain.handle('wallet:holdings', () => getHoldings())
+  ipcMain.handle('wallet:pendingTransfers', () => listPendingTransfers())
+  ipcMain.handle('wallet:accept', (_e, contractId) => acceptTransfer(contractId))
+  ipcMain.handle('wallet:reject', (_e, contractId) => rejectTransfer(contractId))
+  ipcMain.handle('wallet:transfer', (_e, params) => transferAmulet(params))
   console.log('[wallet] IPC handlers registered')
 }
 
@@ -440,10 +886,14 @@ module.exports = {
   createWallet,
   destroyWallet,
   exportPrivateKey,
+  runFaucet,
+  getHoldings,
+  transferAmulet,
+  listPendingTransfers,
+  acceptTransfer,
+  rejectTransfer,
   registerWalletIpcHandlers,
-  // Re-exports for the v2 surface (holdings / faucet / transfer /
-  // accept / reject) — currently stubbed, will be re-introduced when
-  // the payroll flow system comes back.
+  // Re-exports for the v2 surface — currently stubbed.
   WalletFile: undefined,
   WalletStatus: undefined,
   WalletCreateResult: undefined

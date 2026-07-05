@@ -46,8 +46,13 @@ export interface BaseModalProps {
 }
 
 const VARIANT_CLASSES: Record<BaseModalVariant, string> = {
+  // Splash variant — default white card so the text reads clearly
+  // (the old navy→blue gradient looked nice but the low-contrast white
+  // text on a gradient made headings + body hard to read). Pairs with
+  // the dark navy splash background behind it, and uses the same
+  // default brand tokens as the canvas variant.
   splash:
-    'border-white/10 bg-gradient-to-br from-brand-navy to-brand-blue [&_h2]:text-white [&_p]:text-white/70 [&_button[aria-label="Close"]]:text-white/70 [&_button[aria-label="Close"]]:hover:bg-white/10 [&_button[aria-label="Close"]]:focus:ring-brand-teal/60',
+    'border-brand-border bg-white [&_h2]:text-brand-navy [&_p]:text-brand-muted [&_button[aria-label="Close"]]:text-brand-muted [&_button[aria-label="Close"]]:hover:bg-brand-light [&_button[aria-label="Close"]]:focus:ring-brand-teal/60',
   canvas:
     'border-gray-200 bg-white [&_h2]:text-gray-800 [&_p]:text-gray-600 [&_button[aria-label="Close"]]:text-gray-500 [&_button[aria-label="Close"]]:hover:bg-gray-100 [&_button[aria-label="Close"]]:focus:ring-brand-teal/60'
 }

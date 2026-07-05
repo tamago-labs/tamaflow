@@ -113,7 +113,7 @@ export function SplashPage({
         transition={{ delay: 0.25, duration: 0.5 }}
         className='mt-3 font-mono text-[11px] uppercase tracking-wider3 text-brand-teal/90'
       >
-        Employer Client v1.0
+        Private Settlement • Local AI • P2P Sync
       </motion.p>
 
       {/* "Signed in as <name>" — clickable to open the name-edit modal.
@@ -151,7 +151,7 @@ export function SplashPage({
               : joining
                 ? `Joining with invite\u2026`
                 : role === null
-                  ? 'Preparing workspace\u2026'
+                  ? 'Preparing teamspace\u2026'
                   : 'Starting TamaFlow\u2026'}
           </span>
         </motion.div>
@@ -197,12 +197,12 @@ export function SplashPage({
                 onClick={onOpenCanvas}
                 className='mt-2 inline-flex h-9 items-center rounded-md bg-white px-5 text-sm font-semibold text-brand-navy transition hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
               >
-                Open workspace
+                Open teamspace
               </button>
             </>
           ) : (
             <p className='text-sm text-white/80'>
-              Joined. Loading workspace\u2026
+              Joined. Loading teamspace\u2026
             </p>
           )}
         </motion.div>
@@ -212,11 +212,11 @@ export function SplashPage({
         <button
           type='button'
           onClick={() => setShowJoin(true)}
-          aria-label='Join existing workspace'
+          aria-label='Join existing teamspace'
           className='mt-6 inline-flex items-center gap-1.5 rounded-md border border-white/20 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 backdrop-blur transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
         >
           <LogIn className='h-3.5 w-3.5' aria-hidden='true' />
-          Join existing workspace
+          Join existing teamspace
         </button>
       )}
 
