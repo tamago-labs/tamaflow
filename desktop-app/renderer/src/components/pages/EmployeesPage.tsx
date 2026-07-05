@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Plus, Search, Pencil, Trash2, Download, Upload } from 'lucide-react'
 import { PageHeader } from '../PageHeader'
+import EmployeeFormDrawer from '../EmployeeFormDrawer'
+import ConfirmDeleteModal from '../ConfirmDeleteModal'
 import { useEmployees } from '../../context/EmployeeContext'
 import {
   EMPLOYEE_TYPES,
@@ -213,75 +215,23 @@ export function EmployeesPage() {
         )}
       </div>
 
-      {/* Drawers / modals — stubs until components are created */}
-      {addOpen && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40'>
-          <div className='w-full max-w-md rounded-md bg-white p-6 shadow-lg'>
-            <p className='m-0 mb-4 font-sans text-sm font-medium text-brand-navy'>Add Employee</p>
-            <p className='m-0 mb-4 font-sans text-xs text-brand-muted'>
-              EmployeeFormDrawer not yet created. Close to dismiss.
-            </p>
-            <button
-              type='button'
-              onClick={() => setAddOpen(false)}
-              className='cursor-pointer rounded-md border-0 bg-brand-blue px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-white hover:opacity-90'
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-      {editTarget && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40'>
-          <div className='w-full max-w-md rounded-md bg-white p-6 shadow-lg'>
-            <p className='m-0 mb-4 font-sans text-sm font-medium text-brand-navy'>
-              Edit Employee: {editTarget.displayName}
-            </p>
-            <p className='m-0 mb-4 font-sans text-xs text-brand-muted'>
-              EmployeeFormDrawer not yet created. Close to dismiss.
-            </p>
-            <button
-              type='button'
-              onClick={() => setEditTarget(null)}
-              className='cursor-pointer rounded-md border-0 bg-brand-blue px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-white hover:opacity-90'
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-      {deleteTarget && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40'>
-          <div className='w-full max-w-md rounded-md bg-white p-6 shadow-lg'>
-            <p className='m-0 mb-4 font-sans text-sm font-medium text-brand-navy'>
-              Delete Employee: {deleteTarget.displayName}?
-            </p>
-            <p className='m-0 mb-4 font-sans text-xs text-brand-muted'>
-              ConfirmDeleteModal not yet created. This would confirm deletion.
-            </p>
-            <div className='flex gap-2'>
-              <button
-                type='button'
-                onClick={() => setDeleteTarget(null)}
-                className='cursor-pointer rounded-md border border-brand-border bg-white px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-navy hover:bg-brand-light'
-              >
-                Cancel
-              </button>
-              <button
-                type='button'
-                onClick={async () => {
-                  if (!deleteTarget) return
-                  await remove(deleteTarget.id)
-                  setDeleteTarget(null)
-                }}
-                className='cursor-pointer rounded-md border-0 bg-red-600 px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-white hover:opacity-90'
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Drawers / modals */}
+      <EmployeeFormDrawer open={addOpen} onClose={() => setAddOpen(false)} />
+      <EmployeeFormDrawer
+        open={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        initial={editTarget ?? undefined}
+      />
+      <ConfirmDeleteModal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        target={deleteTarget}
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          await remove(deleteTarget.id)
+          setDeleteTarget(null)
+        }}
+      />
     </div>
   )
 }
