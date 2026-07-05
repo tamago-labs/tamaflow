@@ -1,23 +1,15 @@
-// Chat page — Slack/Discord-style 2-pane split with a global
-// settings popover (Workspace content).
+// Chat page — side-by-side 2-pane split (Team Chat + AI Assistant)
+// with a minimal top bar holding the settings popover.
 //
-//   ┌──────────────────────────────────────────────────────┐
-//   │  [TEAM CHAT]  [AI ASSISTANT]              [⚙ Settings]│  ← top bar
-//   ├──────────────────────┬───────────────────────────────┤
-//   │                      │                               │
-//   │   Team chat          │   AI assistant                │
-//   │                      │                               │
-//   │   [input]            │   [input]                     │
-//   └──────────────────────┴───────────────────────────────┘
-//
-// Message rendering: Slack/Discord-style. Avatar circle on the
-// left, sender name + timestamp in the header row, message body
-// below. Consecutive messages from the same sender share the
-// avatar slot (only the first shows the name + timestamp).
-//
-// Settings popover (gear icon top-right) holds the Workspace
-// content that used to live in the right drawer on the Flow
-// Builder page: invite code + AI source picker + wallet state.
+//   ┌─────────────────────────────────────────────────────────────┐
+//   │                                                 [⚙ Settings]│  ← h-8 top bar
+//   ├────────────────────────┬────────────────────────────────────┤
+//   │ Team Chat        [Clr] │ AI · Qwen 4B   [session ▾] [Clr]  │  ← h-8 inline headers
+//   │                        │                                    │
+//   │   messages...          │   messages...                      │
+//   │                        │                                    │
+//   │   [input]              │   [input]                          │
+//   └────────────────────────┴────────────────────────────────────┘
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
@@ -28,7 +20,6 @@ import {
   ChevronRight,
   Copy,
   FileText,
-  Loader2,
   MessageSquare,
   Plus,
   Send,
@@ -36,7 +27,6 @@ import {
   Sparkles,
   Square,
   Trash2,
-  Users,
   Wallet,
   X
 } from 'lucide-react'
@@ -52,72 +42,18 @@ import type { ChatMessage } from '../../lib/chat'
 //
 // The AppShell normally wraps the page in a p-8 main padding.
 // We opt out of that for the Chat page so the two chat panes
-// can use the entire viewport height. We override the margin with
-// a negative left/right to break out of the main padding.
+// can use the entire viewport height.
 
 function ChatShell({ children }: { children: React.ReactNode }) {
   return (
     <div className='-mx-8 -mt-2 flex h-[calc(100vh-7rem)] flex-col'>
-      {children}
-    </div>
-  )
-}
-
-function ChatTopBar({
-  active,
-  onActive,
-  rightAction
-}: {
-  active: 'team' | 'ai'
-  onActive: (which: 'team' | 'ai') => void
-  rightAction: React.ReactNode
-}) {
-  return (
-    <div className='flex h-12 flex-shrink-0 items-center justify-between border-b border-brand-border bg-white px-4'>
-      <div className='flex items-center gap-1'>
-        <ChannelTab
-          active={active === 'team'}
-          onClick={() => onActive('team')}
-          icon={MessageSquare}
-          label='Team chat'
-        />
-        <ChannelTab
-          active={active === 'ai'}
-          onClick={() => onActive('ai')}
-          icon={Sparkles}
-          label='AI assistant'
-        />
+      <div className='flex h-8 flex-shrink-0 items-center justify-end border-b border-brand-border bg-white px-4'>
+        <SettingsPopover />
       </div>
-      {rightAction}
+      <div className='flex min-h-0 flex-1'>
+        {children}
+      </div>
     </div>
-  )
-}
-
-function ChannelTab({
-  active,
-  onClick,
-  icon: Icon,
-  label
-}: {
-  active: boolean
-  onClick: () => void
-  icon: React.ComponentType<{ size?: number; className?: string }>
-  label: string
-}) {
-  return (
-    <button
-      type='button'
-      onClick={onClick}
-      aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-        active
-          ? 'bg-brand-blue text-white'
-          : 'text-brand-navy hover:bg-brand-light'
-      }`}
-    >
-      <Icon size={12} className={active ? 'text-white' : 'text-brand-muted'} />
-      {label}
-    </button>
   )
 }
 
@@ -218,7 +154,6 @@ function TeamChatPanel() {
   const me = room.me
   const groups = useMemo(() => groupMessages(messages), [messages])
 
-  // Auto-scroll to the bottom on new messages.
   useEffect(() => {
     const el = listRef.current
     if (el) el.scrollTop = el.scrollHeight
@@ -237,23 +172,26 @@ function TeamChatPanel() {
   }
 
   return (
-    <ChatPane
-      headerRight={
-        messages.length > 0 ? (
+    <section className='flex min-h-0 flex-1 flex-col border-r border-brand-border bg-white'>
+      <header className='flex h-8 flex-shrink-0 items-center justify-between border-b border-brand-border bg-brand-light px-4'>
+        <span className='font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted'>
+          Team Chat
+        </span>
+        {messages.length > 0 && room.writable ? (
           confirmingClear ? (
             <div className='flex items-center gap-1.5'>
-              <span className='text-xs text-brand-err'>Clear all?</span>
+              <span className='text-[10px] text-brand-err'>Clear all?</span>
               <button
                 type='button'
                 onClick={() => setConfirmingClear(false)}
-                className='rounded border border-brand-border bg-white px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider2 text-brand-navy hover:bg-brand-light'
+                className='rounded border border-brand-border bg-white px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider2 text-brand-navy hover:bg-brand-light'
               >
                 Cancel
               </button>
               <button
                 type='button'
                 onClick={handleClear}
-                className='rounded border border-brand-err bg-white px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider2 text-brand-err hover:bg-brand-errBg'
+                className='rounded border border-brand-err bg-white px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider2 text-brand-err hover:bg-brand-errBg'
               >
                 Confirm
               </button>
@@ -265,12 +203,35 @@ function TeamChatPanel() {
               className='inline-flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted hover:text-brand-err'
             >
               <Trash2 size={10} />
-              Clear all
+              Clear
             </button>
           )
-        ) : null
-      }
-      footer={
+        ) : null}
+      </header>
+      <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>
+        <div ref={listRef} className='flex-1 overflow-y-auto px-4 py-3'>
+          {messages.length === 0 ? (
+            <EmptyPane
+              icon={MessageSquare}
+              title='No messages yet'
+              body='Say hi to the team — your messages are P2P-encrypted and only visible to peers in this teamspace.'
+            />
+          ) : (
+            <ul className='flex flex-col gap-3'>
+              {groups.map((g, gi) => (
+                <MessageGroupRow
+                  key={`${gi}-${g.senderKey}`}
+                  group={g}
+                  isFromMe={!!me && g.senderKey === me.key}
+                  canRemove={room.writable}
+                  onRemove={(id) => room.removeChats([id])}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+      <div className='flex-shrink-0 border-t border-brand-border bg-white p-3'>
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -300,30 +261,8 @@ function TeamChatPanel() {
             Send
           </button>
         </form>
-      }
-    >
-      <div ref={listRef} className='flex-1 overflow-y-auto px-4 py-3'>
-        {messages.length === 0 ? (
-          <EmptyPane
-            icon={MessageSquare}
-            title='No messages yet'
-            body='Say hi to the team — your messages are P2P-encrypted and only visible to peers in this teamspace.'
-          />
-        ) : (
-          <ul className='flex flex-col gap-3'>
-            {groups.map((g, gi) => (
-              <MessageGroupRow
-                key={`${gi}-${g.senderKey}`}
-                group={g}
-                isFromMe={!!me && g.senderKey === me.key}
-                canRemove={room.writable}
-                onRemove={(id) => room.removeChats([id])}
-              />
-            ))}
-          </ul>
-        )}
       </div>
-    </ChatPane>
+    </section>
   )
 }
 
@@ -413,8 +352,6 @@ function AIChatPanel() {
   const modelName = chat.aiSource?.modelName ?? null
   const error = chat.error
 
-  // Current session metadata — drives the session-bar label + the
-  // per-row badge in the session menu.
   const currentSession = useMemo(
     () =>
       chat.sessions.find((s) => s.slug === chat.currentSessionSlug) ?? null,
@@ -422,7 +359,7 @@ function AIChatPanel() {
   )
   const sessionLabel =
     currentSession?.slug === 'main'
-      ? 'Main (default)'
+      ? 'Main'
       : currentSession?.slug ?? '…'
 
   useEffect(() => {
@@ -430,7 +367,6 @@ function AIChatPanel() {
     if (el) el.scrollTop = el.scrollHeight
   }, [messages.length, isStreaming, streamingContent, streamingThinking])
 
-  // Auto-dismiss the destructive Clear confirm after 4s.
   useEffect(() => {
     if (!confirmingClear) return
     const t = setTimeout(() => setConfirmingClear(false), 4000)
@@ -469,204 +405,200 @@ function AIChatPanel() {
   }
 
   return (
-    <ChatPane
-      headerRight={
-        <span
-          className={`font-mono text-[10px] font-semibold uppercase tracking-wider2 ${
-            isStreaming ? 'text-brand-teal' : modelName ? 'text-brand-muted' : 'text-brand-err'
-          }`}
-        >
-          {isStreaming
-            ? 'streaming…'
-            : modelName
-              ? modelName
-              : 'no source'}
-        </span>
-      }
-      footer={
-        <div className='flex flex-col gap-2'>
-          {!aiSource && (
-            <div className='flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-900'>
-              <Sparkles
-                size={12}
-                className='mt-0.5 flex-shrink-0 text-amber-700'
-              />
-              <span>
-                Pick an AI source in <span className='font-mono'>Settings → AI Model</span> or via
-                the gear icon in the top bar to start.
-              </span>
-            </div>
-          )}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              handleSend()
-            }}
-            className='flex items-end gap-2'
+    <section className='flex min-h-0 flex-1 flex-col bg-white'>
+      <header className='flex h-8 flex-shrink-0 items-center justify-between border-b border-brand-border bg-brand-light px-4'>
+        <div className='flex items-center gap-2'>
+          <span className='font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted'>
+            AI
+          </span>
+          <span
+            className={`font-mono text-[10px] ${
+              isStreaming ? 'text-brand-teal' : modelName ? 'text-brand-navy' : 'text-brand-err'
+            }`}
           >
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSend()
-                }
-              }}
-              placeholder={aiSource ? `Ask ${modelName}…` : 'Pick a source first'}
-              rows={1}
-              disabled={!aiSource || isStreaming}
-              className='flex-1 resize-none rounded-md border border-brand-border bg-white px-3 py-2 font-sans text-sm text-brand-navy placeholder:text-brand-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:opacity-60'
-            />
-            {isStreaming ? (
-              <button
-                type='button'
-                onClick={() => void chat.cancel()}
-                aria-label='Stop generation'
-                className='inline-flex h-9 items-center gap-1.5 rounded-md border-0 bg-brand-err px-4 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:bg-brand-errDark focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
-              >
-                <Square size={12} />
-                Stop
-              </button>
+            {isStreaming ? 'streaming…' : modelName ?? 'no source'}
+          </span>
+          {/* Session dropdown */}
+          <div className='relative'>
+            <button
+              type='button'
+              onClick={() => setShowSessionMenu((v) => !v)}
+              aria-haspopup='menu'
+              aria-expanded={showSessionMenu}
+              className='inline-flex items-center gap-1 rounded border border-brand-border bg-white px-1.5 py-0.5 text-[10px] font-medium text-brand-navy transition hover:bg-brand-light focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+            >
+              <FileText size={9} className='text-brand-muted' />
+              <span className='max-w-[80px] truncate'>{sessionLabel}</span>
+              {currentSession && currentSession.messageCount > 0 && (
+                <span className='rounded bg-brand-light px-1 py-0.5 text-[8px] text-brand-muted'>
+                  {currentSession.messageCount}
+                </span>
+              )}
+              <ChevronDown size={8} className='text-brand-muted' />
+            </button>
+            {showSessionMenu && (
+              <SessionMenu
+                current={chat.currentSessionSlug}
+                sessions={chat.sessions}
+                onSelect={handleSwitchSession}
+                onCreate={handleNewSession}
+                onDelete={handleDeleteSession}
+                onClose={() => setShowSessionMenu(false)}
+              />
+            )}
+          </div>
+        </div>
+        {/* Clear button */}
+        <div className='flex items-center gap-2'>
+          <span className='font-mono text-[10px] text-brand-muted'>
+            {chat.aiSource
+              ? chat.aiSource.kind === 'local'
+                ? `local · ${chat.aiSource.modelName || ''}`
+                : `peer · ${chat.aiSource.modelName || ''}`
+              : ''}
+          </span>
+          {messages.length > 0 ? (
+            confirmingClear ? (
+              <div className='flex items-center gap-1'>
+                <button
+                  type='button'
+                  onClick={() => setConfirmingClear(false)}
+                  className='rounded border border-brand-border bg-white px-1 py-0.5 font-mono text-[9px] text-brand-navy hover:bg-brand-light'
+                >
+                  Cancel
+                </button>
+                <button
+                  type='button'
+                  onClick={handleClear}
+                  className='rounded border border-brand-err bg-white px-1 py-0.5 font-mono text-[9px] text-brand-err hover:bg-brand-errBg'
+                >
+                  Confirm
+                </button>
+              </div>
             ) : (
               <button
-                type='submit'
-                disabled={!aiSource || !draft.trim()}
-                className='inline-flex h-9 items-center gap-1.5 rounded-md border-0 bg-brand-blue px-4 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90 disabled:opacity-50'
+                type='button'
+                onClick={handleClear}
+                className='inline-flex items-center gap-1 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted hover:text-brand-err'
               >
-                <Send size={12} />
-                Ask
+                <Trash2 size={10} />
+                Clear
               </button>
-            )}
-          </form>
+            )
+          ) : null}
         </div>
-      }
-    >
-      {/* ── Session bar — file icon + current session + count + chevron,
-         then a clear-messages trash button on the right. ── */}
-      <div className='flex h-9 flex-shrink-0 items-center gap-1.5 border-b border-brand-border bg-white px-3'>
-        <div className='relative flex-1'>
-          <button
-            type='button'
-            onClick={() => setShowSessionMenu((v) => !v)}
-            aria-haspopup='menu'
-            aria-expanded={showSessionMenu}
-            className='flex w-full items-center gap-1.5 rounded-md border border-brand-border bg-white px-2 py-1 text-left text-xs font-medium text-brand-navy transition hover:bg-brand-light focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
-          >
-            <FileText size={12} className='text-brand-muted' aria-hidden='true' />
-            <span className='min-w-0 flex-1 truncate'>{sessionLabel}</span>
-            {currentSession && currentSession.messageCount > 0 && (
-              <span className='rounded bg-brand-light px-1.5 py-0.5 text-[10px] font-normal text-brand-muted'>
-                {currentSession.messageCount}
-              </span>
-            )}
-            <ChevronDown size={10} className='text-brand-muted' aria-hidden='true' />
-          </button>
-          {showSessionMenu && (
-            <SessionMenu
-              current={chat.currentSessionSlug}
-              sessions={chat.sessions}
-              onSelect={handleSwitchSession}
-              onCreate={handleNewSession}
-              onDelete={handleDeleteSession}
-              onClose={() => setShowSessionMenu(false)}
-            />
-          )}
-        </div>
-        <button
-          type='button'
-          onClick={handleClear}
-          disabled={
-            !currentSession ||
-            currentSession.messageCount === 0 ||
-            isStreaming
-          }
-          aria-label={
-            confirmingClear ? 'Confirm clear messages' : 'Clear messages'
-          }
-          title={
-            confirmingClear
-              ? 'Click again to confirm'
-              : currentSession && currentSession.messageCount > 0
-                ? 'Clear all messages in this session'
-                : 'No messages to clear'
-          }
-          className={`inline-flex h-6 w-6 items-center justify-center rounded-md border transition focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:cursor-not-allowed ${
-            confirmingClear
-              ? 'border-brand-err bg-brand-err text-white hover:bg-brand-errDark'
-              : 'border-brand-border bg-white text-brand-muted hover:bg-brand-light disabled:text-brand-border'
-          }`}
-        >
-          <Trash2 size={12} />
-        </button>
-      </div>
+      </header>
 
-      {/* ── Source status hint — compact line showing where AI runs. ── */}
-      {chat.aiSource && (
-        <p className='flex-shrink-0 border-b border-brand-border bg-white px-4 py-1 text-[10px] text-brand-muted'>
-          Connected to{' '}
-          <span className='font-medium text-brand-navy'>
-            {chat.aiSource.kind === 'local'
-              ? `This device — ${chat.aiSource.modelName || 'No model'}`
-              : `${chat.aiSource.modelName || 'Peer model'} (peer)`}
+      {!aiSource && (
+        <div className='flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-[11px] text-amber-900'>
+          <Sparkles size={11} className='flex-shrink-0 text-amber-700' />
+          <span>
+            Pick an AI source in <span className='font-mono'>Settings</span> to start.
           </span>
-        </p>
+        </div>
       )}
 
-      <div ref={listRef} className='flex-1 overflow-y-auto px-4 py-3'>
-        {messages.length === 0 ? (
-          <AIEmptyState
-            hasSource={!!chat.aiSource}
-            sourceIsLocal={chat.aiSource?.kind === 'local'}
-            hasModel={ai.isReady}
-          />
-        ) : (
-          <ul className='flex flex-col gap-3'>
-            {messages.map((m, i) => (
-              <AIMessageRow key={i} message={m} modelName={modelName ?? 'AI'} />
-            ))}
-            {isStreaming && (
-              <StreamingBubble
-                content={streamingContent}
-                thinking={streamingThinking}
-                modelName={modelName ?? 'AI'}
-                onCancel={() => void chat.cancel()}
-              />
-            )}
-          </ul>
-        )}
-        {chat.error && (
-          <div className='mt-3 rounded-md border border-brand-errBorder bg-brand-errBg px-3 py-2 text-xs text-brand-errDark'>
-            <div className='flex items-start gap-2'>
-              <span className='font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err'>
-                {chat.error.code}
-              </span>
-              <span className='flex-1'>{chat.error.message}</span>
-            </div>
-            <div className='mt-2 flex items-center gap-1.5'>
-              {isRelayErrorCode(chat.error.code) && (
-                <button
-                  type='button'
-                  onClick={() => void chat.cancel().then(() => chat.retry())}
-                  className='inline-flex items-center gap-1 rounded-md border border-brand-err px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err hover:bg-brand-errBg focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
-                >
-                  Switch source
-                </button>
+      <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>
+        <div ref={listRef} className='flex-1 overflow-y-auto px-4 py-3'>
+          {messages.length === 0 ? (
+            <AIEmptyState
+              hasSource={!!chat.aiSource}
+              sourceIsLocal={chat.aiSource?.kind === 'local'}
+              hasModel={ai.isReady}
+            />
+          ) : (
+            <ul className='flex flex-col gap-3'>
+              {messages.map((m, i) => (
+                <AIMessageRow key={i} message={m} modelName={modelName ?? 'AI'} />
+              ))}
+              {isStreaming && (
+                <StreamingBubble
+                  content={streamingContent}
+                  thinking={streamingThinking}
+                  modelName={modelName ?? 'AI'}
+                  onCancel={() => void chat.cancel()}
+                />
               )}
-              {chat.error.retryable && (
-                <button
-                  type='button'
-                  onClick={() => void chat.retry()}
-                  className='inline-flex items-center gap-1 rounded-md border border-brand-err px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err hover:bg-brand-errBg focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
-                >
-                  Retry
-                </button>
-              )}
+            </ul>
+          )}
+          {chat.error && (
+            <div className='mt-3 rounded-md border border-brand-errBorder bg-brand-errBg px-3 py-2 text-xs text-brand-errDark'>
+              <div className='flex items-start gap-2'>
+                <span className='font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err'>
+                  {chat.error.code}
+                </span>
+                <span className='flex-1'>{chat.error.message}</span>
+              </div>
+              <div className='mt-2 flex items-center gap-1.5'>
+                {isRelayErrorCode(chat.error.code) && (
+                  <button
+                    type='button'
+                    onClick={() => void chat.cancel().then(() => chat.retry())}
+                    className='inline-flex items-center gap-1 rounded-md border border-brand-err px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err hover:bg-brand-errBg focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+                  >
+                    Switch source
+                  </button>
+                )}
+                {chat.error.retryable && (
+                  <button
+                    type='button'
+                    onClick={() => void chat.retry()}
+                    className='inline-flex items-center gap-1 rounded-md border border-brand-err px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err hover:bg-brand-errBg focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </ChatPane>
+
+      <div className='flex-shrink-0 border-t border-brand-border bg-white p-3'>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleSend()
+          }}
+          className='flex items-end gap-2'
+        >
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
+            }}
+            placeholder={aiSource ? `Ask ${modelName}…` : 'Pick a source first'}
+            rows={1}
+            disabled={!aiSource || isStreaming}
+            className='flex-1 resize-none rounded-md border border-brand-border bg-white px-3 py-2 font-sans text-sm text-brand-navy placeholder:text-brand-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:opacity-60'
+          />
+          {isStreaming ? (
+            <button
+              type='button'
+              onClick={() => void chat.cancel()}
+              aria-label='Stop generation'
+              className='inline-flex h-9 items-center gap-1.5 rounded-md border-0 bg-brand-err px-4 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:bg-brand-errDark focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+            >
+              <Square size={12} />
+              Stop
+            </button>
+          ) : (
+            <button
+              type='submit'
+              disabled={!aiSource || !draft.trim()}
+              className='inline-flex h-9 items-center gap-1.5 rounded-md border-0 bg-brand-blue px-4 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90 disabled:opacity-50'
+            >
+              <Send size={12} />
+              Ask
+            </button>
+          )}
+        </form>
+      </div>
+    </section>
   )
 }
 
@@ -1096,34 +1028,8 @@ function SessionMenu({
 }
 
 // ============================================
-// Shared chat-pane chrome — header + body + footer
+// Shared chrome — no longer used (inlined into panels)
 // ============================================
-function ChatPane({
-  headerRight,
-  footer,
-  children
-}: {
-  headerRight?: React.ReactNode
-  footer?: React.ReactNode
-  children: React.ReactNode
-}) {
-  return (
-    <section className='flex min-h-0 flex-1 flex-col border-r border-brand-border bg-white last:border-r-0'>
-      <header className='flex h-10 flex-shrink-0 items-center justify-between border-b border-brand-border bg-brand-light px-4'>
-        <span className='font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted'>
-          Messages
-        </span>
-        {headerRight}
-      </header>
-      <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>{children}</div>
-      {footer && (
-        <div className='flex-shrink-0 border-t border-brand-border bg-white p-3'>
-          {footer}
-        </div>
-      )}
-    </section>
-  )
-}
 
 function EmptyPane({
   icon: Icon,
@@ -1537,28 +1443,13 @@ function shortWriterKey(key: string) {
 }
 
 // ============================================
-// Chat page entry
+// Chat page entry — side-by-side layout
 // ============================================
 export function ChatPage() {
-  // Tab state lives at the page level so the Settings popover stays
-  // accessible from either pane. Default to 'team' (the first-run
-  // experience starts with a teamspace, not the AI panel).
-  const [active, setActive] = useState<'team' | 'ai'>('team')
-
   return (
     <ChatShell>
-      <ChatTopBar
-        active={active}
-        onActive={setActive}
-        rightAction={<SettingsPopover />}
-      />
-      <div className='flex min-h-0 flex-1'>
-        {active === 'team' ? (
-          <TeamChatPanel />
-        ) : (
-          <AIChatPanel />
-        )}
-      </div>
+      <TeamChatPanel />
+      <AIChatPanel />
     </ChatShell>
   )
 }
