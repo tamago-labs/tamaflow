@@ -22,9 +22,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Check,
+  ChevronDown,
   Copy,
+  FileText,
   Loader2,
   MessageSquare,
+  Plus,
   Send,
   Settings as SettingsIcon,
   Sparkles,
@@ -390,7 +393,7 @@ function MessageGroupRow({
                   type='button'
                   onClick={() => onRemove(m.id)}
                   aria-label='Delete message'
-                  className='absolute right-0 top-0 hidden rounded p-0.5 text-brand-muted opacity-0 transition-opacity hover:bg-brand-border hover:text-brand-err group-hover:opacity-100 group-hover/msg:flex group-hover:block'
+                  className='absolute right-0 top-0 flex items-center justify-center rounded p-0.5 text-brand-muted opacity-0 transition-opacity hover:bg-brand-border hover:text-brand-err group-hover/msg:opacity-100'
                   title='Delete'
                 >
                   <X size={11} />
@@ -411,6 +414,8 @@ function AIChatPanel() {
   const ai = useAI()
   const chat = useAIChat()
   const [draft, setDraft] = useState('')
+  const [showSessionMenu, setShowSessionMenu] = useState(false)
+  const [confirmingClear, setConfirmingClear] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
 
   const messages = chat.messages
@@ -418,16 +423,59 @@ function AIChatPanel() {
   const aiSource = chat.aiSource
   const modelName = chat.aiSource?.modelName ?? null
 
+  // Current session metadata — drives the session-bar label + the
+  // per-row badge in the session menu.
+  const currentSession = useMemo(
+    () =>
+      chat.sessions.find((s) => s.slug === chat.currentSessionSlug) ?? null,
+    [chat.sessions, chat.currentSessionSlug]
+  )
+  const sessionLabel =
+    currentSession?.slug === 'main'
+      ? 'Main (default)'
+      : currentSession?.slug ?? '…'
+
   useEffect(() => {
     const el = listRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [messages.length, isStreaming])
+
+  // Auto-dismiss the destructive Clear confirm after 4s.
+  useEffect(() => {
+    if (!confirmingClear) return
+    const t = setTimeout(() => setConfirmingClear(false), 4000)
+    return () => clearTimeout(t)
+  }, [confirmingClear])
 
   const handleSend = () => {
     const text = draft.trim()
     if (!text || isStreaming) return
     chat.send(text)
     setDraft('')
+  }
+
+  function handleClear() {
+    if (confirmingClear) {
+      setConfirmingClear(false)
+      void chat.clearSession(chat.currentSessionSlug)
+      return
+    }
+    setConfirmingClear(true)
+  }
+
+  async function handleDeleteSession(slug: string) {
+    if (slug === 'main') return
+    await chat.deleteSession(slug)
+  }
+
+  async function handleNewSession() {
+    await chat.createSession()
+    setShowSessionMenu(false)
+  }
+
+  async function handleSwitchSession(slug: string) {
+    setShowSessionMenu(false)
+    await chat.setCurrentSession(slug)
   }
 
   return (
@@ -492,6 +540,77 @@ function AIChatPanel() {
         </div>
       }
     >
+      {/* ── Session bar — file icon + current session + count + chevron,
+         then a clear-messages trash button on the right. ── */}
+      <div className='flex h-9 flex-shrink-0 items-center gap-1.5 border-b border-brand-border bg-white px-3'>
+        <div className='relative flex-1'>
+          <button
+            type='button'
+            onClick={() => setShowSessionMenu((v) => !v)}
+            aria-haspopup='menu'
+            aria-expanded={showSessionMenu}
+            className='flex w-full items-center gap-1.5 rounded-md border border-brand-border bg-white px-2 py-1 text-left text-xs font-medium text-brand-navy transition hover:bg-brand-light focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+          >
+            <FileText size={12} className='text-brand-muted' aria-hidden='true' />
+            <span className='min-w-0 flex-1 truncate'>{sessionLabel}</span>
+            {currentSession && currentSession.messageCount > 0 && (
+              <span className='rounded bg-brand-light px-1.5 py-0.5 text-[10px] font-normal text-brand-muted'>
+                {currentSession.messageCount}
+              </span>
+            )}
+            <ChevronDown size={10} className='text-brand-muted' aria-hidden='true' />
+          </button>
+          {showSessionMenu && (
+            <SessionMenu
+              current={chat.currentSessionSlug}
+              sessions={chat.sessions}
+              onSelect={handleSwitchSession}
+              onCreate={handleNewSession}
+              onDelete={handleDeleteSession}
+              onClose={() => setShowSessionMenu(false)}
+            />
+          )}
+        </div>
+        <button
+          type='button'
+          onClick={handleClear}
+          disabled={
+            !currentSession ||
+            currentSession.messageCount === 0 ||
+            isStreaming
+          }
+          aria-label={
+            confirmingClear ? 'Confirm clear messages' : 'Clear messages'
+          }
+          title={
+            confirmingClear
+              ? 'Click again to confirm'
+              : currentSession && currentSession.messageCount > 0
+                ? 'Clear all messages in this session'
+                : 'No messages to clear'
+          }
+          className={`inline-flex h-6 w-6 items-center justify-center rounded-md border transition focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:cursor-not-allowed ${
+            confirmingClear
+              ? 'border-brand-err bg-brand-err text-white hover:bg-brand-errDark'
+              : 'border-brand-border bg-white text-brand-muted hover:bg-brand-light disabled:text-brand-border'
+          }`}
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
+
+      {/* ── Source status hint — compact line showing where AI runs. ── */}
+      {chat.aiSource && (
+        <p className='flex-shrink-0 border-b border-brand-border bg-white px-4 py-1 text-[10px] text-brand-muted'>
+          Connected to{' '}
+          <span className='font-medium text-brand-navy'>
+            {chat.aiSource.kind === 'local'
+              ? `This device — ${chat.aiSource.modelName || 'No model'}`
+              : `${chat.aiSource.modelName || 'Peer model'} (peer)`}
+          </span>
+        </p>
+      )}
+
       <div ref={listRef} className='flex-1 overflow-y-auto px-4 py-3'>
         {messages.length === 0 ? (
           <EmptyPane
@@ -570,6 +689,132 @@ function AIMessageRow({
         </p>
       </div>
     </li>
+  )
+}
+
+// ============================================
+// Session menu — dropdown anchored to the session-bar trigger
+// on the AI chat panel. Lists existing sessions, lets the user
+// switch, create a new one, or delete a non-main one. The
+// per-row delete uses a 4s two-step confirm so a stray click
+// doesn't wipe a session.
+// ============================================
+function SessionMenu({
+  current,
+  sessions,
+  onSelect,
+  onCreate,
+  onDelete,
+  onClose
+}: {
+  current: string
+  sessions: { slug: string; pinned: boolean; messageCount: number }[]
+  onSelect: (slug: string) => void
+  onCreate: () => void
+  onDelete: (slug: string) => void
+  onClose: () => void
+}) {
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(
+    null
+  )
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Outside-click closes the menu.
+  useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      const t = e.target as HTMLElement | null
+      if (!t || !t.closest('[data-session-menu]')) onClose()
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [onClose])
+
+  // Auto-clear the confirm after 4s.
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+    }
+  }, [])
+
+  function handleDeleteClick(slug: string) {
+    if (confirmingDelete === slug) {
+      if (confirmTimerRef.current) {
+        clearTimeout(confirmTimerRef.current)
+        confirmTimerRef.current = null
+      }
+      setConfirmingDelete(null)
+      void onDelete(slug)
+      return
+    }
+    setConfirmingDelete(slug)
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
+    confirmTimerRef.current = setTimeout(() => {
+      confirmTimerRef.current = null
+      setConfirmingDelete(null)
+    }, 4000)
+  }
+
+  return (
+    <div
+      data-session-menu
+      className='absolute left-0 top-full z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-brand-border bg-white shadow-[0_18px_50px_-12px_rgba(10,10,92,0.25)]'
+    >
+      {sessions.map((s) => {
+        const isCurrent = s.slug === current
+        const isConfirming = confirmingDelete === s.slug
+        return (
+          <div
+            key={s.slug}
+            className={`flex items-center gap-1.5 px-2 py-1.5 text-xs ${
+              isCurrent
+                ? 'bg-brand-blue/10 text-brand-navy'
+                : 'text-brand-navy hover:bg-brand-light'
+            }`}
+          >
+            <button
+              type='button'
+              onClick={() => onSelect(s.slug)}
+              className='min-w-0 flex-1 truncate text-left'
+            >
+              {s.pinned ? 'Main (default)' : s.slug}
+            </button>
+            {s.messageCount > 0 && (
+              <span className='shrink-0 rounded bg-brand-light px-1.5 py-0.5 text-[10px] text-brand-muted'>
+                {s.messageCount}
+              </span>
+            )}
+            {!s.pinned && (
+              <button
+                type='button'
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDeleteClick(s.slug)
+                }}
+                aria-label={
+                  isConfirming ? 'Confirm delete session' : 'Delete session'
+                }
+                title={isConfirming ? 'Click again to confirm' : 'Delete session'}
+                className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded transition focus:outline-none focus:ring-2 focus:ring-brand-teal/60 ${
+                  isConfirming
+                    ? 'bg-brand-err text-white hover:bg-brand-errDark'
+                    : 'text-brand-muted hover:bg-brand-errBg hover:text-brand-err'
+                }`}
+              >
+                <X size={11} />
+              </button>
+            )}
+          </div>
+        )
+      })}
+      <button
+        type='button'
+        onClick={onCreate}
+        className='flex w-full items-center gap-1.5 border-t border-brand-border px-2 py-1.5 text-left text-xs text-brand-navy hover:bg-brand-light'
+      >
+        <Plus size={11} />
+        New session
+      </button>
+    </div>
   )
 }
 
