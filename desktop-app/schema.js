@@ -29,6 +29,11 @@ const schema = hyperSchema.namespace('tamaflow')
 
 // ── Records ─────────────────────────────────────────────────────────
 schema.register({
+  name: 'writer',
+  fields: [{ name: 'key', type: 'buffer', required: true }]
+})
+
+schema.register({
   name: 'invite',
   fields: [
     { name: 'id', type: 'buffer', required: true },
@@ -204,5 +209,7 @@ dispatch.register({ name: 'update-ai-state', requestType: '@tamaflow/ai-state-up
 dispatch.register({ name: 'relay-request', requestType: '@tamaflow/relay-request' })
 dispatch.register({ name: 'relay-response', requestType: '@tamaflow/relay-response' })
 dispatch.register({ name: 'relay-cancel', requestType: '@tamaflow/relay-cancel' })
+
+dispatch.register({ name: 'add-writer', requestType: '@tamaflow/writer' })
 
 Hyperdispatch.toDisk(hyperdispatch)

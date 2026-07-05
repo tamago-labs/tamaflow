@@ -84,7 +84,7 @@ class TamaflowRoom extends ReadyResource {
         const inv = await this.view.findOne('@tamaflow/invites', { id: request.inviteId })
         if (!inv) return
         request.open(inv.publicKey)
-        this.base.hintWakeup([{ key: request.userData, length: 0 }])
+        await this.addWriter(request.userData)
         request.confirm({
           key: this.base.key,
           encryptionKey: this.base.encryptionKey
@@ -119,10 +119,13 @@ class TamaflowRoom extends ReadyResource {
   }
 
   _setupRouter() {
-    // Invite plumbing. The first invite is minted by the host
-    // (see `getInvite`) and replicated to every peer that joins
-    // afterwards. New peers look up the invite by id when a pairing
-    // request lands (see `pairMember` above).
+    // Membership + invite plumbing. `add-writer` appends the joining
+    // guest's public key to the Autobase's writer list so the guest
+    // becomes writable. Without this, the guest's `writablePromise`
+    // in `_open()` never resolves and the worker hangs forever.
+    this.router.add('@tamaflow/add-writer', async (data, context) => {
+      await context.base.addWriter(data.key)
+    })
     this.router.add('@tamaflow/add-invite', async (data, context) => {
       await context.view.insert('@tamaflow/invites', data)
     })
@@ -241,6 +244,14 @@ class TamaflowRoom extends ReadyResource {
   // the caller).
   isWritable() {
     return Boolean(this.base && this.base.writable)
+  }
+
+  async addWriter(key) {
+    await this.base.append(
+      TamaflowDispatch.encode('@tamaflow/add-writer', {
+        key: b4a.isBuffer(key) ? key : b4a.from(key)
+      })
+    )
   }
 
   async getMessages({ reverse = true, limit = 100 } = {}) {

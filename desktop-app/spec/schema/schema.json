@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "schema": [
     {
       "name": "invite",
@@ -259,6 +259,20 @@
           "required": true,
           "type": "buffer",
           "version": 1
+        }
+      ]
+    },
+    {
+      "name": "writer",
+      "namespace": "tamaflow",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "key",
+          "required": true,
+          "type": "buffer",
+          "version": 2
         }
       ]
     }

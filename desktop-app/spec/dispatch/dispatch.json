@@ -43,6 +43,12 @@
       "name": "@tamaflow/relay-cancel",
       "requestType": "@tamaflow/relay-cancel",
       "version": 1
+    },
+    {
+      "id": 7,
+      "name": "@tamaflow/add-writer",
+      "requestType": "@tamaflow/writer",
+      "version": 1
     }
   ]
 }
