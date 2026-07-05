@@ -1390,32 +1390,55 @@ function SourceRow({
 // Chat page entry — overlay layout
 // ============================================
 export function ChatPage() {
+  const room = useRoom()
   const [showAi, setShowAi] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  async function handleCopyInvite() {
+    if (!room.invite) return
+    try {
+      await navigator.clipboard.writeText(room.invite)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {}
+  }
 
   return (
     <div className='-mx-8 -mt-2 flex h-[calc(100vh-7rem)] flex-col'>
-      {/* Top bar */}
+      {/* Top bar — invite code left, Ask AI right */}
       <div className='flex h-10 flex-shrink-0 items-center justify-between border-b border-brand-border bg-white px-4'>
-        <span className='font-sans text-sm font-semibold text-brand-navy'>
-          Team Chat
-        </span>
-        <div className='flex items-center gap-1'>
+        {room.invite ? (
           <button
             type='button'
-            onClick={() => setShowAi((v) => !v)}
-            aria-label='Toggle AI panel'
-            className={`inline-flex h-8 items-center gap-1.5 rounded-md px-3 font-mono text-[11px] font-bold uppercase tracking-wider2 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-teal/60 ${
-              showAi
-                ? 'bg-brand-blue text-white'
-                : 'text-brand-muted hover:bg-brand-light hover:text-brand-navy'
-            }`}
+            onClick={handleCopyInvite}
+            className='inline-flex items-center gap-2 rounded-md px-2 py-1 font-mono text-xs text-brand-muted transition hover:bg-brand-light hover:text-brand-navy'
+            title='Click to copy invite code'
           >
-            <Sparkles size={13} />
-            Ask AI
+            <code className='text-brand-navy'>{room.invite.slice(0, 12)}…</code>
+            {copied ? (
+              <Check size={12} className='text-brand-teal' />
+            ) : (
+              <Copy size={12} />
+            )}
           </button>
-          <div className='mx-1 h-5 w-px bg-brand-border' />
-          <SettingsPopover showLabel />
-        </div>
+        ) : (
+          <span className='font-mono text-xs text-brand-muted'>
+            {room.status === 'ready' ? 'Workspace' : 'Starting…'}
+          </span>
+        )}
+        <button
+          type='button'
+          onClick={() => setShowAi((v) => !v)}
+          aria-label='Toggle AI panel'
+          className={`inline-flex h-8 items-center gap-1.5 rounded-md px-3 font-mono text-[11px] font-bold uppercase tracking-wider2 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-teal/60 ${
+            showAi
+              ? 'bg-brand-blue text-white'
+              : 'text-brand-muted hover:bg-brand-light hover:text-brand-navy'
+          }`}
+        >
+          <Sparkles size={13} />
+          Ask AI
+        </button>
       </div>
 
       {/* Content area */}
