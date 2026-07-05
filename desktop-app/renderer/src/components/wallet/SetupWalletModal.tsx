@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useWallet } from '../../context/WalletContext'
 import { WalletModal } from './WalletModal'
-import { Loader2 } from 'lucide-react'
+import { KeyRound, Loader2 } from 'lucide-react'
 
 const DEFAULT_PARTY_HINT = 'tamaflow'
 
@@ -24,7 +24,8 @@ function slugifyPartyHint(input: string): string {
 }
 
 export function SetupWalletModal() {
-  const { modal, loadStatus, error, setup, clearError, closeSetup } = useWallet()
+  const { modal, loadStatus, error, setup, clearError, closeSetup, openRestore } =
+    useWallet()
   const [orgName, setOrgName] = useState('')
   const [acknowledged, setAcknowledged] = useState(false)
 
@@ -138,6 +139,23 @@ export function SetupWalletModal() {
           >
             {isBusy && <Loader2 size={12} className='animate-spin' />}
             {isBusy ? 'Generating…' : 'Generate Wallet'}
+          </button>
+        </div>
+
+        {/* Restore-from-key entry point. Sits below the primary
+           actions so the "generate a new wallet" path stays the
+           dominant affordance. */}
+        <div className='border-t border-brand-border pt-3'>
+          <button
+            type='button'
+            onClick={() => {
+              closeSetup()
+              openRestore()
+            }}
+            className='flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-brand-border bg-white px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider2 text-brand-navy transition hover:bg-brand-light'
+          >
+            <KeyRound size={12} className='text-brand-muted' />
+            Already have a wallet? Restore from key
           </button>
         </div>
       </div>

@@ -14,7 +14,7 @@
 
 import { useState } from 'react'
 import { useWallet } from '../context/WalletContext'
-import { ArrowDownToLine, ChevronDown, ChevronUp, Loader2, X } from 'lucide-react'
+import { AlertTriangle, ChevronDown, ChevronUp, Loader2, X } from 'lucide-react'
 
 function formatAmount(value: string | number | undefined): string {
   if (value === undefined || value === null || value === '') return '0'
@@ -161,23 +161,23 @@ export function PendingTransfersCard() {
   const instrumentLabel = pendingTransfers[0]?.instrumentId || 'CC'
 
   return (
-    <div className='mb-4 overflow-hidden rounded-md border border-brand-border bg-white'>
+    <div className='mb-4 overflow-hidden rounded-md border border-amber-200 bg-amber-50'>
       <div className='flex items-center justify-between gap-3 px-4 py-3'>
         <div className='flex min-w-0 items-center gap-3'>
-          <div className='flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-brand-border bg-brand-light text-brand-teal'>
-            <ArrowDownToLine size={14} />
+          <div className='flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-amber-300 bg-amber-100 text-amber-700'>
+            <AlertTriangle size={14} />
           </div>
-          <p className='m-0 truncate font-sans text-sm text-brand-navy'>
+          <p className='m-0 truncate font-sans text-sm text-amber-900'>
             <span className='font-semibold'>
               {pendingTransfers.length} incoming {offerWord}
             </span>
-            <span className='text-brand-muted'>
+            <span className='text-amber-800'>
               {' '}
               · {totalDisplay} {instrumentLabel} total
             </span>
           </p>
           {pendingTransfersLoading ? (
-            <Loader2 size={12} className='flex-shrink-0 animate-spin text-brand-muted' />
+            <Loader2 size={12} className='flex-shrink-0 animate-spin text-amber-700' />
           ) : null}
           {ctxError ? (
             <span
@@ -250,9 +250,9 @@ export function PendingTransfersCard() {
                   className='grid grid-cols-[2fr_1fr_1fr_auto] items-center gap-4 rounded-md px-4 py-3 transition-colors hover:bg-brand-light/40'
                 >
                   <div className='flex min-w-0 items-center gap-2'>
-                    <ArrowDownToLine
+                    <AlertTriangle
                       size={14}
-                      className='flex-shrink-0 text-brand-teal'
+                      className='flex-shrink-0 text-amber-600'
                     />
                     <span
                       className='m-0 cursor-help truncate font-mono text-[11px] text-brand-navy'

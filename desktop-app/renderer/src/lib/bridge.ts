@@ -147,13 +147,14 @@ export interface BridgeAPI {
     }) => void
   ): () => void
   // Canton wallet (Settings > Wallet tab). Tamaflow v1 surface:
-  // status / create / destroy / exportKey / faucet / holdings /
-  // pendingTransfers / accept / reject / transfer. The old payroll
-  // settings surface (Company / Employees / Flows) is dropped with
-  // the rebrand.
+  // status / create / restore / destroy / exportKey / faucet /
+  // holdings / pendingTransfers / accept / reject / transfer. The
+  // old payroll settings surface (Company / Employees / Flows) is
+  // dropped with the rebrand.
   wallet: {
     status(): Promise<WalletStatus>
     create(opts?: { partyHint?: string }): Promise<WalletCreateResult>
+    restore(opts: { privateKey: string; partyHint?: string }): Promise<WalletRestoreResult>
     destroy(): Promise<{ success: boolean }>
     exportKey(): Promise<{ success: boolean; privateKey?: string; error?: string }>
     faucet(amount?: string): Promise<FaucetResult>
@@ -185,6 +186,14 @@ export interface WalletCreateResult {
   fingerprint?: string
   error?: string
   errorCode?: 'OS_KEYCHAIN_UNAVAILABLE' | 'SDK_ERROR' | 'AUTH_ERROR'
+}
+
+export interface WalletRestoreResult {
+  success: boolean
+  partyId?: string
+  fingerprint?: string
+  error?: string
+  errorCode?: 'WALLET_EXISTS' | 'INVALID_KEY' | 'SDK_ERROR' | 'OS_KEYCHAIN_UNAVAILABLE'
 }
 
 export interface FaucetResult {
@@ -328,6 +337,7 @@ const noopBridge: BridgeAPI = {
     create: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     destroy: () => Promise.resolve({ success: false }),
     exportKey: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    restore: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     faucet: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     holdings: () => Promise.resolve([]),
     pendingTransfers: () => Promise.resolve([]),

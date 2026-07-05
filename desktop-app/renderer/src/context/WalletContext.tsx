@@ -28,6 +28,7 @@ import type {
   RecipientResult,
   TransferParams,
   TransferResult,
+  WalletRestoreResult,
   WalletStatus
 } from '../lib/bridge'
 
@@ -39,6 +40,7 @@ interface ModalState {
   exportKeyOpen: boolean
   destroyOpen: boolean
   faucetOpen: boolean
+  restoreOpen: boolean
   sendOpen: boolean
   /** Populated when the user opens Export; rendered by ExportKeyModal. */
   exportKeyValue: string | null
@@ -75,6 +77,7 @@ interface WalletContextValue {
     fingerprint?: string
     error?: string
   }>
+  restore: (opts: { privateKey: string; partyHint?: string }) => Promise<WalletRestoreResult>
   destroy: () => Promise<void>
   exportKey: () => Promise<void>
   runFaucet: (amount?: string) => Promise<FaucetResult>
@@ -83,6 +86,8 @@ interface WalletContextValue {
   rejectPending: (contractId: string) => Promise<RecipientResult>
   openSetup: () => void
   closeSetup: () => void
+  openRestore: () => void
+  closeRestore: () => void
   openAccountInfo: () => void
   closeAccountInfo: () => void
   openExportKey: () => void
@@ -107,6 +112,7 @@ const defaultModal: ModalState = {
   exportKeyOpen: false,
   destroyOpen: false,
   faucetOpen: false,
+  restoreOpen: false,
   sendOpen: false,
   exportKeyValue: null,
   openSendSymbol: null
@@ -227,6 +233,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     []
   )
 
+  const restore = useCallback(
+    async (opts: { privateKey: string; partyHint?: string }): Promise<WalletRestoreResult> => {
+      setLoadStatus('creating')
+      setError(null)
+      const r = await bridge.wallet.restore(opts)
+      if (!mounted.current) return r
+      if (!r.success) {
+        setLoadStatus('error')
+        setError(r.error ?? 'Failed to restore wallet')
+        return r
+      }
+      setLoadStatus('present')
+      setModal((m) => ({ ...m, restoreOpen: false, setupOpen: false }))
+      return r
+    },
+    []
+  )
+
   const destroy = useCallback(async () => {
     await bridge.wallet.destroy()
     if (!mounted.current) return
@@ -323,6 +347,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     () => setModal((m) => ({ ...m, setupOpen: false })),
     []
   )
+  const openRestore = useCallback(
+    () => setModal((m) => ({ ...m, restoreOpen: true })),
+    []
+  )
+  const closeRestore = useCallback(
+    () => setModal((m) => ({ ...m, restoreOpen: false })),
+    []
+  )
   const openAccountInfo = useCallback(
     () => setModal((m) => ({ ...m, accountInfoOpen: true })),
     []
@@ -379,6 +411,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     refreshHoldings,
     refreshPendingTransfers,
     setup,
+    restore,
     destroy,
     exportKey,
     runFaucet,
@@ -387,6 +420,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     rejectPending,
     openSetup,
     closeSetup,
+    openRestore,
+    closeRestore,
     openAccountInfo,
     closeAccountInfo,
     openExportKey,

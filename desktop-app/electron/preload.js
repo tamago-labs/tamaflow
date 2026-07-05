@@ -127,6 +127,7 @@ contextBridge.exposeInMainWorld('bridge', {
     create: (opts) => ipcRenderer.invoke('wallet:create', opts),
     destroy: () => ipcRenderer.invoke('wallet:destroy'),
     exportKey: () => ipcRenderer.invoke('wallet:exportKey'),
+    restore: (opts) => ipcRenderer.invoke('wallet:restore', opts),
     faucet: (amount) => ipcRenderer.invoke('wallet:faucet', amount),
     holdings: () => ipcRenderer.invoke('wallet:holdings'),
     pendingTransfers: () => ipcRenderer.invoke('wallet:pendingTransfers'),

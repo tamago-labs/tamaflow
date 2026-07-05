@@ -15,9 +15,11 @@ export const PRICE_TABLE: Record<string, number> = {
  *  changes (e.g. when we wire up a real feed). */
 export const PRICE_TABLE_UPDATED = '2026-07-05'
 
-/** Currencies we know how to convert. Keeps the type narrow so the
- *  `convert` function doesn't accept arbitrary strings. */
-export type PricedCurrency = 'CC'
+/** Currencies the renderer knows how to convert. USD is the pivot
+ *  for every conversion (two-step `from → USD → to`) and is always
+ *  available even when the rate table doesn't list it — the USD
+ *  rate is implicitly 1. */
+export type PricedCurrency = 'CC' | 'USD'
 
 /** Lookup the USD value of 1 unit of `ccy`. Returns `null` if we
  *  don't have a rate. */

@@ -16,9 +16,8 @@ import { WalletModal } from './WalletModal'
 import { Loader2, Send } from 'lucide-react'
 
 export function SendModal() {
-  const { modal, openSendSymbol, closeSend, transfer, refreshHoldings } =
-    useWallet()
-  const symbol = openSendSymbol ?? 'CC'
+  const { modal, closeSend, transfer, refreshHoldings } = useWallet()
+  const symbol = modal.openSendSymbol ?? 'CC'
   const open = modal.sendOpen
 
   const [recipient, setRecipient] = useState('')
@@ -88,6 +87,7 @@ export function SendModal() {
           Send Canton Coin to any party on the network. The transfer is
           signed with this wallet's own key and submitted to the validator.
         </p>
+        <br/>
 
         <div>
           <label
@@ -104,12 +104,7 @@ export function SendModal() {
             disabled={isBusy}
             placeholder='party-hint::1220abcd…'
             className='w-full rounded-md border border-brand-border bg-white px-3 py-2 font-mono text-xs text-brand-navy focus:border-brand-blue focus:outline-none'
-          />
-          <p className='m-0 mt-1 font-sans text-[11px] text-brand-muted'>
-            Canton partyId format:{' '}
-            <code className='font-mono'>hint::fingerprint</code> or a raw
-            64-char hex fingerprint.
-          </p>
+          /> 
         </div>
 
         <div>

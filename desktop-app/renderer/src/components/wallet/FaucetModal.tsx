@@ -35,13 +35,14 @@ export function FaucetModal() {
       open={modal.faucetOpen}
       onClose={closeFaucet}
       title='Faucet'
-      subtitle='Mint testnet Amulet (CC)'
+      // subtitle='Mint testnet Amulet (CC)'
     >
       <div className='space-y-4'>
         <p className='m-0 font-sans text-sm text-brand-navy'>
           Mint Canton Amulet (CC) to your wallet for testing. The tap
           transaction is signed with this wallet's own key.
         </p>
+        <br/>
 
         <div>
           <label
@@ -107,7 +108,7 @@ export function FaucetModal() {
             ) : (
               <Droplets size={12} />
             )}
-            {isBusy ? 'Running…' : 'Run Faucet'}
+            {isBusy ? 'Running…' : 'Mint'}
           </button>
         </div>
       </div>

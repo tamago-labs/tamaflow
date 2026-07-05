@@ -27,6 +27,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { WalletProvider } from '../context/WalletContext'
 import { PriceProvider } from '../context/PriceContext'
 import { SetupWalletModal } from './wallet/SetupWalletModal'
+import { RestoreWalletModal } from './wallet/RestoreWalletModal'
 import { AccountInfoModal } from './wallet/AccountInfoModal'
 import { ExportKeyModal } from './wallet/ExportKeyModal'
 import { ConfirmDestroyModal } from './wallet/ConfirmDestroyModal'
@@ -103,6 +104,7 @@ export function AppShell({ initialPage = 'employees' }: AppShellProps) {
              when their own `open` flag is false, so there's no DOM
              cost when closed. */}
           <SetupWalletModal />
+          <RestoreWalletModal />
           <AccountInfoModal />
           <ExportKeyModal />
           <ConfirmDestroyModal />

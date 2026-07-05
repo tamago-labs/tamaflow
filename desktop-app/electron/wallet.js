@@ -18,7 +18,7 @@
 const { app, ipcMain, BrowserWindow, safeStorage } = require('electron')
 const { join } = require('path')
 const { writeFile, readFile, unlink, rename } = require('fs/promises')
-const { SDK } = require('@canton-network/wallet-sdk')
+const { SDK, getPublicKeyFromPrivate } = require('@canton-network/wallet-sdk')
 const { DEVNET, DEFAULT_PARTY_HINT, DEFAULT_AMULET_AMOUNT } = require('./devnet')
 const { buildTapCommand } = require('./tap')
 const { buildTransferCommand, getAmuletDsoParty } = require('./transfer')
@@ -786,6 +786,108 @@ async function rejectTransfer(contractId) {
 }
 
 // ============================================
+// Restore — import a previously-exported Ed25519 keypair.
+//
+// Caller pastes the base64-encoded private key (the same shape as
+// `exportPrivateKey()` returns) + the original party hint. We:
+//   1. base64-decode the private key
+//   2. derive the matching public key (Canton SDK)
+//   3. derive the fingerprint via the SDK (deterministic from pubkey)
+//   4. persist (encrypted-at-rest) with the same safeStorage path
+//
+// No validator round-trip. The Canton SDK signs with the wallet's
+// own key on the next transfer/tap; the partyId on-ledger is what
+// it is. If the caller provides the WRONG party hint, the local
+// file's partyId will be `wrongHint::correctFingerprint` and any
+// attempt to look up the on-ledger party will 404 — surface that
+// error to the user via the standard `error` field.
+//
+// ============================================
+
+/**
+ * @typedef {Object} WalletRestoreResult
+ * @property {boolean} success
+ * @property {string} [partyId]
+ * @property {string} [fingerprint]
+ * @property {string} [error]
+ * @property {'WALLET_EXISTS' | 'INVALID_KEY' | 'SDK_ERROR'} [errorCode]
+ */
+
+/**
+ * @param {{ privateKey: string, partyHint?: string }} opts
+ * @returns {Promise<WalletRestoreResult>}
+ */
+async function restoreWallet(opts = {}) {
+  const encryption = ensureEncryption()
+  if (!encryption.available) {
+    return {
+      success: false,
+      error: encryption.reason ?? 'OS keychain unavailable',
+      errorCode: 'OS_KEYCHAIN_UNAVAILABLE'
+    }
+  }
+  if (!opts || typeof opts.privateKey !== 'string' || opts.privateKey.length === 0) {
+    return { success: false, error: 'Private key is required', errorCode: 'INVALID_KEY' }
+  }
+
+  // Reject if a wallet already exists to avoid overwriting silently.
+  const existing = await loadWallet()
+  if (existing) {
+    return {
+      success: false,
+      error: `Wallet already exists (party ${existing.partyId}). Destroy it first.`,
+      errorCode: 'WALLET_EXISTS'
+    }
+  }
+
+  const requestedHint = slugifyPartyHint((opts.partyHint ?? '').trim())
+  const partyHint = requestedHint.length > 0 ? requestedHint : DEFAULT_PARTY_HINT
+
+  try {
+    const token = await getToken()
+    const sdk = await buildBaseSdk(token)
+
+    // Derive the matching public key from the base64 private key.
+    // `getPublicKeyFromPrivate` is re-exported by the wallet SDK from
+    // `@canton-network/core-signing-lib` — it's a top-level function
+    // (NOT a method on `sdk.keys`). Same ed25519 curve the SDK uses
+    // for sign() under the hood, so the public key we derive here
+    // is the one the ledger has on file.
+    const privateKey = opts.privateKey
+    const publicKey = getPublicKeyFromPrivate(privateKey)
+    const fingerprint = await sdk.keys.fingerprint(publicKey)
+
+    const wallet = {
+      v: 1,
+      partyId: `${partyHint}::${fingerprint}`,
+      partyHint,
+      publicKey,
+      privateKey,
+      fingerprint,
+      createdAt: new Date().toISOString()
+    }
+    await saveWallet(wallet)
+
+    notifyChange()
+    return {
+      success: true,
+      partyId: wallet.partyId,
+      fingerprint: wallet.fingerprint
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[wallet] restoreWallet failed:', err)
+    return {
+      success: false,
+      error: message,
+      errorCode: message.toLowerCase().includes('invalid')
+        ? 'INVALID_KEY'
+        : 'SDK_ERROR'
+    }
+  }
+}
+
+// ============================================
 // Export private key — only via this explicit IPC.
 // ============================================
 
@@ -822,6 +924,7 @@ function registerWalletIpcHandlers(_log) {
     return { success: true }
   })
   ipcMain.handle('wallet:exportKey', () => exportPrivateKey())
+  ipcMain.handle('wallet:restore', (_e, opts) => restoreWallet(opts))
   ipcMain.handle('wallet:faucet', (_e, amount) => runFaucet(amount))
   ipcMain.handle('wallet:holdings', () => getHoldings())
   ipcMain.handle('wallet:pendingTransfers', () => listPendingTransfers())
@@ -886,6 +989,7 @@ module.exports = {
   createWallet,
   destroyWallet,
   exportPrivateKey,
+  restoreWallet,
   runFaucet,
   getHoldings,
   transferAmulet,
