@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
@@ -382,7 +383,7 @@ function AIChatPanel({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <section className='flex w-[400px] flex-shrink-0 flex-col border-l border-brand-border bg-white'>
+    <section className='flex h-full w-[400px] flex-shrink-0 flex-col border-l border-brand-border bg-white'>
       <header className='flex h-8 flex-shrink-0 items-center justify-between border-b border-brand-border bg-brand-light px-4'>
         <div className='flex items-center gap-2'>
           <span className='font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted'>
@@ -1033,7 +1034,7 @@ function AIEmptyState({
 // Settings popover
 // ============================================
 
-function SettingsPopover() {
+function SettingsPopover({ showLabel = false }: { showLabel?: boolean }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -1071,9 +1072,16 @@ function SettingsPopover() {
         aria-expanded={open}
         aria-label='Workspace settings'
         title='Workspace settings'
-        className='inline-flex h-8 w-8 items-center justify-center rounded-md text-brand-muted transition-colors hover:bg-brand-light hover:text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+        className={`inline-flex h-8 items-center gap-1.5 rounded-md text-brand-muted transition-colors hover:bg-brand-light hover:text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-teal/60 ${
+          showLabel ? 'px-3' : 'w-8 justify-center'
+        }`}
       >
         <SettingsIcon size={14} />
+        {showLabel && (
+          <span className='font-mono text-[11px] font-bold uppercase tracking-wider2'>
+            Settings
+          </span>
+        )}
       </button>
       {open && (
         <div
@@ -1403,16 +1411,29 @@ export function ChatPage() {
             }`}
           >
             <Sparkles size={13} />
-            AI
+            Ask AI
           </button>
-          <SettingsPopover />
+          <div className='mx-1 h-5 w-px bg-brand-border' />
+          <SettingsPopover showLabel />
         </div>
       </div>
 
       {/* Content area */}
-      <div className='flex min-h-0 flex-1'>
+      <div className='flex min-h-0 flex-1 overflow-hidden'>
         <TeamChatPanel />
-        {showAi && <AIChatPanel onClose={() => setShowAi(false)} />}
+        <AnimatePresence>
+          {showAi && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 400, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className='flex-shrink-0 overflow-hidden'
+            >
+              <AIChatPanel onClose={() => setShowAi(false)} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
