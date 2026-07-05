@@ -121,5 +121,16 @@ contextBridge.exposeInMainWorld('bridge', {
     const handler = (_evt, e) => cb(e)
     ipcRenderer.on('ai:chat:relay-event', handler)
     return () => ipcRenderer.removeListener('ai:chat:relay-event', handler)
+  },
+  wallet: {
+    status: () => ipcRenderer.invoke('wallet:status'),
+    create: (opts) => ipcRenderer.invoke('wallet:create', opts),
+    destroy: () => ipcRenderer.invoke('wallet:destroy'),
+    exportKey: () => ipcRenderer.invoke('wallet:exportKey'),
+    onChange: (cb) => {
+      const handler = () => cb()
+      ipcRenderer.on('wallet:onChange', handler)
+      return () => ipcRenderer.removeListener('wallet:onChange', handler)
+    }
   }
 })

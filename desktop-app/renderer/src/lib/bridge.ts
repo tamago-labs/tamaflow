@@ -146,6 +146,37 @@ export interface BridgeAPI {
       error?: { code: string; message: string; retryable: boolean } | null
     }) => void
   ): () => void
+  // Canton wallet (Settings > Wallet tab). Tamaflow v1 surface:
+  // status / create / destroy / exportKey. The old payroll transfer /
+  // faucet / holdings surface was dropped with the rebrand.
+  wallet: {
+    status(): Promise<WalletStatus>
+    create(opts?: { partyHint?: string }): Promise<WalletCreateResult>
+    destroy(): Promise<{ success: boolean }>
+    exportKey(): Promise<{ success: boolean; privateKey?: string; error?: string }>
+    onChange(cb: () => void): () => void
+  }
+}
+
+// Canton wallet types — mirror the JSDoc typedefs in
+// electron/wallet.js (status / create / exportKey surface).
+export interface WalletStatus {
+  exists: boolean
+  encryptionAvailable: boolean
+  partyId?: string
+  partyHint?: string
+  fingerprint?: string
+  publicKey?: string
+  createdAt?: string
+  filePath: string
+}
+
+export interface WalletCreateResult {
+  success: boolean
+  partyId?: string
+  fingerprint?: string
+  error?: string
+  errorCode?: 'OS_KEYCHAIN_UNAVAILABLE' | 'SDK_ERROR' | 'AUTH_ERROR'
 }
 
 // Worker specifiers. Picked by the renderer when calling
@@ -231,7 +262,21 @@ const noopBridge: BridgeAPI = {
     route: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     routeCancel: () => Promise.resolve({ success: false })
   },
-  onRelayEvent: () => () => {}
+  onRelayEvent: () => () => {},
+  wallet: {
+    status: () =>
+      Promise.resolve({
+        exists: false,
+        encryptionAvailable:
+          typeof window !== 'undefined' &&
+          Boolean((window as unknown as { isSecureContext?: boolean }).isSecureContext),
+        filePath: ''
+      }),
+    create: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    destroy: () => Promise.resolve({ success: false }),
+    exportKey: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    onChange: () => () => {}
+  }
 }
 
 export const bridge: BridgeAPI =

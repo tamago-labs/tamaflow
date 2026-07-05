@@ -29,6 +29,7 @@ export type PageId =
   | 'flow-builder'
   | 'settlements'
   | 'assets'
+  | 'settings'
 
 export interface NavItem {
   id: PageId
@@ -47,7 +48,7 @@ export interface NavCategory {
 export const NAV_CATEGORIES: NavCategory[] = [
   {
     key: 'teamspace',
-    label: 'Teamspace',
+    label: 'Team space',
     items: [
       { id: 'chat', label: 'Chat', icon: MessageSquare },
       { id: 'shareable', label: 'Shareable', icon: Share2 }
@@ -59,17 +60,23 @@ export const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { id: 'employees', label: 'Employees', icon: Users },
       { id: 'flow-builder', label: 'Flow Builder', icon: Workflow },
-      { id: 'settlements', label: 'Settlements', icon: CircleDollarSign },
-      { id: 'assets', label: 'Assets', icon: Boxes }
+      { id: 'settlements', label: 'Settlements', icon: Boxes },
+      { id: 'assets', label: 'Assets', icon: CircleDollarSign }
     ]
   }
 ]
 
 // Flat label lookup for the topbar breadcrumb (mirrors the
-// frontend's `routeLabels`).
-export const PAGE_LABELS: Record<PageId, string> = Object.fromEntries(
-  NAV_CATEGORIES.flatMap((c) => c.items).map((i) => [i.id, i.label])
-) as Record<PageId, string>
+// frontend's `routeLabels`). Includes pages that don't sit in
+// the sidebar categories (Settings is a bottom utility button,
+// not a Payroll item) so the breadcrumb always renders a
+// human label, not the raw page id.
+export const PAGE_LABELS: Record<PageId, string> = {
+  ...(Object.fromEntries(
+    NAV_CATEGORIES.flatMap((c) => c.items).map((i) => [i.id, i.label])
+  ) as Record<PageId, string>),
+  settings: 'Settings'
+}
 
 // FileBox is imported above to keep the import surface stable
 // (some tooling flags unused imports in a flat list).

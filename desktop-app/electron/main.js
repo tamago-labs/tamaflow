@@ -18,6 +18,7 @@ const {
 const { modelStore } = require('./modelStore')
 const aiChat = require('./aiChat')
 const sessions = require('./sessions')
+const { registerWalletIpcHandlers } = require('./wallet')
 const path = require('path')
 const PearRuntime = require('pear-runtime')
 const FramedStream = require('framed-stream')
@@ -864,6 +865,7 @@ if (!lock) {
     // first invoke; the renderer's useAI() hydrates status() on mount.
     registerModelsIpc()
     registerChatIpc()
+    registerWalletIpcHandlers()
 
     // Create the 'main' AI chat session directory + empty
     // messages.json so the first `sessions:list` from the renderer
