@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron')
+const fs = require('fs')
 const os = require('os')
 const {
   ensureQvacConfig,
@@ -19,6 +20,8 @@ const { modelStore } = require('./modelStore')
 const aiChat = require('./aiChat')
 const sessions = require('./sessions')
 const { registerWalletIpcHandlers } = require('./wallet')
+const { EmployeeStore } = require('./employeeStore')
+const { CompanyStore } = require('./companyStore')
 const path = require('path')
 const PearRuntime = require('pear-runtime')
 const FramedStream = require('framed-stream')
@@ -836,6 +839,123 @@ function getLocalWriterKey() {
   return localWriterKey
 }
 
+// ============================================
+// Employee roster IPC Handlers
+// ============================================
+
+let employeeStore = null
+
+function registerEmployeeIpc() {
+  employeeStore = new EmployeeStore()
+
+  ipcMain.handle('employees:get', () => {
+    return employeeStore.get()
+  })
+
+  ipcMain.handle('employees:save', (_evt, employees) => {
+    const file = employeeStore.save(employees)
+    sendToAll('employees:onChange', file)
+    return file
+  })
+
+  ipcMain.handle('employees:remove', (_evt, id) => {
+    const file = employeeStore.remove(id)
+    sendToAll('employees:onChange', file)
+    return file
+  })
+
+  ipcMain.handle('employees:reset', () => {
+    employeeStore.reset()
+    sendToAll('employees:onChange', null)
+    return { success: true }
+  })
+
+  ipcMain.handle('employees:exportJson', async () => {
+    const cur = BrowserWindow.getFocusedWindow()
+    if (!cur) return { success: false, error: 'No focused window' }
+    const result = await dialog.showSaveDialog(cur, {
+      title: 'Export employee roster',
+      defaultPath: 'employees.json',
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+    if (result.canceled || !result.filePath) return { success: true, canceled: true }
+    try {
+      const file = employeeStore.get()
+      fs.writeFileSync(result.filePath, JSON.stringify(file, null, 2), 'utf-8')
+      return { success: true, path: result.filePath }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Export failed' }
+    }
+  })
+
+  ipcMain.handle('employees:importJson', async () => {
+    const cur = BrowserWindow.getFocusedWindow()
+    if (!cur) return { success: false, error: 'No focused window' }
+    const result = await dialog.showOpenDialog(cur, {
+      title: 'Import employee roster',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      properties: ['openFile']
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: true, canceled: true }
+    }
+    try {
+      const data = fs.readFileSync(result.filePaths[0], 'utf-8')
+      const parsed = JSON.parse(data)
+      const employees = EmployeeStore.validate(parsed)
+      const current = employeeStore.get()
+      const currentIds = new Set((current?.employees || []).map((e) => e.id))
+      const importedIds = new Set(employees.map((e) => e.id))
+      const toAdd = employees.filter((e) => !currentIds.has(e.id)).length
+      const toUpdate = employees.filter((e) => currentIds.has(e.id)).length
+      const toSkip = 0
+      const willBeRemoved = (current?.employees || []).filter(
+        (e) => !importedIds.has(e.id)
+      ).length
+      return {
+        success: true,
+        file: { version: 1, employees },
+        diff: { toAdd, toUpdate, toSkip, willBeRemoved }
+      }
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Import failed'
+      }
+    }
+  })
+
+  console.log('Employee IPC handlers registered')
+}
+
+// ============================================
+// Company profile IPC Handlers
+// ============================================
+
+let companyStore = null
+
+function registerCompanyIpc() {
+  companyStore = new CompanyStore()
+
+  ipcMain.handle('company:get', () => {
+    return companyStore.get()
+  })
+
+  ipcMain.handle('company:save', (_evt, profile) => {
+    const file = companyStore.save(profile)
+    sendToAll('company:onChange', file)
+    return file
+  })
+
+  ipcMain.handle('company:reset', () => {
+    companyStore.reset()
+    sendToAll('company:onChange', null)
+    return { success: true }
+  })
+
+  console.log('Company IPC handlers registered')
+}
+
 function handleDeepLink(url) {
   console.log('deep link:', url)
 }
@@ -867,6 +987,8 @@ if (!lock) {
     registerModelsIpc()
     registerChatIpc()
     registerWalletIpcHandlers()
+    registerEmployeeIpc()
+    registerCompanyIpc()
 
     // Create the 'main' AI chat session directory + empty
     // messages.json so the first `sessions:list` from the renderer

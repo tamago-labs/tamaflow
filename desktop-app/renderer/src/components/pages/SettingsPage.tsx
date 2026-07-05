@@ -8,14 +8,17 @@
 // dropped (the payroll flow system is gone). The Wallet tab is
 // reduced to the lifecycle (status + create + export + destroy).
 
-import { useState } from 'react'
-import { Cpu, Wallet, Power, KeyRound, Trash2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Cpu, Wallet, Power, KeyRound, Trash2, Building2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useAI } from '../../hooks/useAI'
 import { useWallet } from '../../context/WalletContext'
+import { bridge } from '../../lib/bridge'
+import type { CompanyProfile, CompanyFile } from '../../ai/types'
 import { PageHeader } from '../PageHeader'
+import CompanyForm from '../CompanyForm'
 
-type Tab = 'wallet' | 'ai'
+type Tab = 'wallet' | 'ai' | 'company'
 
 interface TabDef {
   key: Tab
@@ -25,7 +28,8 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { key: 'wallet', label: 'Wallet', icon: <Wallet size={12} /> },
-  { key: 'ai', label: 'AI Model', icon: <Cpu size={12} /> }
+  { key: 'ai', label: 'AI Model', icon: <Cpu size={12} /> },
+  { key: 'company', label: 'Company', icon: <Building2 size={12} /> }
 ]
 
 export function SettingsPage() {
@@ -33,6 +37,32 @@ export function SettingsPage() {
   const { activeModel, unload, resetCache, setError } = useAI()
   const { status, openSetup, openAccountInfo, openExportKey, openDestroy } =
     useWallet()
+
+  const [companyFile, setCompanyFile] = useState<CompanyFile | null>(null)
+  const [companySaving, setCompanySaving] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    bridge.company.get().then((file) => {
+      if (!cancelled) setCompanyFile(file)
+    })
+    const unsub = bridge.company.onChange((file) => {
+      if (!cancelled) setCompanyFile(file)
+    })
+    return () => {
+      cancelled = true
+      unsub()
+    }
+  }, [])
+
+  const handleCompanySave = async (profile: CompanyProfile) => {
+    setCompanySaving(true)
+    try {
+      await bridge.company.save(profile)
+    } finally {
+      setCompanySaving(false)
+    }
+  }
 
   return (
     <div>
@@ -192,6 +222,20 @@ export function SettingsPage() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {tab === 'company' && (
+        <div className='max-w-2xl rounded-md border border-brand-border bg-white p-6'>
+          <p className='m-0 mb-3 font-mono text-[10px] uppercase tracking-wider2 text-brand-muted'>
+            Company Profile
+          </p>
+          <CompanyForm
+            initial={companyFile?.profile}
+            submitLabel='Save Profile'
+            onSubmit={handleCompanySave}
+            submitting={companySaving}
+          />
         </div>
       )}
     </div>

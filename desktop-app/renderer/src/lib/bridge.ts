@@ -19,6 +19,12 @@ import type {
   ChatThinkingEvent,
   ChatTokenEvent,
   ChatTurn,
+  CompanyFile,
+  CompanyProfile,
+  Employee,
+  EmployeeExportResult,
+  EmployeeFile,
+  EmployeeImportResult,
   ModelAddInput,
   ModelEntry,
   ModelErrorPayload,
@@ -164,6 +170,21 @@ export interface BridgeAPI {
     reject(contractId: string): Promise<RecipientResult>
     transfer(params: TransferParams): Promise<TransferResult>
     onChange(cb: () => void): () => void
+  }
+  employees: {
+    get(): Promise<EmployeeFile | null>
+    save(employees: Employee[]): Promise<EmployeeFile>
+    remove(id: string): Promise<EmployeeFile | null>
+    reset(): Promise<{ success: boolean }>
+    exportJson(): Promise<EmployeeExportResult>
+    importJson(): Promise<EmployeeImportResult>
+    onChange(cb: (file: EmployeeFile | null) => void): () => void
+  }
+  company: {
+    get(): Promise<CompanyFile | null>
+    save(profile: CompanyProfile): Promise<CompanyFile>
+    reset(): Promise<{ success: boolean }>
+    onChange(cb: (file: CompanyFile | null) => void): () => void
   }
 }
 
@@ -344,6 +365,21 @@ const noopBridge: BridgeAPI = {
     accept: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     reject: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     transfer: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    onChange: () => () => {}
+  },
+  employees: {
+    get: () => Promise.resolve(null),
+    save: (employees) => Promise.resolve({ version: 1, employees }),
+    remove: () => Promise.resolve(null),
+    reset: () => Promise.resolve({ success: false }),
+    exportJson: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    importJson: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    onChange: () => () => {}
+  },
+  company: {
+    get: () => Promise.resolve(null),
+    save: (profile) => Promise.resolve({ version: 1, profile }),
+    reset: () => Promise.resolve({ success: false }),
     onChange: () => () => {}
   }
 }

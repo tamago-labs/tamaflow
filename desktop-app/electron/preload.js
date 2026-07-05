@@ -139,5 +139,28 @@ contextBridge.exposeInMainWorld('bridge', {
       ipcRenderer.on('wallet:onChange', handler)
       return () => ipcRenderer.removeListener('wallet:onChange', handler)
     }
+  },
+  employees: {
+    get: () => ipcRenderer.invoke('employees:get'),
+    save: (employees) => ipcRenderer.invoke('employees:save', employees),
+    remove: (id) => ipcRenderer.invoke('employees:remove', id),
+    reset: () => ipcRenderer.invoke('employees:reset'),
+    exportJson: () => ipcRenderer.invoke('employees:exportJson'),
+    importJson: () => ipcRenderer.invoke('employees:importJson'),
+    onChange: (cb) => {
+      const handler = (_evt, file) => cb(file)
+      ipcRenderer.on('employees:onChange', handler)
+      return () => ipcRenderer.removeListener('employees:onChange', handler)
+    }
+  },
+  company: {
+    get: () => ipcRenderer.invoke('company:get'),
+    save: (profile) => ipcRenderer.invoke('company:save', profile),
+    reset: () => ipcRenderer.invoke('company:reset'),
+    onChange: (cb) => {
+      const handler = (_evt, file) => cb(file)
+      ipcRenderer.on('company:onChange', handler)
+      return () => ipcRenderer.removeListener('company:onChange', handler)
+    }
   }
 })

@@ -175,3 +175,89 @@ export interface ChatStatusEvent {
 export type AiSource =
   | { kind: 'local'; modelId: string; modelName: string }
   | { kind: 'peer'; writerKey: string; modelId: string; modelName: string; displayName?: string }
+
+// ──────────────────────────── Employee roster ────────────────────────────
+
+export type EmployeeType = 'employee' | 'contractor' | 'other'
+
+export type PayFrequency = 'monthly' | 'biweekly' | 'weekly' | 'hourly' | 'one-off'
+
+export type EmployeeStatus = 'active' | 'paused' | 'terminated'
+
+export type CurrencyCode = 'JPY' | 'THB' | 'USD' | 'EUR'
+
+export type CountryCode = 'JP' | 'TH' | 'US-DE' | 'VG'
+
+export type LegalEntityType =
+  | 'corporation'
+  | 'limited_company'
+  | 'partnership'
+  | 'non_profit'
+  | 'other'
+
+export type SettlementCurrency = 'CC'
+
+export interface Employee {
+  id: string
+  displayName: string
+  email?: string
+  type: EmployeeType
+  role?: string
+  country: string
+  payCurrency: CurrencyCode
+  salaryAmount?: string
+  payFrequency: PayFrequency
+  hourlyRate?: string
+  cantonPartyId?: string
+  status: EmployeeStatus
+  startDate?: string
+  endDate?: string
+  note?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface EmployeeFile {
+  version: 1
+  employees: Employee[]
+}
+
+export interface EmployeeExportResult {
+  success: boolean
+  canceled?: boolean
+  path?: string
+  error?: string
+}
+
+export interface EmployeeImportDiff {
+  toAdd: number
+  toUpdate: number
+  toSkip: number
+  willBeRemoved: number
+}
+
+export interface EmployeeImportResult {
+  success: boolean
+  canceled?: boolean
+  file?: EmployeeFile
+  error?: string
+  diff?: EmployeeImportDiff
+}
+
+// ──────────────────────────── Company profile ────────────────────────────
+
+export interface CompanyProfile {
+  companyName: string
+  country: CountryCode
+  baseCurrency: CurrencyCode
+  legalEntityType: LegalEntityType
+  settlementCurrency: SettlementCurrency
+  fiscalYearStart: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CompanyFile {
+  version: 1
+  profile: CompanyProfile
+}
