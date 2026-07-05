@@ -1,6 +1,10 @@
 @import 'tailwindcss';
 
 @theme {
+  /* ── Legacy palette (kept for the canvas / modals that still
+     reference tamarind-*). Will be removed in a follow-up pass
+     when those components are migrated to the Tamaflow brand
+     tokens. ─────────────────────────────────────────────────── */
   --color-tamarind-50: #fdf6ec;
   --color-tamarind-300: #7ee787;
   --color-tamarind-500: #21c437;
@@ -8,6 +12,36 @@
   --color-tamarind-900: #052408;
   --font-display: 'Inter', system-ui, sans-serif;
   --app-tagline: 'Tactical Whiteboard for Teams That Need to Win';
+
+  /* ── Tamaflow brand palette (mirrors frontend/app/globals.css) ── */
+  --color-brand-blue: #1A1AE8;
+  --color-brand-teal: #3EC4C0;
+  --color-brand-navy: #0a0a5c;
+  --color-brand-muted: #9999bb;
+  --color-brand-light: #f7f7fc;
+  --color-brand-border: #e0e0f0;
+  --color-brand-ok: #0a8463;
+  --color-brand-err: #cc0000;
+  --color-brand-errBg: #fff0f0;
+  --color-brand-errBorder: #ffcccc;
+  --color-brand-errDark: #660000;
+  --color-brand-tealAccent: #085041;
+
+  /* Type families — bound to the Google Fonts loaded in index.html
+     so the desktop splash and the frontend Employee Portal share
+     the same wordmark. */
+  --font-sans:
+    'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:
+    'Space Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Tracking tokens used by the splash wordmark / mono labels. */
+  --tracking-wider2: 0.14em;
+  --tracking-wider3: 0.18em;
+  --tracking-wide2: 0.1em;
+
+  /* Replaces --app-tagline. Read by the splash only. */
+  --app-tagline-tamaflow: 'AI Auto-Payroll on Canton';
 }
 
 html,
@@ -15,13 +49,13 @@ body,
 #root {
   height: 100%;
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
 }
 
 @layer components {
   /* Viewport reference dot grid. Lives on the surface <main> so it
      stays fixed while the world (pitch + tokens) pans and zooms on
-     top. Matches tamaflow / my-doctor-ai canvas pattern: single
+     top. Matches the Tamaflow / my-doctor-ai canvas pattern: single
      24px dot grid, light blue-gray background, no major lines. */
   .canvas-grid {
     background-color: #f8f8fc;

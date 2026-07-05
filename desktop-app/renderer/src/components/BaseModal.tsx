@@ -11,11 +11,11 @@ import { X } from 'lucide-react'
 // handler no-ops so the user can't dismiss mid-submit.
 //
 // `variant` picks the card theme:
-//   • 'splash' (default) — tamarind gradient + white text. Used for
+//   • 'splash' (default) — navy → blue gradient + white text. Used for
 //     modals that appear over the splash page (InviteJoinModal,
-//     NameEditModal) where the green/white look matches the page.
+//     NameEditModal) where the dark Tamaflow card matches the page.
 //   • 'canvas' — solid white card + gray text. Used for modals that
-//     appear over the canvas (TemplatesModal) where the green gradient
+//     appear over the canvas (TemplatesModal) where the dark gradient
 //     would clash with the white workspace.
 
 export type BaseModalVariant = 'splash' | 'canvas'
@@ -47,9 +47,9 @@ export interface BaseModalProps {
 
 const VARIANT_CLASSES: Record<BaseModalVariant, string> = {
   splash:
-    'border-white/10 bg-gradient-to-br from-tamarind-700 to-tamarind-900 [&_h2]:text-white [&_p]:text-white/70 [&_button[aria-label="Close"]]:text-white/70 [&_button[aria-label="Close"]]:hover:bg-white/10 [&_button[aria-label="Close"]]:focus:ring-white/30',
+    'border-white/10 bg-gradient-to-br from-brand-navy to-brand-blue [&_h2]:text-white [&_p]:text-white/70 [&_button[aria-label="Close"]]:text-white/70 [&_button[aria-label="Close"]]:hover:bg-white/10 [&_button[aria-label="Close"]]:focus:ring-brand-teal/60',
   canvas:
-    'border-gray-200 bg-white [&_h2]:text-gray-800 [&_p]:text-gray-600 [&_button[aria-label="Close"]]:text-gray-500 [&_button[aria-label="Close"]]:hover:bg-gray-100 [&_button[aria-label="Close"]]:focus:ring-tamarind-300'
+    'border-gray-200 bg-white [&_h2]:text-gray-800 [&_p]:text-gray-600 [&_button[aria-label="Close"]]:text-gray-500 [&_button[aria-label="Close"]]:hover:bg-gray-100 [&_button[aria-label="Close"]]:focus:ring-brand-teal/60'
 }
 
 export function BaseModal({

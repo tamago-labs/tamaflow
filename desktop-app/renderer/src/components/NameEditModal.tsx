@@ -56,14 +56,14 @@ export function NameEditModal({
       title='Change display name'
       hint='Your display name for the session.'
       busy={busy}
-      icon={<User className='h-5 w-5 text-tamarind-300' aria-hidden='true' />}
+      icon={<User className='h-5 w-5 text-brand-teal' aria-hidden='true' />}
       footer={
         <>
           <button
             type='button'
             onClick={onClose}
             disabled={busy}
-            className='inline-flex h-9 items-center rounded-md border border-white/20 bg-white/5 px-4 text-sm font-medium text-white/80 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/30 disabled:cursor-not-allowed disabled:opacity-50'
+            className='inline-flex h-9 items-center rounded-md border border-white/20 bg-white/5 px-4 text-sm font-medium text-white/80 transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:cursor-not-allowed disabled:opacity-50'
           >
             Cancel
           </button>
@@ -71,7 +71,7 @@ export function NameEditModal({
             type='button'
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className='inline-flex h-9 items-center gap-1.5 rounded-md bg-white px-4 text-sm font-semibold text-tamarind-700 transition hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-white/40 disabled:cursor-not-allowed disabled:opacity-50'
+            className='inline-flex h-9 items-center gap-1.5 rounded-md bg-white px-4 text-sm font-semibold text-brand-navy transition hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:cursor-not-allowed disabled:opacity-50'
           >
             {busy && <Loader2 className='h-3.5 w-3.5 animate-spin' aria-hidden='true' />}
             {busy ? 'Saving…' : 'Save'}
