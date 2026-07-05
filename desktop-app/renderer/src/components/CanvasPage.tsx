@@ -50,9 +50,9 @@ import { CanvasItems } from '../canvas/CanvasItems'
 import { CanvasOverlay, type DraftConnector } from '../canvas/CanvasOverlay'
 import { findNearestPort } from '../canvas/findPort'
 import { Marquee } from '../canvas/Marquee'
+import { CanvasFooter } from './CanvasFooter'
 import { CanvasToolbar, type SelectedTool } from './CanvasToolbar'
 import { PropertiesDrawer } from './PropertiesDrawer'
-import { RightDrawer } from './RightDrawer'
 import { TemplatesModal } from './TemplatesModal'
 import { BoardBackupError, buildBackupFilename, parseBackup, serializeBoard } from '../data/boardIO'
 import {
@@ -1360,7 +1360,7 @@ export function CanvasPage() {
           onTransientUpdate={handleTransientUpdate}
           onBringToFront={handleBringToFront}
           onSendToBack={handleSendToBack}
-          emptyPanel={<RightDrawer />}
+          emptyPanel={null}
         />
       </div>
       <TemplatesModal
