@@ -32,6 +32,7 @@ export default function EmployeeFormDrawer({ open, onClose, initial }: EmployeeF
     >
       <EmployeeForm
         initial={initial}
+        submitLabel={isEdit ? 'Save Changes' : 'Add Employee'}
         onSubmit={handleSubmit}
         onCancel={onClose}
       />
