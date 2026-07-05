@@ -113,7 +113,7 @@ export function SplashPage({
         transition={{ delay: 0.25, duration: 0.5 }}
         className='mt-3 font-mono text-[11px] uppercase tracking-wider3 text-brand-teal/90'
       >
-        Employer Client
+        Employer Client v1.0
       </motion.p>
 
       {/* "Signed in as <name>" — clickable to open the name-edit modal.
@@ -151,7 +151,7 @@ export function SplashPage({
               : joining
                 ? `Joining with invite\u2026`
                 : role === null
-                  ? 'Preparing TamaFlow workspace\u2026'
+                  ? 'Preparing workspace\u2026'
                   : 'Starting TamaFlow\u2026'}
           </span>
         </motion.div>

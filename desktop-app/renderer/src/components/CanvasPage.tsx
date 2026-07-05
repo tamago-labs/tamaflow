@@ -1,13 +1,16 @@
 // The canvas page — wires the toolbar, viewport, items tree, footer, and
-// properties drawer together. Holds the canvas reducer state (P2P-ready
-// shape) and the ephemeral selection state (UI-only, not synced).
+// properties drawer together. Holds the canvas reducer state and the
+// ephemeral selection state (UI-only, not synced).
 //
-// Phase 1 keeps everything in-process. Phase 3 will replace the
-// reducer's per-action dispatches with a single `snapshot` action
-// pushed by the worker; the reducer shape and CanvasState type stay
-// identical so the swap is local to this file.
+// Tamaflow note: the original Tamarind design hydrated this reducer
+// from a P2P worker (`useRoom.snapshot` + `useRoom.sendAction`). The
+// Tamaflow data plane dropped the board/canvas collections, so this
+// component now runs as a local-only canvas: every `dispatchAction`
+// is just a `dispatch` into the local reducer. The plumbing
+// (`withHistory`, `selectedIds`, etc.) is unchanged, so re-wiring
+// P2P later is a small swap.
 //
-// Iteration: editing table-stakes + connectors. Adds:
+// Iteration: editing table-stance + connectors. Adds:
 //   • selectedIds (Set) + ref mirror for window-level handlers
 //   • withHistory wrapper for Cmd/Ctrl+Z/Y
 //   • Keyboard nudge (arrows), clipboard (Cmd/Ctrl+C/X/V/D)
@@ -19,7 +22,6 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { motion } from 'framer-motion'
 import { useCanvasViewport } from '../hooks/useCanvasViewport'
-import { useRoom } from '../hooks/useRoom'
 import { canvasReducer } from '../canvas/canvasReducer'
 import type { Action, CanvasState } from '../canvas/canvasReducer'
 import { withHistory, type HistoryState } from '../canvas/history'
@@ -36,7 +38,6 @@ import {
   computeBoundingBox,
   getPortWorld,
   isConnector,
-  type ActiveBoard,
   type Board,
   type BoardScopedItem,
   type ConnectorEnd,
@@ -49,7 +50,6 @@ import { CanvasItems } from '../canvas/CanvasItems'
 import { CanvasOverlay, type DraftConnector } from '../canvas/CanvasOverlay'
 import { findNearestPort } from '../canvas/findPort'
 import { Marquee } from '../canvas/Marquee'
-import { CanvasFooter } from './CanvasFooter'
 import { CanvasToolbar, type SelectedTool } from './CanvasToolbar'
 import { PropertiesDrawer } from './PropertiesDrawer'
 import { RightDrawer } from './RightDrawer'
@@ -113,8 +113,6 @@ export function CanvasPage() {
     canZoomOut
   } = useCanvasViewport()
 
-  const room = useRoom()
-
   const [historyState, dispatch] = useReducer(
     withHistory(canvasReducer),
     undefined,
@@ -122,59 +120,16 @@ export function CanvasPage() {
   )
   const state = historyState.present
 
-  // P2P integration: hydrate the reducer from the worker's snapshot,
-  // and mirror every local dispatch through the worker. The reducer
-  // shape (`snapshot` action replaces `present`) was already
-  // designed for this in Phase 1; Phase 2 wires it through.
-  const lastSnapshotRef = useRef<unknown>(null)
-  useEffect(() => {
-    if (!room.snapshot) return
-    // Skip when the snapshot is byte-identical to the last one we
-    // dispatched — prevents an extra history-past push when the
-    // worker echoes our own writes.
-    if (lastSnapshotRef.current === room.snapshot) return
-    lastSnapshotRef.current = room.snapshot
-    // Active-board selection is per-renderer UI state — the worker
-    // intentionally doesn't track it (it would force every peer onto
-    // the same board). Preserve the renderer's local `state.activeBoardId`
-    // when it's still a valid id in the snapshot's boards list, even if
-    // a transient snapshot arrives. Only fall back to the worker's
-    // suggestion when our current active board no longer exists (deleted)
-    // or we don't yet have one (first snapshot after boot).
-    const workerActive = room.snapshot.activeBoardId
-    const localActive = state.activeBoardId
-    const boardsHaveLocal =
-      localActive !== null && room.snapshot.boards.some((b) => b.id === localActive)
-    const effectiveActive = boardsHaveLocal ? localActive : workerActive
-    const activeBoard: ActiveBoard | null = effectiveActive
-      ? { key: 'current', boardId: effectiveActive }
-      : null
-    // Worker-decoded items already match BoardScopedItem for the
-    // local reducer's purposes (ids are hex strings, connector
-    // endpoints are parsed back into plain objects). The double-
-    // cast through `unknown` is needed because the worker's `type`
-    // is a free `string` while the reducer's `ShapeType` is a
-    // narrow union; we trust the worker to only emit shapes the
-    // renderer ever created.
-    dispatch({
-      type: 'snapshot',
-      boards: room.snapshot.boards,
-      items: room.snapshot.items as unknown as BoardScopedItem[],
-      activeBoard
-    })
-  }, [room.snapshot, state.activeBoardId, dispatch])
-
-  // Stable ref to `sendAction` so `dispatchAction` stays referentially
-  // stable across renders (otherwise every room.snapshot would force
-  // re-binding of every keyboard / drag handler).
-  const sendActionRef = useRef(room.sendAction)
-  sendActionRef.current = room.sendAction
+  // P2P integration was dropped with the Tamaflow rebrand (the
+  // board/canvas collections are gone, so the worker no longer
+  // carries a `snapshot`). `dispatchAction` is now a thin alias for
+  // the local reducer's `dispatch` — every action mutates only
+  // this renderer's state. The `withHistory` wrapper still gives
+  // us undo/redo; the toolbar/footer/right-drawer all keep
+  // working. Re-wiring P2P is a small future swap.
   const dispatchAction = useCallback(
     (action: Action) => {
       dispatch(action)
-      // Local-only actions never reach the wire; the hook filter covers
-      // most of them but stay defensive here too.
-      sendActionRef.current(action)
     },
     [dispatch]
   )
@@ -1408,7 +1363,6 @@ export function CanvasPage() {
           emptyPanel={<RightDrawer />}
         />
       </div>
-      <CanvasFooter />
       <TemplatesModal
         open={templatesOpen}
         onClose={() => setTemplatesOpen(false)}
