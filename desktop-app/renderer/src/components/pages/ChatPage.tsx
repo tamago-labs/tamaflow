@@ -1,16 +1,3 @@
-// Chat page — side-by-side 2-pane split (Team Chat + AI Assistant)
-// with a minimal top bar holding the settings popover.
-//
-//   ┌─────────────────────────────────────────────────────────────┐
-//   │                                                 [⚙ Settings]│  ← h-8 top bar
-//   ├────────────────────────┬────────────────────────────────────┤
-//   │ Team Chat        [Clr] │ AI · Qwen 4B   [session ▾] [Clr]  │  ← h-8 inline headers
-//   │                        │                                    │
-//   │   messages...          │   messages...                      │
-//   │                        │                                    │
-//   │   [input]              │   [input]                          │
-//   └────────────────────────┴────────────────────────────────────┘
-
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -37,35 +24,8 @@ import { useWallet } from '../../context/WalletContext'
 import type { ChatMessage } from '../../lib/chat'
 
 // ============================================
-// Page chrome — full-bleed, no padding, no header
+// Helpers
 // ============================================
-//
-// The AppShell normally wraps the page in a p-8 main padding.
-// We opt out of that for the Chat page so the two chat panes
-// can use the entire viewport height.
-
-function ChatShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className='-mx-8 -mt-2 flex h-[calc(100vh-7rem)] flex-col'>
-      <div className='flex h-8 flex-shrink-0 items-center justify-end border-b border-brand-border bg-white px-4'>
-        <SettingsPopover />
-      </div>
-      <div className='flex min-h-0 flex-1'>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-// ============================================
-// Slack-style message list
-// ============================================
-//
-// One MessageGroup per "burst" of consecutive messages from the
-// same sender (consecutive = same `info.key`, no >5min gap in v1).
-// The first message in a group renders the avatar + name + timestamp
-// header; subsequent messages render just the text body indented
-// to align with the first message's body.
 
 interface MessageGroup {
   sender: string
@@ -126,8 +86,6 @@ function formatTimeLong(ts: number): string {
   })
 }
 
-// Color palette for sender avatars — pick a stable color from the
-// sender's writer key. A handful of brand-tinted backgrounds.
 const AVATAR_PALETTE = [
   { bg: 'bg-brand-blue', text: 'text-white' },
   { bg: 'bg-brand-teal', text: 'text-brand-navy' },
@@ -141,9 +99,27 @@ function avatarFor(key: string): { bg: string; text: string } {
   return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length]
 }
 
+const RELAY_ERROR_CODES = new Set([
+  'MODEL_MISMATCH',
+  'RELAY_ERROR',
+  'ROUTE_FAILED',
+  'NO_SOURCE'
+])
+
+function isRelayErrorCode(code: string | undefined | null): boolean {
+  if (!code) return false
+  return RELAY_ERROR_CODES.has(code)
+}
+
+function shortWriterKey(key: string) {
+  if (typeof key !== 'string' || key.length < 6) return 'host'
+  return `host-${key.slice(0, 6)}`
+}
+
 // ============================================
-// Team chat panel
+// Team chat panel (full-width, no border-r)
 // ============================================
+
 function TeamChatPanel() {
   const room = useRoom()
   const [draft, setDraft] = useState('')
@@ -172,7 +148,7 @@ function TeamChatPanel() {
   }
 
   return (
-    <section className='flex min-h-0 flex-1 flex-col border-r border-brand-border bg-white'>
+    <section className='flex min-h-0 flex-1 flex-col bg-white'>
       <header className='flex h-8 flex-shrink-0 items-center justify-between border-b border-brand-border bg-brand-light px-4'>
         <span className='font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted'>
           Team Chat
@@ -334,9 +310,10 @@ function MessageGroupRow({
 }
 
 // ============================================
-// AI chat panel
+// AI chat panel (overlay panel)
 // ============================================
-function AIChatPanel() {
+
+function AIChatPanel({ onClose }: { onClose: () => void }) {
   const ai = useAI()
   const chat = useAIChat()
   const [draft, setDraft] = useState('')
@@ -405,7 +382,7 @@ function AIChatPanel() {
   }
 
   return (
-    <section className='flex min-h-0 flex-1 flex-col bg-white'>
+    <section className='flex w-[400px] flex-shrink-0 flex-col border-l border-brand-border bg-white'>
       <header className='flex h-8 flex-shrink-0 items-center justify-between border-b border-brand-border bg-brand-light px-4'>
         <div className='flex items-center gap-2'>
           <span className='font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted'>
@@ -448,7 +425,6 @@ function AIChatPanel() {
             )}
           </div>
         </div>
-        {/* Clear button */}
         <div className='flex items-center gap-2'>
           <span className='font-mono text-[10px] text-brand-muted'>
             {chat.aiSource
@@ -486,6 +462,14 @@ function AIChatPanel() {
               </button>
             )
           ) : null}
+          <button
+            type='button'
+            onClick={onClose}
+            aria-label='Close AI panel'
+            className='inline-flex h-6 w-6 items-center justify-center rounded text-brand-muted transition-colors hover:bg-brand-light hover:text-brand-navy focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+          >
+            <X size={13} />
+          </button>
         </div>
       </header>
 
@@ -605,19 +589,6 @@ function AIChatPanel() {
 // ============================================
 // AI message rendering
 // ============================================
-//
-// AIMessageRow — a persisted message (user or assistant).
-// Assistant messages render via ReactMarkdown + remark-gfm so the
-// model can use headings / lists / code blocks / tables / links.
-// The optional `thinking` field is rendered as a collapsible
-// "Thinking" card, default collapsed once the message has been
-// persisted (the user can expand it on hover / click). Streaming
-// messages get the same treatment but with the thinking card
-// default-expanded (the user is actively watching).
-//
-// StreamingBubble — the in-progress response. Shows the current
-// streamingContent + streamingThinking + a Cancel button. Same
-// markdown + thinking UX as a persisted assistant message.
 
 function AIMessageRow({
   message,
@@ -694,8 +665,6 @@ function StreamingBubble({
   onCancel: () => void
 }) {
   const hasThinking = typeof thinking === 'string' && thinking.length > 0
-  // Default the thinking card OPEN while streaming so the user can
-  // watch the model's reasoning live.
   const [showThinking, setShowThinking] = useState(true)
   return (
     <li className='flex gap-3 rounded-md px-2 py-1'>
@@ -800,9 +769,6 @@ function ThinkingCard({
   )
 }
 
-// Minimal markdown component map. No syntax highlighting, no math —
-// keep the bundle lean. Code distinction, tables, links with
-// target=_blank, headings.
 const markdownComponents = {
   a({
     href,
@@ -890,28 +856,10 @@ const markdownComponents = {
   )
 }
 
-// Codes that mean "the peer source is no longer reachable — pick a
-// new one". A local SEND_FAILED doesn't qualify: the user might
-// just want to Retry, not switch sources.
-const RELAY_ERROR_CODES = new Set([
-  'MODEL_MISMATCH',
-  'RELAY_ERROR',
-  'ROUTE_FAILED',
-  'NO_SOURCE'
-])
-
-function isRelayErrorCode(code: string | undefined | null): boolean {
-  if (!code) return false
-  return RELAY_ERROR_CODES.has(code)
-}
-
 // ============================================
-// Session menu — dropdown anchored to the session-bar trigger
-// on the AI chat panel. Lists existing sessions, lets the user
-// switch, create a new one, or delete a non-main one. The
-// per-row delete uses a 4s two-step confirm so a stray click
-// doesn't wipe a session.
+// Session menu
 // ============================================
+
 function SessionMenu({
   current,
   sessions,
@@ -932,7 +880,6 @@ function SessionMenu({
   )
   const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Outside-click closes the menu.
   useEffect(() => {
     function onDoc(e: MouseEvent) {
       const t = e.target as HTMLElement | null
@@ -942,7 +889,6 @@ function SessionMenu({
     return () => document.removeEventListener('mousedown', onDoc)
   }, [onClose])
 
-  // Auto-clear the confirm after 4s.
   useEffect(() => {
     return () => {
       if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
@@ -1028,7 +974,7 @@ function SessionMenu({
 }
 
 // ============================================
-// Shared chrome — no longer used (inlined into panels)
+// Empty states
 // ============================================
 
 function EmptyPane({
@@ -1055,11 +1001,6 @@ function EmptyPane({
   )
 }
 
-// Three distinct empty states for the AI chat panel:
-//   1. No source at all → primary "Pick a source" CTA
-//   2. Source is local but no model is loaded → guide the user
-//      through loading a model (via Settings > AI Model).
-//   3. Source is set and a model is loaded → generic prompt.
 function AIEmptyState({
   hasSource,
   sourceIsLocal,
@@ -1089,8 +1030,9 @@ function AIEmptyState({
 }
 
 // ============================================
-// Settings popover (Workspace content) — gear icon top-right
+// Settings popover
 // ============================================
+
 function SettingsPopover() {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -1197,7 +1139,6 @@ function WorkspacePanel({ compact = false }: { compact?: boolean }) {
   const hostHasModel = !!(hostState?.modelId && hostState?.modelName)
   const hostVisible = hostState !== null
 
-  const sectionClass = compact ? 'p-4' : 'p-4'
   const headerClass =
     'mb-1.5 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-muted'
 
@@ -1437,20 +1378,43 @@ function SourceRow({
   )
 }
 
-function shortWriterKey(key: string) {
-  if (typeof key !== 'string' || key.length < 6) return 'host'
-  return `host-${key.slice(0, 6)}`
-}
-
 // ============================================
-// Chat page entry — side-by-side layout
+// Chat page entry — overlay layout
 // ============================================
 export function ChatPage() {
+  const [showAi, setShowAi] = useState(false)
+
   return (
-    <ChatShell>
-      <TeamChatPanel />
-      <AIChatPanel />
-    </ChatShell>
+    <div className='-mx-8 -mt-2 flex h-[calc(100vh-7rem)] flex-col'>
+      {/* Top bar */}
+      <div className='flex h-10 flex-shrink-0 items-center justify-between border-b border-brand-border bg-white px-4'>
+        <span className='font-sans text-sm font-semibold text-brand-navy'>
+          Team Chat
+        </span>
+        <div className='flex items-center gap-1'>
+          <button
+            type='button'
+            onClick={() => setShowAi((v) => !v)}
+            aria-label='Toggle AI panel'
+            className={`inline-flex h-8 items-center gap-1.5 rounded-md px-3 font-mono text-[11px] font-bold uppercase tracking-wider2 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-teal/60 ${
+              showAi
+                ? 'bg-brand-blue text-white'
+                : 'text-brand-muted hover:bg-brand-light hover:text-brand-navy'
+            }`}
+          >
+            <Sparkles size={13} />
+            AI
+          </button>
+          <SettingsPopover />
+        </div>
+      </div>
+
+      {/* Content area */}
+      <div className='flex min-h-0 flex-1'>
+        <TeamChatPanel />
+        {showAi && <AIChatPanel onClose={() => setShowAi(false)} />}
+      </div>
+    </div>
   )
 }
 
