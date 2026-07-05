@@ -210,8 +210,6 @@ function avatarFor(key: string): { bg: string; text: string } {
 // ============================================
 function TeamChatPanel() {
   const room = useRoom()
-  const { status, openSetup } = useWallet()
-  const writable = !!status?.exists
   const [draft, setDraft] = useState('')
   const [confirmingClear, setConfirmingClear] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
@@ -241,7 +239,7 @@ function TeamChatPanel() {
   return (
     <ChatPane
       headerRight={
-        messages.length > 0 && writable ? (
+        messages.length > 0 ? (
           confirmingClear ? (
             <div className='flex items-center gap-1.5'>
               <span className='text-xs text-brand-err'>Clear all?</span>
@@ -273,50 +271,35 @@ function TeamChatPanel() {
         ) : null
       }
       footer={
-        !writable ? (
-          <div className='flex items-center gap-2 rounded-md border border-brand-border bg-brand-light px-3 py-2 text-xs text-brand-muted'>
-            <Wallet size={12} />
-            Set up a wallet to send messages.{' '}
-            <button
-              type='button'
-              onClick={openSetup}
-              className='font-semibold text-brand-blue hover:underline'
-            >
-              Setup
-            </button>
-          </div>
-        ) : (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              handleSend()
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleSend()
+          }}
+          className='flex items-end gap-2'
+        >
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSend()
+              }
             }}
-            className='flex items-end gap-2'
+            placeholder='Message the team…'
+            rows={1}
+            className='flex-1 resize-none rounded-md border border-brand-border bg-white px-3 py-2 font-sans text-sm text-brand-navy placeholder:text-brand-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+          />
+          <button
+            type='submit'
+            disabled={!draft.trim()}
+            className='inline-flex h-9 items-center gap-1.5 rounded-md border-0 bg-brand-blue px-4 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90 disabled:opacity-50'
           >
-            <textarea
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSend()
-                }
-              }}
-              placeholder={writable ? 'Message the team…' : ''}
-              rows={1}
-              disabled={!writable}
-              className='flex-1 resize-none rounded-md border border-brand-border bg-white px-3 py-2 font-sans text-sm text-brand-navy placeholder:text-brand-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:opacity-60'
-            />
-            <button
-              type='submit'
-              disabled={!writable || !draft.trim()}
-              className='inline-flex h-9 items-center gap-1.5 rounded-md border-0 bg-brand-blue px-4 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90 disabled:opacity-50'
-            >
-              <Send size={12} />
-              Send
-            </button>
-          </form>
-        )
+            <Send size={12} />
+            Send
+          </button>
+        </form>
       }
     >
       <div ref={listRef} className='flex-1 overflow-y-auto px-4 py-3'>
@@ -333,7 +316,7 @@ function TeamChatPanel() {
                 key={`${gi}-${g.senderKey}`}
                 group={g}
                 isFromMe={!!me && g.senderKey === me.key}
-                canRemove={writable}
+                canRemove={room.writable}
                 onRemove={(id) => room.removeChats([id])}
               />
             ))}
@@ -1055,7 +1038,7 @@ function SessionMenu({
   return (
     <div
       data-session-menu
-      className='absolute left-0 top-full z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-brand-border bg-white shadow-[0_18px_50px_-12px_rgba(10,10,92,0.25)]'
+      className='absolute left-0 top-full z-30 mt-1 max-h-64 w-80 overflow-y-auto rounded-md border border-brand-border bg-white shadow-[0_18px_50px_-12px_rgba(10,10,92,0.25)]'
     >
       {sessions.map((s) => {
         const isCurrent = s.slug === current
@@ -1088,17 +1071,13 @@ function SessionMenu({
                   e.stopPropagation()
                   handleDeleteClick(s.slug)
                 }}
-                aria-label={
-                  isConfirming ? 'Confirm delete session' : 'Delete session'
-                }
-                title={isConfirming ? 'Click again to confirm' : 'Delete session'}
-                className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded transition focus:outline-none focus:ring-2 focus:ring-brand-teal/60 ${
+                className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider2 transition focus:outline-none focus:ring-2 focus:ring-brand-teal/60 ${
                   isConfirming
                     ? 'bg-brand-err text-white hover:bg-brand-errDark'
                     : 'text-brand-muted hover:bg-brand-errBg hover:text-brand-err'
                 }`}
               >
-                <X size={11} />
+                {isConfirming ? 'Confirm' : 'Delete'}
               </button>
             )}
           </div>
