@@ -78,20 +78,13 @@ class TamaflowRoom extends ReadyResource {
 
     this.view.core.download({ start: 0, end: -1 })
 
-    // Pair-add without a dispatch: the previous Tamarind design used
-    // a `@tamarind/add-writer` route to broadcast the new writer's
-    // key. Tamaflow drops that — new peers join via BlindPairing
-    // only, and writer-set membership is part of the Autobase CRDT
-    // (calling `base.addWriter` locally syncs to every connected
-    // peer through the normal Autobase update). The new peer's own
-    // local core is added by the Autobase constructor.
     this.pairMember = this.pairing.addMember({
       discoveryKey: this.base.discoveryKey,
       onadd: async (request) => {
         const inv = await this.view.findOne('@tamaflow/invites', { id: request.inviteId })
         if (!inv) return
         request.open(inv.publicKey)
-        await this.base.addWriter(request.userData)
+        this.base.hintWakeup([{ key: request.userData, length: 0 }])
         request.confirm({
           key: this.base.key,
           encryptionKey: this.base.encryptionKey

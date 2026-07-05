@@ -288,7 +288,8 @@ ipcMain.handle('pear:startWorker', (evt, filename) => {
   return true
 })
 ipcMain.handle('pear:joinWithInvite', (_evt, invite) => {
-  return restartRoomWorker(invite)
+  restartRoomWorker(invite)
+  return { success: true }
 })
 ipcMain.handle('app:afterUpdate', () => {
   if (isLinux && process.env.APPIMAGE) {
