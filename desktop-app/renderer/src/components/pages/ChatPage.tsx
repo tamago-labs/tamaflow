@@ -20,9 +20,12 @@
 // Builder page: invite code + AI source picker + wallet state.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import {
   Check,
   ChevronDown,
+  ChevronRight,
   Copy,
   FileText,
   Loader2,
@@ -31,6 +34,7 @@ import {
   Send,
   Settings as SettingsIcon,
   Sparkles,
+  Square,
   Trash2,
   Users,
   Wallet,
@@ -420,8 +424,11 @@ function AIChatPanel() {
 
   const messages = chat.messages
   const isStreaming = chat.isStreaming
+  const streamingContent = chat.streamingContent
+  const streamingThinking = chat.streamingThinking
   const aiSource = chat.aiSource
   const modelName = chat.aiSource?.modelName ?? null
+  const error = chat.error
 
   // Current session metadata — drives the session-bar label + the
   // per-row badge in the session menu.
@@ -438,7 +445,7 @@ function AIChatPanel() {
   useEffect(() => {
     const el = listRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [messages.length, isStreaming])
+  }, [messages.length, isStreaming, streamingContent, streamingThinking])
 
   // Auto-dismiss the destructive Clear confirm after 4s.
   useEffect(() => {
@@ -528,14 +535,26 @@ function AIChatPanel() {
               disabled={!aiSource || isStreaming}
               className='flex-1 resize-none rounded-md border border-brand-border bg-white px-3 py-2 font-sans text-sm text-brand-navy placeholder:text-brand-muted focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-teal/60 disabled:opacity-60'
             />
-            <button
-              type='submit'
-              disabled={!aiSource || isStreaming || !draft.trim()}
-              className='inline-flex h-9 items-center gap-1.5 rounded-md border-0 bg-brand-blue px-4 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90 disabled:opacity-50'
-            >
-              {isStreaming ? <Loader2 size={12} className='animate-spin' /> : <Send size={12} />}
-              {isStreaming ? 'Sending…' : 'Ask'}
-            </button>
+            {isStreaming ? (
+              <button
+                type='button'
+                onClick={() => void chat.cancel()}
+                aria-label='Stop generation'
+                className='inline-flex h-9 items-center gap-1.5 rounded-md border-0 bg-brand-err px-4 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:bg-brand-errDark focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+              >
+                <Square size={12} />
+                Stop
+              </button>
+            ) : (
+              <button
+                type='submit'
+                disabled={!aiSource || !draft.trim()}
+                className='inline-flex h-9 items-center gap-1.5 rounded-md border-0 bg-brand-blue px-4 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90 disabled:opacity-50'
+              >
+                <Send size={12} />
+                Ask
+              </button>
+            )}
           </form>
         </div>
       }
@@ -613,14 +632,10 @@ function AIChatPanel() {
 
       <div ref={listRef} className='flex-1 overflow-y-auto px-4 py-3'>
         {messages.length === 0 ? (
-          <EmptyPane
-            icon={Sparkles}
-            title={aiSource ? `Ask ${modelName}` : 'No source selected'}
-            body={
-              aiSource
-                ? 'Streamed responses from this device or a peer land here. Responses are markdown-aware.'
-                : 'Pick an AI source in the gear-icon popover (top-right) to start chatting.'
-            }
+          <AIEmptyState
+            hasSource={!!chat.aiSource}
+            sourceIsLocal={chat.aiSource?.kind === 'local'}
+            hasModel={ai.isReady}
           />
         ) : (
           <ul className='flex flex-col gap-3'>
@@ -628,21 +643,43 @@ function AIChatPanel() {
               <AIMessageRow key={i} message={m} modelName={modelName ?? 'AI'} />
             ))}
             {isStreaming && (
-              <li className='flex items-center gap-2 px-2 text-brand-muted'>
-                <Loader2 size={12} className='animate-spin' />
-                <span className='font-mono text-[10px] uppercase tracking-wider2'>
-                  {modelName} is thinking…
-                </span>
-              </li>
+              <StreamingBubble
+                content={streamingContent}
+                thinking={streamingThinking}
+                modelName={modelName ?? 'AI'}
+                onCancel={() => void chat.cancel()}
+              />
             )}
           </ul>
         )}
         {chat.error && (
           <div className='mt-3 rounded-md border border-brand-errBorder bg-brand-errBg px-3 py-2 text-xs text-brand-errDark'>
-            <p className='m-0 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err'>
-              {chat.aiSource?.kind === 'peer' ? 'Relay error' : 'AI error'}
-            </p>
-            <p className='m-0 mt-1'>{chat.error.message}</p>
+            <div className='flex items-start gap-2'>
+              <span className='font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err'>
+                {chat.error.code}
+              </span>
+              <span className='flex-1'>{chat.error.message}</span>
+            </div>
+            <div className='mt-2 flex items-center gap-1.5'>
+              {isRelayErrorCode(chat.error.code) && (
+                <button
+                  type='button'
+                  onClick={() => void chat.cancel().then(() => chat.retry())}
+                  className='inline-flex items-center gap-1 rounded-md border border-brand-err px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err hover:bg-brand-errBg focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+                >
+                  Switch source
+                </button>
+              )}
+              {chat.error.retryable && (
+                <button
+                  type='button'
+                  onClick={() => void chat.retry()}
+                  className='inline-flex items-center gap-1 rounded-md border border-brand-err px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err hover:bg-brand-errBg focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+                >
+                  Retry
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -650,17 +687,37 @@ function AIChatPanel() {
   )
 }
 
+// ============================================
+// AI message rendering
+// ============================================
+//
+// AIMessageRow — a persisted message (user or assistant).
+// Assistant messages render via ReactMarkdown + remark-gfm so the
+// model can use headings / lists / code blocks / tables / links.
+// The optional `thinking` field is rendered as a collapsible
+// "Thinking" card, default collapsed once the message has been
+// persisted (the user can expand it on hover / click). Streaming
+// messages get the same treatment but with the thinking card
+// default-expanded (the user is actively watching).
+//
+// StreamingBubble — the in-progress response. Shows the current
+// streamingContent + streamingThinking + a Cancel button. Same
+// markdown + thinking UX as a persisted assistant message.
+
 function AIMessageRow({
   message,
   modelName
 }: {
-  message: { role: 'user' | 'assistant'; content: string }
+  message: { role: 'user' | 'assistant'; content: string; thinking?: string }
   modelName: string
 }) {
   const isUser = message.role === 'user'
   const av = isUser
     ? { bg: 'bg-brand-navy', text: 'text-white' }
     : { bg: 'bg-brand-blue', text: 'text-white' }
+  const hasThinking =
+    !isUser && typeof message.thinking === 'string' && message.thinking.length > 0
+  const [showThinking, setShowThinking] = useState(false)
   return (
     <li
       className={`flex gap-3 rounded-md px-2 py-1 ${
@@ -684,12 +741,253 @@ function AIMessageRow({
             {isUser ? 'You' : modelName}
           </span>
         </div>
-        <p className='m-0 mt-0.5 whitespace-pre-wrap break-words font-sans text-sm text-brand-navy'>
-          {message.content}
-        </p>
+        {hasThinking && (
+          <ThinkingCard
+            thinking={message.thinking!}
+            open={showThinking}
+            onToggle={() => setShowThinking((v) => !v)}
+          />
+        )}
+        {isUser ? (
+          <p className='m-0 mt-0.5 whitespace-pre-wrap break-words font-sans text-sm text-brand-navy'>
+            {message.content}
+          </p>
+        ) : (
+          <div className='prose prose-xs mt-0.5 max-w-none text-sm text-brand-navy prose-headings:text-brand-navy prose-p:text-brand-navy prose-a:text-brand-blue prose-strong:text-brand-navy prose-code:text-brand-navy prose-li:text-brand-navy'>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={markdownComponents}
+            >
+              {message.content.trimStart()}
+            </ReactMarkdown>
+          </div>
+        )}
       </div>
     </li>
   )
+}
+
+function StreamingBubble({
+  content,
+  thinking,
+  modelName,
+  onCancel
+}: {
+  content: string
+  thinking: string
+  modelName: string
+  onCancel: () => void
+}) {
+  const hasThinking = typeof thinking === 'string' && thinking.length > 0
+  // Default the thinking card OPEN while streaming so the user can
+  // watch the model's reasoning live.
+  const [showThinking, setShowThinking] = useState(true)
+  return (
+    <li className='flex gap-3 rounded-md px-2 py-1'>
+      <div className='flex w-9 flex-shrink-0 flex-col items-center pt-0.5'>
+        <div className='flex h-9 w-9 items-center justify-center rounded-full bg-brand-blue font-mono text-[11px] font-bold text-white'>
+          {initialsOf(modelName)}
+        </div>
+      </div>
+      <div className='min-w-0 flex-1'>
+        <div className='flex flex-wrap items-center gap-1.5'>
+          <span className='font-sans text-[13px] font-semibold text-brand-blue'>
+            {modelName}
+          </span>
+          <span className='inline-flex items-center gap-1 font-mono text-[10px] font-semibold uppercase tracking-wider2 text-brand-teal'>
+            <span
+              className='h-1.5 w-1.5 animate-pulse rounded-full bg-brand-teal'
+              aria-hidden='true'
+            />
+            streaming
+          </span>
+          {content && (
+            <button
+              type='button'
+              onClick={onCancel}
+              aria-label='Stop generation'
+              className='ml-auto inline-flex items-center gap-1 rounded-md border border-brand-err bg-white px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err hover:bg-brand-errBg'
+            >
+              <Square size={10} />
+              Stop
+            </button>
+          )}
+        </div>
+        {hasThinking && (
+          <ThinkingCard
+            thinking={thinking}
+            open={showThinking}
+            onToggle={() => setShowThinking((v) => !v)}
+            streaming
+          />
+        )}
+        {content ? (
+          <div className='prose prose-xs mt-0.5 max-w-none text-sm text-brand-navy prose-headings:text-brand-navy prose-p:text-brand-navy prose-a:text-brand-blue prose-strong:text-brand-navy prose-code:text-brand-navy prose-li:text-brand-navy'>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={markdownComponents}
+            >
+              {content.trimStart()}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          !thinking && (
+            <p className='m-0 mt-0.5 text-[10px] italic text-brand-muted'>
+              Thinking…
+            </p>
+          )
+        )}
+      </div>
+    </li>
+  )
+}
+
+function ThinkingCard({
+  thinking,
+  open,
+  onToggle,
+  streaming = false
+}: {
+  thinking: string
+  open: boolean
+  onToggle: () => void
+  streaming?: boolean
+}) {
+  return (
+    <div className='mt-0.5'>
+      <button
+        type='button'
+        onClick={onToggle}
+        className='inline-flex items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider2 text-amber-800 transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-300'
+      >
+        {open ? (
+          <ChevronDown size={10} />
+        ) : (
+          <ChevronRight size={10} />
+        )}
+        Thinking
+        {streaming && (
+          <span className='ml-1 inline-flex items-center gap-1 text-amber-600'>
+            <span
+              className='h-1 w-1 animate-pulse rounded-full bg-amber-500'
+              aria-hidden='true'
+            />
+            live
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className='mt-1 whitespace-pre-wrap break-words rounded-md border border-amber-100 bg-amber-50/50 px-2 py-1.5 font-mono text-[11px] text-amber-900'>
+          {thinking}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Minimal markdown component map. No syntax highlighting, no math —
+// keep the bundle lean. Code distinction, tables, links with
+// target=_blank, headings.
+const markdownComponents = {
+  a({
+    href,
+    children,
+    ...rest
+  }: {
+    href?: string
+    children?: React.ReactNode
+  } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
+    return (
+      <a
+        href={href}
+        target='_blank'
+        rel='noreferrer'
+        className='text-brand-blue underline hover:text-brand-navy'
+        {...rest}
+      >
+        {children}
+      </a>
+    )
+  },
+  code({
+    className,
+    children,
+    ...rest
+  }: {
+    className?: string
+    children?: React.ReactNode
+  } & React.HTMLAttributes<HTMLElement>) {
+    const isBlock =
+      typeof className === 'string' && className.startsWith('language-')
+    if (isBlock) {
+      return (
+        <pre className='my-1 overflow-x-auto rounded-md bg-brand-navy p-2 font-mono text-[11px] text-white'>
+          <code className={className} {...rest}>
+            {children}
+          </code>
+        </pre>
+      )
+    }
+    return (
+      <code
+        className='rounded bg-brand-light px-1 py-0.5 font-mono text-[11px] text-brand-navy'
+        {...rest}
+      >
+        {children}
+      </code>
+    )
+  },
+  pre({ children }: { children?: React.ReactNode }) {
+    return <>{children}</>
+  },
+  h1: ({ children }: { children?: React.ReactNode }) => (
+    <h1 className='mb-1 text-sm font-semibold text-brand-navy'>{children}</h1>
+  ),
+  h2: ({ children }: { children?: React.ReactNode }) => (
+    <h2 className='mb-1 text-sm font-semibold text-brand-navy'>{children}</h2>
+  ),
+  h3: ({ children }: { children?: React.ReactNode }) => (
+    <h3 className='mb-1 text-xs font-semibold text-brand-navy'>{children}</h3>
+  ),
+  ul: ({ children }: { children?: React.ReactNode }) => (
+    <ul className='my-1 list-disc pl-4'>{children}</ul>
+  ),
+  ol: ({ children }: { children?: React.ReactNode }) => (
+    <ol className='my-1 list-decimal pl-4'>{children}</ol>
+  ),
+  blockquote: ({ children }: { children?: React.ReactNode }) => (
+    <blockquote className='my-1 border-l-2 border-brand-border pl-2 text-brand-muted'>
+      {children}
+    </blockquote>
+  ),
+  table: ({ children }: { children?: React.ReactNode }) => (
+    <table className='my-1 w-full border-collapse text-[11px]'>{children}</table>
+  ),
+  th: ({ children }: { children?: React.ReactNode }) => (
+    <th className='border border-brand-border bg-brand-light px-1 py-0.5 text-left font-medium text-brand-navy'>
+      {children}
+    </th>
+  ),
+  td: ({ children }: { children?: React.ReactNode }) => (
+    <td className='border border-brand-border px-1 py-0.5 text-brand-navy'>
+      {children}
+    </td>
+  )
+}
+
+// Codes that mean "the peer source is no longer reachable — pick a
+// new one". A local SEND_FAILED doesn't qualify: the user might
+// just want to Retry, not switch sources.
+const RELAY_ERROR_CODES = new Set([
+  'MODEL_MISMATCH',
+  'RELAY_ERROR',
+  'ROUTE_FAILED',
+  'NO_SOURCE'
+])
+
+function isRelayErrorCode(code: string | undefined | null): boolean {
+  if (!code) return false
+  return RELAY_ERROR_CODES.has(code)
 }
 
 // ============================================
@@ -869,6 +1167,39 @@ function EmptyPane({
         {body}
       </p>
     </div>
+  )
+}
+
+// Three distinct empty states for the AI chat panel:
+//   1. No source at all → primary "Pick a source" CTA
+//   2. Source is local but no model is loaded → guide the user
+//      through loading a model (via Settings > AI Model).
+//   3. Source is set and a model is loaded → generic prompt.
+function AIEmptyState({
+  hasSource,
+  sourceIsLocal,
+  hasModel
+}: {
+  hasSource: boolean
+  sourceIsLocal: boolean
+  hasModel: boolean
+}) {
+  let title: string
+  let body: string
+  if (!hasSource) {
+    title = 'No source selected'
+    body =
+      'Pick an AI source in the gear-icon popover (top-right) to start chatting. You can use a local model or a peer\'s model.'
+  } else if (sourceIsLocal && !hasModel) {
+    title = 'No model loaded'
+    body =
+      'Your source is "This device" but no model is loaded. Open Settings → AI Model to load one.'
+  } else {
+    title = 'Start a conversation'
+    body = 'Your messages are streamed from the selected source. Responses are markdown-aware.'
+  }
+  return (
+    <EmptyPane icon={Sparkles} title={title} body={body} />
   )
 }
 
