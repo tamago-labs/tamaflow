@@ -65,6 +65,15 @@ function registerFlowIpcHandlers() {
     const cards = file.flow.cards || []
     const connections = file.flow.connections || []
 
+    // Load employees to look up cantonPartyId
+    let employees = []
+    try {
+      const empPath = require('path').join(require('electron').app.getPath('userData'), 'employees.json')
+      const empData = JSON.parse(require('fs').readFileSync(empPath, 'utf-8'))
+      employees = Array.isArray(empData?.employees) ? empData.employees : []
+    } catch { employees = [] }
+    const empById = new Map(employees.map(e => [e.id, e]))
+
     // Build lookup maps
     const incoming = new Map()
     for (const conn of connections) {
@@ -92,8 +101,8 @@ function registerFlowIpcHandlers() {
       const paymentCard = downstreamIds.length > 0 ? cardsById.get(downstreamIds[0]) : null
 
       const employeeId = card.payeeFields?.employeeId || ''
-      // Look up employee cantonPartyId from cards won't work here, leave empty for worker
-      const recipientPartyId = ''
+      const employee = empById.get(employeeId)
+      const recipientPartyId = employee?.cantonPartyId || ''
 
       routeStore.upsert({
         flowId: id,
