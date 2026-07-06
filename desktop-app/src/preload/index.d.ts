@@ -661,6 +661,13 @@ export interface BridgeAPI {
   onWorkerExit(specifier: string, listener: (code: number | null) => void): () => void
   onWorkerStdout(specifier: string, listener: (data: Uint8Array) => void): () => void
   onWorkerStderr(specifier: string, listener: (data: Uint8Array) => void): () => void
+  aiSourcePeers(): Promise<Array<{
+    writerKey: string
+    modelId: string | null
+    modelName: string | null
+    loadedAt: number | null
+    accepting: boolean
+  }>>
 }
 
 declare global {

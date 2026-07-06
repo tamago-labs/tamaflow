@@ -17,6 +17,7 @@ const noopBridge: BridgeAPI = {
   onWorkerExit: () => () => {},
   onWorkerStdout: () => () => {},
   onWorkerStderr: () => () => {},
+  aiSourcePeers: () => Promise.resolve([]),
 }
 
 export const bridge: BridgeAPI =

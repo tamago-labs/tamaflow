@@ -30,7 +30,6 @@ app.commandLine.appendSwitch('no-sandbox')
 
 // ─── CLI flags (mirrors v2's electron/main.js) ─────────────────────────
 
-const mainWorkerSpecifier = '/workers/main.js'
 const roomWorkerSpecifier = '/workers/tamaflow-room-entry.js'
 
 const pkg = require('../../package.json') as { name: string; productName?: string; version: string }
@@ -47,6 +46,24 @@ const cmd = command(
 )
 
 cmd.parse(process.argv.slice(2))
+
+// electron-vite uses `cac` for strict CLI parsing, so flags like
+// --invite and --storage crash it before the dev server starts.
+// scripts/dev.js intercepts those flags and writes them to a temp
+// file we read here.
+let electronCliArgs: string[] = []
+const argsFile = process.env.TAMAFLOW_DEV_ARGS_FILE
+if (argsFile) {
+  try {
+    const fs = require('fs') as typeof import('fs')
+    electronCliArgs = JSON.parse(fs.readFileSync(argsFile, 'utf-8'))
+  } catch {
+    electronCliArgs = []
+  }
+}
+if (electronCliArgs.length > 0) {
+  cmd.parse(electronCliArgs)
+}
 
 const pearStore = cmd.flags.storage ? resolve(cmd.flags.storage) : null
 const displayName = (cmd.flags as Record<string, unknown>).name as string | null || null
@@ -379,11 +396,15 @@ app.whenReady().then(() => {
 
   flowWorker.start()
 
-  // Start the updater worker immediately (same as v2).
+  // Phase 1: only start the room worker. The updater worker
+  // (`/workers/main.js`) requires a Pear `upgrade` link in
+  // package.json which v1 doesn't ship yet (we use
+  // electron-builder, not Pear's OTA system). Re-enable this
+  // once v1 has a real upgrade flow.
   try {
-    getWorker(mainWorkerSpecifier)
+    getWorker(roomWorkerSpecifier)
   } catch (err) {
-    console.warn('[App] failed to start updater worker:', err)
+    console.warn('[App] failed to start room worker:', err)
   }
 
   console.log('[App] Tamaflow ready')

@@ -199,6 +199,13 @@ const bridge = {
     ipcRenderer.on('pear:worker:stderr:' + specifier, wrap)
     return () => ipcRenderer.removeListener('pear:worker:stderr:' + specifier, wrap)
   },
+  aiSourcePeers: (): Promise<Array<{
+    writerKey: string
+    modelId: string | null
+    modelName: string | null
+    loadedAt: number | null
+    accepting: boolean
+  }>> => Promise.resolve([]),
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
