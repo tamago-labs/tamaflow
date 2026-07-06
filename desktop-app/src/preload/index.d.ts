@@ -668,6 +668,31 @@ export interface BridgeAPI {
     loadedAt: number | null
     accepting: boolean
   }>>
+  aiChat: {
+    send(args: { messages: unknown[] }): Promise<{ success: boolean; requestId?: string; error?: string }>
+    cancel(): Promise<{ success: boolean; error?: string }>
+    status(): Promise<{ isStreaming: boolean; requestId: string | null; startedAt: number | null }>
+    onToken(cb: (e: { requestId: string; text: string }) => void): () => void
+    onThinking(cb: (e: { requestId: string; text: string }) => void): () => void
+    onStats(cb: (e: { requestId: string; stats: unknown }) => void): () => void
+    onDone(cb: (e: { requestId: string; stopReason: string }) => void): () => void
+    onError(cb: (e: { requestId: string; error: { code: string; message: string; retryable: boolean } }) => void): () => void
+    onStatus(cb: (e: { isStreaming: boolean; requestId: string | null; startedAt: number | null }) => void): () => void
+  }
+  sessions: {
+    list(): Promise<Array<{ slug: string; createdAt: number; lastActive: number; messageCount: number; pinned: boolean }>>
+    create(): Promise<{ slug: string }>
+    delete(slug: string): Promise<{ success: boolean; error?: string }>
+    clear(slug: string): Promise<{ success: boolean; error?: string }>
+    load(slug: string): Promise<{ success: boolean; messages: unknown[]; error?: string }>
+    save(slug: string, messages: unknown[]): Promise<{ success: boolean; count?: number; error?: string }>
+  }
+  chat: {
+    route(args: { requestId: string; targetWriterKey: string; messages: unknown[]; modelId: string }): Promise<{ success: boolean; error?: string }>
+    routeCancel(requestId: string): Promise<{ success: boolean }>
+  }
+  onRelayEvent(cb: (e: { requestId: string; kind: string; text?: string | null; error?: unknown }) => void): () => void
+  onPeerAiStates(cb: (states: unknown[]) => void): () => void
 }
 
 declare global {

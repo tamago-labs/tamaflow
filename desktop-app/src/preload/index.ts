@@ -199,13 +199,85 @@ const bridge = {
     ipcRenderer.on('pear:worker:stderr:' + specifier, wrap)
     return () => ipcRenderer.removeListener('pear:worker:stderr:' + specifier, wrap)
   },
+  aiChat: {
+    send: (args: { messages: unknown[] }): Promise<{ success: boolean; requestId?: string; error?: string }> =>
+      ipcRenderer.invoke('chat:send', args),
+    cancel: (): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('chat:cancel'),
+    status: (): Promise<{ isStreaming: boolean; requestId: string | null; startedAt: number | null }> =>
+      ipcRenderer.invoke('chat:status'),
+    onToken: (cb: (e: { requestId: string; text: string }) => void) => {
+      const handler = (_evt: unknown, p: unknown) => cb(p as { requestId: string; text: string })
+      ipcRenderer.on('ai:chat:token', handler)
+      return () => ipcRenderer.removeListener('ai:chat:token', handler)
+    },
+    onThinking: (cb: (e: { requestId: string; text: string }) => void) => {
+      const handler = (_evt: unknown, p: unknown) => cb(p as { requestId: string; text: string })
+      ipcRenderer.on('ai:chat:thinking', handler)
+      return () => ipcRenderer.removeListener('ai:chat:thinking', handler)
+    },
+    onStats: (cb: (e: { requestId: string; stats: unknown }) => void) => {
+      const handler = (_evt: unknown, p: unknown) => cb(p as { requestId: string; stats: unknown })
+      ipcRenderer.on('ai:chat:stats', handler)
+      return () => ipcRenderer.removeListener('ai:chat:stats', handler)
+    },
+    onDone: (cb: (e: { requestId: string; stopReason: string }) => void) => {
+      const handler = (_evt: unknown, p: unknown) => cb(p as { requestId: string; stopReason: string })
+      ipcRenderer.on('ai:chat:done', handler)
+      return () => ipcRenderer.removeListener('ai:chat:done', handler)
+    },
+    onError: (cb: (e: { requestId: string; error: { code: string; message: string; retryable: boolean } }) => void) => {
+      const handler = (_evt: unknown, p: unknown) => cb(p as { requestId: string; error: { code: string; message: string; retryable: boolean } })
+      ipcRenderer.on('ai:chat:error', handler)
+      return () => ipcRenderer.removeListener('ai:chat:error', handler)
+    },
+    onStatus: (cb: (e: { isStreaming: boolean; requestId: string | null; startedAt: number | null }) => void) => {
+      const handler = (_evt: unknown, p: unknown) => cb(p as { isStreaming: boolean; requestId: string | null; startedAt: number | null })
+      ipcRenderer.on('ai:chat:status', handler)
+      return () => ipcRenderer.removeListener('ai:chat:status', handler)
+    },
+  },
+  sessions: {
+    list: (): Promise<Array<{ slug: string; createdAt: number; lastActive: number; messageCount: number; pinned: boolean }>> =>
+      ipcRenderer.invoke('sessions:list'),
+    create: (): Promise<{ slug: string }> =>
+      ipcRenderer.invoke('sessions:create'),
+    delete: (slug: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('sessions:delete', slug),
+    clear: (slug: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke('sessions:clear', slug),
+    load: (slug: string): Promise<{ success: boolean; messages: unknown[]; error?: string }> =>
+      ipcRenderer.invoke('sessions:load', slug),
+    save: (slug: string, messages: unknown[]): Promise<{ success: boolean; count?: number; error?: string }> =>
+      ipcRenderer.invoke('sessions:save', slug, messages),
+  },
+  // P2P relay — route a chat completion to a peer's model
+  chat: {
+    route: (args: { requestId: string; targetWriterKey: string; messages: unknown[]; modelId: string }) =>
+      ipcRenderer.invoke('chat:route', args),
+    routeCancel: (requestId: string) =>
+      ipcRenderer.invoke('chat:routeCancel', { requestId }),
+  },
+  // Relay events from a peer's completion
+  onRelayEvent: (cb: (e: { requestId: string; kind: string; text?: string | null; error?: unknown }) => void) => {
+    const handler = (_evt: unknown, e: unknown) => cb(e as { requestId: string; kind: string; text?: string | null; error?: unknown })
+    ipcRenderer.on('ai:chat:relay-event', handler)
+    return () => ipcRenderer.removeListener('ai:chat:relay-event', handler)
+  },
+  // Peer AI states (updated whenever a peer loads/unloads a model)
+  onPeerAiStates: (cb: (states: unknown[]) => void) => {
+    const handler = (_evt: unknown, states: unknown) => cb(states as unknown[])
+    ipcRenderer.on('ai:peerStates', handler)
+    return () => ipcRenderer.removeListener('ai:peerStates', handler)
+  },
+  // Override aiSourcePeers with real IPC call
   aiSourcePeers: (): Promise<Array<{
     writerKey: string
     modelId: string | null
     modelName: string | null
     loadedAt: number | null
     accepting: boolean
-  }>> => Promise.resolve([]),
+  }>> => ipcRenderer.invoke('aiSourcePeers:list'),
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

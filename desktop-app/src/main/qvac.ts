@@ -530,3 +530,30 @@ export function buildStatus(): {
     available: modelStore.getAll(),
   }
 }
+
+// ─── Streaming state (for AI chat relay + peer state broadcast) ──
+
+let streamingNowFlag = false
+
+export function setStreamingNow(value: boolean): void {
+  streamingNowFlag = !!value
+}
+
+export function isStreamingNow(): boolean {
+  return streamingNowFlag
+}
+
+export function getLocalAiStateSnapshot(): {
+  modelId: string | null
+  modelName: string | null
+  loadedAt: number | null
+  accepting: boolean
+} {
+  const accepting = currentModelId !== null && !streamingNowFlag
+  return {
+    modelId: currentEntry?.id ?? null,
+    modelName: currentEntry?.name ?? null,
+    loadedAt: currentLoadedAt,
+    accepting
+  }
+}

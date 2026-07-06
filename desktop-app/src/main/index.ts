@@ -13,6 +13,8 @@ import {
   buildStatus,
   resetCache,
   mapError,
+  getLocalAiStateSnapshot,
+  setStreamingNow,
 } from './qvac'
 import { modelStore, type ModelEntry, type ModelSourceKind } from './modelStore'
 import { registerWalletIpcHandlers } from './wallet'
@@ -20,6 +22,8 @@ import { registerCompanyIpcHandlers } from './company'
 import { registerEmployeeIpcHandlers } from './employee'
 import { registerFlowIpcHandlers } from './flows'
 import { flowWorker } from './flowWorker'
+import * as aiChat from './aiChat'
+import * as sessions from './sessions'
 
 // ─── Pear-runtime worker plumbing ──────────────────────────────────────
 const os = require('os') as typeof import('os')
@@ -132,6 +136,24 @@ function getWorker(specifier: string): ReturnType<typeof FramedStream> {
         if (frame && typeof frame === 'object') {
           if (frame.type === 'me' && typeof frame.key === 'string') {
             setLocalWriterKey(frame.key)
+          } else if (frame.type === 'relay-run') {
+            handleRelayRun(frame).catch((err) => {
+              console.error('[main] handleRelayRun failed:', err)
+            })
+            return
+          } else if (frame.type === 'relay-cancel') {
+            handleRelayCancel(frame)
+            return
+          } else if (frame.type === 'ai-states') {
+            setLastPeerAiStates(frame.states)
+          } else if (frame.type === 'relay-event') {
+            sendToAll('ai:chat:relay-event', {
+              requestId: frame.requestId,
+              kind: frame.kind,
+              text: frame.text ?? null,
+              error: frame.error ?? null
+            })
+            return
           }
         }
       } catch {
@@ -182,8 +204,291 @@ function restartRoomWorker(invite: string | null): ReturnType<typeof FramedStrea
 
 // ─── Local writer key (z32) ────────────────────────────────────────────
 
-function setLocalWriterKey(_z32key: string): void {
-  // Phase 4: will be stored and used for relay routing.
+let localWriterKey: string | null = null
+
+function setLocalWriterKey(z32key: string): void {
+  localWriterKey = z32key
+}
+
+function getLocalWriterKey(): string | null {
+  return localWriterKey
+}
+
+// ─── AI state broadcast ───────────────────────────────────────────────
+
+function pushAiStateToRoomWorker(): void {
+  const pipe = workers.get(roomWorkerSpecifier)?.pipe
+  if (!pipe) return
+  const snapshot = getLocalAiStateSnapshot()
+  try {
+    pipe.write(JSON.stringify({ type: 'ai-state-snapshot', snapshot }))
+  } catch (err) {
+    console.warn('[main] pushAiStateToRoomWorker write failed:', err)
+  }
+}
+
+// ─── Relay routing ────────────────────────────────────────────────────
+
+const b4a = require('b4a')
+const z32 = require('z32')
+
+function z32ToHex(z32Key: string): string | null {
+  if (typeof z32Key !== 'string' || z32Key.length === 0) return null
+  try {
+    return b4a.toString(z32.decode(z32Key), 'hex')
+  } catch {
+    return null
+  }
+}
+
+const RELAY_COALESCE_MS = 50
+const relayHandlers = new Map<string, {
+  requestId: string
+  fromKey: string
+  toKey: string
+  fromKeyHex: string
+  toKeyHex: string
+  pendingText: string | null
+  pendingKind: string | null
+  flushTimer: ReturnType<typeof setTimeout> | null
+  closed: boolean
+}>()
+
+function routeChatCompletion({
+  requestId,
+  targetWriterKey,
+  messages,
+  modelId
+}: {
+  requestId: string
+  targetWriterKey: string
+  messages: unknown[]
+  modelId: string
+}) {
+  if (!requestId || !targetWriterKey || !messages?.length || !modelId) {
+    return { success: false, error: 'Missing required fields' }
+  }
+  const pipe = workers.get(roomWorkerSpecifier)?.pipe
+  if (!pipe) return { success: false, error: 'Worker not running' }
+  const myKeyZ32 = getLocalWriterKey()
+  if (!myKeyZ32) return { success: false, error: 'Local writer key not ready' }
+  const myKey = z32ToHex(myKeyZ32)
+  const toKey = z32ToHex(targetWriterKey)
+  if (!myKey || !toKey) {
+    return { success: false, error: 'Writer key encoding failed' }
+  }
+  try {
+    pipe.write(JSON.stringify({
+      type: 'relay-request',
+      requestId,
+      fromKey: myKey,
+      toKey,
+      messages,
+      modelId,
+      createdAt: Date.now()
+    }))
+    return { success: true, requestId }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Write failed' }
+  }
+}
+
+function cancelRouteChat(requestId: string) {
+  if (!requestId) return { success: false, error: 'requestId required' }
+  const pipe = workers.get(roomWorkerSpecifier)?.pipe
+  if (!pipe) return { success: false }
+  const myKeyZ32 = getLocalWriterKey()
+  if (!myKeyZ32) return { success: false }
+  const myKey = z32ToHex(myKeyZ32)
+  if (!myKey) return { success: false, error: 'Writer key encoding failed' }
+  const handler = relayHandlers.get(requestId)
+  const toKey = handler?.toKey ? z32ToHex(handler.toKey) : null
+  try {
+    pipe.write(JSON.stringify({
+      type: 'relay-cancel',
+      requestId,
+      fromKey: myKey,
+      toKey
+    }))
+  } catch { /* best-effort */ }
+  return { success: true }
+}
+
+async function handleRelayRun({
+  requestId,
+  fromKey,
+  messages,
+  modelId
+}: {
+  requestId: string
+  fromKey: string
+  messages: unknown[]
+  modelId: string
+}) {
+  if (relayHandlers.has(requestId)) return // duplicate
+
+  const entry = {
+    requestId,
+    fromKey,
+    toKey: getLocalWriterKey()!,
+    fromKeyHex: '',
+    toKeyHex: '',
+    pendingText: null as string | null,
+    pendingKind: null as string | null,
+    flushTimer: null as ReturnType<typeof setTimeout> | null,
+    closed: false
+  }
+  relayHandlers.set(requestId, entry)
+
+  entry.fromKeyHex = z32ToHex(entry.fromKey)!
+  entry.toKeyHex = z32ToHex(entry.toKey)!
+  if (!entry.fromKeyHex || !entry.toKeyHex) {
+    sendRelayError(entry, 'BAD_KEY', 'Writer key encoding failed')
+    sendRelayDone(entry)
+    closeRelay(entry)
+    return
+  }
+
+  function flushBuffered() {
+    if (entry.closed) return
+    if (entry.pendingText == null && entry.pendingKind == null) return
+    const pipe = workers.get(roomWorkerSpecifier)?.pipe
+    if (!pipe) return
+    try {
+      pipe.write(JSON.stringify({
+        type: 'relay-response',
+        requestId: entry.requestId,
+        fromKey: entry.toKeyHex,
+        toKey: entry.fromKeyHex,
+        kind: entry.pendingKind,
+        ...(entry.pendingText != null ? { text: entry.pendingText } : {})
+      }))
+    } catch (err) {
+      console.warn('[main] relay-response write failed:', err)
+    }
+    entry.pendingText = null
+    entry.pendingKind = null
+    entry.flushTimer = null
+  }
+
+  function buffer(kind: string, text: string) {
+    if (entry.closed) return
+    if (entry.pendingKind && entry.pendingKind !== kind) flushBuffered()
+    entry.pendingKind = kind
+    entry.pendingText = (entry.pendingText ?? '') + (text ?? '')
+    if (entry.flushTimer) return
+    entry.flushTimer = setTimeout(flushBuffered, RELAY_COALESCE_MS)
+  }
+
+  function sendImmediate(kind: string, extra?: Record<string, unknown>) {
+    if (entry.closed) return
+    flushBuffered()
+    const pipe = workers.get(roomWorkerSpecifier)?.pipe
+    if (!pipe) return
+    try {
+      pipe.write(JSON.stringify({
+        type: 'relay-response',
+        requestId: entry.requestId,
+        fromKey: entry.toKeyHex,
+        toKey: entry.fromKeyHex,
+        kind,
+        ...(extra || {})
+      }))
+    } catch (err) {
+      console.warn('[main] relay-response write failed:', err)
+    }
+  }
+
+  function sendRelayError(_e: typeof entry, code: string, message: string) {
+    sendImmediate('error', { error: { code, message, retryable: false } })
+  }
+
+  function sendRelayDone(_e: typeof entry, extra?: Record<string, unknown>) {
+    sendImmediate('done', extra)
+  }
+
+  function closeRelay(e: typeof entry) {
+    if (e.closed) return
+    e.closed = true
+    if (e.flushTimer) { clearTimeout(e.flushTimer); e.flushTimer = null }
+    flushBuffered()
+    relayHandlers.delete(e.requestId)
+  }
+
+  try {
+    const { completion } = require('@qvac/sdk')
+    const entryIdLive = getActiveEntry()?.id ?? null
+    const modelIdLive = getActiveModelId()
+    if (!modelIdLive || !entryIdLive || entryIdLive !== modelId) {
+      sendImmediate('error', { error: { code: 'MODEL_MISMATCH', message: 'Model not loaded here', retryable: false } })
+      sendImmediate('done')
+      closeRelay(entry)
+      return
+    }
+    if (!getLocalAiStateSnapshot().accepting) {
+      sendImmediate('busy')
+      sendImmediate('done')
+      closeRelay(entry)
+      return
+    }
+    setStreamingNow(true)
+    const history = (messages as Array<{ role: string; content: string }>)
+      .filter((m) => m && (m.role === 'user' || m.role === 'assistant'))
+      .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+    const run = completion({ modelId: modelIdLive, history, stream: true, kvCache: true, captureThinking: true })
+    sendImmediate('started', { requestId })
+    for await (const event of run.events as AsyncIterable<{ type: string; text?: string; stopReason?: string; error?: { message: string } }>) {
+      if (entry.closed) break
+      if (event.type === 'contentDelta') {
+        buffer('token', event.text ?? '')
+      } else if (event.type === 'thinkingDelta') {
+        buffer('thinking', event.text ?? '')
+      } else if (event.type === 'completionDone') {
+        flushBuffered()
+        if (event.stopReason === 'error' && event.error) {
+          sendImmediate('error', { error: { code: 'COMPLETION_ERROR', message: event.error.message, retryable: true } })
+        }
+        sendImmediate('done', { stopReason: event.stopReason ?? 'eos' })
+        break
+      }
+    }
+    setStreamingNow(false)
+    pushAiStateToRoomWorker()
+  } catch (err) {
+    setStreamingNow(false)
+    const mapped = mapError(err)
+    sendImmediate('error', { error: mapped })
+    sendImmediate('done')
+  } finally {
+    closeRelay(entry)
+  }
+}
+
+function handleRelayCancel({ requestId }: { requestId: string }) {
+  const entry = relayHandlers.get(requestId)
+  if (!entry) return
+  entry.closed = true
+  if (entry.flushTimer) { clearTimeout(entry.flushTimer); entry.flushTimer = null }
+  try {
+    const sdk = require('@qvac/sdk')
+    sdk.cancel({}).catch(() => {})
+  } catch { /* ignore */ }
+  relayHandlers.delete(requestId)
+}
+
+// ─── Peer AI state cache ──────────────────────────────────────────────
+
+let lastPeerAiStates: Array<{
+  writerKey: string
+  modelId: string | null
+  modelName: string | null
+  loadedAt: number | null
+  accepting: boolean
+}> = []
+
+function setLastPeerAiStates(states: unknown): void {
+  lastPeerAiStates = Array.isArray(states) ? (states as typeof lastPeerAiStates) : []
+  sendToAll('ai:peerStates', lastPeerAiStates)
 }
 
 // ─── Worker lifecycle IPC ──────────────────────────────────────────────
@@ -320,6 +625,7 @@ function registerModelsIpcHandlers(): void {
       }
       modelStore.setLastSelected(entry.id)
       await ensureModel(entry)
+      pushAiStateToRoomWorker()
       return { success: true }
     } catch (err) {
       const mapped = mapError(err)
@@ -346,6 +652,7 @@ function registerModelsIpcHandlers(): void {
     if (!id) return { success: true }
     try {
       await unloadCurrent(id)
+      pushAiStateToRoomWorker()
       return { success: true }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to unload model'
@@ -370,6 +677,50 @@ function registerModelsIpcHandlers(): void {
 }
 
 // ============================================
+// AI Chat + Sessions IPC Handlers
+// ============================================
+
+function registerChatIpc(): void {
+  ipcMain.handle('chat:send', async (_, args) => {
+    return aiChat.sendMessage({ messages: args?.messages ?? [] })
+  })
+  ipcMain.handle('chat:cancel', () => aiChat.cancelMessage())
+  ipcMain.handle('chat:status', () => aiChat.getStatus())
+
+  // P2P relay — route a completion to a peer's model
+  ipcMain.handle('chat:route', (_, args) => {
+    return routeChatCompletion(args)
+  })
+  ipcMain.handle('chat:routeCancel', (_, args) => {
+    return cancelRouteChat(args?.requestId)
+  })
+
+  ipcMain.handle('sessions:list', () => sessions.listSessions())
+  ipcMain.handle('sessions:create', () => sessions.createSession())
+  ipcMain.handle('sessions:delete', (_, slug: string) => sessions.deleteSession(slug))
+  ipcMain.handle('sessions:clear', (_, slug: string) => sessions.clearMessages(slug))
+  ipcMain.handle('sessions:load', (_, slug: string) => {
+    try {
+      return { success: true, messages: sessions.loadMessages(slug) }
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Load failed',
+        messages: []
+      }
+    }
+  })
+  ipcMain.handle('sessions:save', (_, slug: string, messages: unknown[]) => {
+    return sessions.saveMessages(slug, messages)
+  })
+
+  // Peer AI states — served from the cache that the room worker populates
+  ipcMain.handle('aiSourcePeers:list', () => lastPeerAiStates)
+
+  console.log('AI chat / sessions / relay IPC handlers registered')
+}
+
+// ============================================
 // App Lifecycle
 // ============================================
 
@@ -389,10 +740,14 @@ app.whenReady().then(() => {
   registerEmployeeIpcHandlers()
   registerFlowIpcHandlers()
   registerWorkerIpc()
+  registerChatIpc()
 
   createWindow()
 
   setMainWindow(win)
+  aiChat.setMainWindow(win)
+
+  sessions.ensureMainSession()
 
   flowWorker.start()
 

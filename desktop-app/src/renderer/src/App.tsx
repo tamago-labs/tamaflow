@@ -16,6 +16,7 @@ import Settlements from './pages/Settlements'
 import Assets from './pages/Assets'
 import Settings from './pages/Settings'
 import CompanyProfile from './pages/CompanyProfile'
+import ChatPage from './pages/ChatPage'
 import SetupWalletModal from './components/SetupWalletModal'
 import AccountInfoModal from './components/AccountInfoModal'
 import FaucetModal from './components/FaucetModal'
@@ -426,6 +427,7 @@ function AppRouter({
             />
           }
         >
+          <Route path="/chat" element={<ChatPage />} />
           <Route path="/" element={<Dashboard />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/flows" element={<ActiveFlows />} />

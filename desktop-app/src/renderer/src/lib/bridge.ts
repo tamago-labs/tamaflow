@@ -18,6 +18,31 @@ const noopBridge: BridgeAPI = {
   onWorkerStdout: () => () => {},
   onWorkerStderr: () => () => {},
   aiSourcePeers: () => Promise.resolve([]),
+  aiChat: {
+    send: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    cancel: () => Promise.resolve({ success: false }),
+    status: () => Promise.resolve({ isStreaming: false, requestId: null, startedAt: null }),
+    onToken: () => () => {},
+    onThinking: () => () => {},
+    onStats: () => () => {},
+    onDone: () => () => {},
+    onError: () => () => {},
+    onStatus: () => () => {},
+  },
+  sessions: {
+    list: () => Promise.resolve([]),
+    create: () => Promise.resolve({ slug: 'main' }),
+    delete: () => Promise.resolve({ success: false }),
+    clear: () => Promise.resolve({ success: false }),
+    load: () => Promise.resolve({ success: true, messages: [] }),
+    save: () => Promise.resolve({ success: false }),
+  },
+  chat: {
+    route: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    routeCancel: () => Promise.resolve({ success: false }),
+  },
+  onRelayEvent: () => () => {},
+  onPeerAiStates: () => () => {},
 }
 
 export const bridge: BridgeAPI =

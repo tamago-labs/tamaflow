@@ -7,7 +7,8 @@ import {
   Receipt,
   ListTodo,
   Settings as SettingsIcon,
-  Building2
+  Building2,
+  MessageSquare
 } from 'lucide-react'
 import { WORDMARK } from '../theme'
 import Logomark from './Logomark'
@@ -41,6 +42,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  { path: '/chat', label: 'Team Chat', icon: MessageSquare },
   { path: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { path: '/employees', label: 'Employees', icon: Users },
   { path: '/flows/new', label: 'Flow Builder', icon: Plus },
