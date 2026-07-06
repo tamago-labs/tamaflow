@@ -8,6 +8,7 @@
 const { ipcMain, BrowserWindow } = require('electron')
 const { FlowStore } = require('./flowStore')
 const { RouteStore } = require('./routeStore')
+const { enumerateRoutes } = require('./shared/flowPaths')
 
 let flowStore = null
 let routeStore = null
@@ -56,68 +57,43 @@ function registerFlowIpcHandlers() {
       return { ok: false, error: 'Flow is already active' }
     }
     if (file.flow.status === 'completed') {
-      return {
-        ok: false,
-        error: 'Flow already completed — delete it and create a new one to re-run.',
-      }
+      return { ok: false, error: 'Flow already completed — delete it and create a new one to re-run.' }
     }
 
-    const cards = file.flow.cards || []
-    const connections = file.flow.connections || []
-
-    // Load employees to look up cantonPartyId
+    // Load employees
     let employees = []
     try {
       const empPath = require('path').join(require('electron').app.getPath('userData'), 'employees.json')
       const empData = JSON.parse(require('fs').readFileSync(empPath, 'utf-8'))
       employees = Array.isArray(empData?.employees) ? empData.employees : []
     } catch { employees = [] }
-    const empById = new Map(employees.map(e => [e.id, e]))
 
-    // Build lookup maps
-    const incoming = new Map()
-    for (const conn of connections) {
-      const arr = incoming.get(conn.to) || []
-      arr.push(conn.from)
-      incoming.set(conn.to, arr)
+    // Load company profile
+    let companyProfile = null
+    try {
+      const compPath = require('path').join(require('electron').app.getPath('userData'), 'company.json')
+      const compData = JSON.parse(require('fs').readFileSync(compPath, 'utf-8'))
+      companyProfile = compData?.profile || null
+    } catch { companyProfile = null }
+
+    // Use enumerateRoutes to compute proper routes with amounts
+    const result = enumerateRoutes({
+      flowId: id,
+      cards: file.flow.cards || [],
+      connections: file.flow.connections || [],
+      employees,
+      companyProfile
+    })
+
+    if (result.routes.length === 0) {
+      return { ok: false, error: 'No valid routes found. Make sure each Payee is connected to a Source and Payment card, and the employee has a valid salary.' }
     }
-    const outgoing = new Map()
-    for (const conn of connections) {
-      const arr = outgoing.get(conn.from) || []
-      arr.push(conn.to)
-      outgoing.set(conn.from, arr)
+
+    // Persist each computed route
+    for (const route of result.routes) {
+      routeStore.upsert(route)
     }
 
-    const cardsById = new Map(cards.map(c => [c.placementId, c]))
-
-    // Prime routes: create one pending route per payee card
-    const payeeCards = cards.filter((c) => c.category === 'payee')
-    for (const card of payeeCards) {
-      // Find connected source (incoming edge)
-      const upstreamIds = incoming.get(card.placementId) || []
-      const sourceCard = upstreamIds.length > 0 ? cardsById.get(upstreamIds[0]) : null
-      // Find connected payment (outgoing edge)
-      const downstreamIds = outgoing.get(card.placementId) || []
-      const paymentCard = downstreamIds.length > 0 ? cardsById.get(downstreamIds[0]) : null
-
-      const employeeId = card.payeeFields?.employeeId || ''
-      const employee = empById.get(employeeId)
-      const recipientPartyId = employee?.cantonPartyId || ''
-
-      routeStore.upsert({
-        flowId: id,
-        status: 'pending',
-        employeeId: employeeId,
-        payeePlacementId: card.placementId,
-        sourcePlacementId: sourceCard ? sourceCard.placementId : card.placementId,
-        paymentPlacementId: paymentCard ? paymentCard.placementId : card.placementId,
-        amountCC: '0',
-        payCurrency: 'USD',
-        grossPay: '0',
-        recipientPartyId: recipientPartyId,
-        memo: '',
-      })
-    }
     flowStore.setStatus(id, 'active')
     notifyChange(flowStore.listWithRoutes(routeStore))
     notifyProgress(id, routeStore.list(id))
