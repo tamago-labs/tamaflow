@@ -83,7 +83,7 @@ export function AppShell({ initialPage = 'employees' }: AppShellProps) {
               <main
                 className={
                   isFlowBuilder
-                    ? 'flex min-h-0 flex-1 overflow-hidden'
+                    ? 'flex min-h-0 flex-1 overflow-hidden w-full'
                     : 'flex-1 overflow-y-auto p-8'
                 }
               >
