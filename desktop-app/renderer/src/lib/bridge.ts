@@ -25,11 +25,15 @@ import type {
   EmployeeExportResult,
   EmployeeFile,
   EmployeeImportResult,
+  FlowDefinition,
+  FlowFile,
+  FlowSummary,
   ModelAddInput,
   ModelEntry,
   ModelErrorPayload,
   ModelLoadProgress,
   ModelStatus,
+  RouteSummary,
   SessionMeta
 } from '../ai/types'
 
@@ -185,6 +189,26 @@ export interface BridgeAPI {
     save(profile: CompanyProfile): Promise<CompanyFile>
     reset(): Promise<{ success: boolean }>
     onChange(cb: (file: CompanyFile | null) => void): () => void
+  }
+  flows: {
+    list(): Promise<FlowSummary[]>
+    get(id: string): Promise<FlowFile | null>
+    save(
+      flow: Omit<FlowDefinition, 'id' | 'createdAt' | 'updatedAt'> & {
+        id?: string
+        createdAt?: string
+        updatedAt?: string
+      }
+    ): Promise<FlowFile>
+    remove(id: string): Promise<void>
+    start(id: string): Promise<{ ok: true } | { ok: false; error: string }>
+    stop(id: string): Promise<{ ok: true } | { ok: false; error: string }>
+    routes: {
+      list(flowId: string): Promise<RouteSummary[]>
+      listAll(): Promise<RouteSummary[]>
+    }
+    onChange(cb: (list: FlowSummary[]) => void): () => void
+    onProgress(cb: (flowId: string, routes: RouteSummary[]) => void): () => void
   }
 }
 
@@ -381,6 +405,20 @@ const noopBridge: BridgeAPI = {
     save: (profile) => Promise.resolve({ version: 1, profile }),
     reset: () => Promise.resolve({ success: false }),
     onChange: () => () => {}
+  },
+  flows: {
+    list: () => Promise.resolve([]),
+    get: () => Promise.resolve(null),
+    save: (flow) => Promise.resolve({ version: 1, flow: { id: 'noop', ...flow, createdAt: '', updatedAt: '' } }),
+    remove: () => Promise.resolve(),
+    start: () => Promise.resolve({ ok: false, error: 'bridge not available' }),
+    stop: () => Promise.resolve({ ok: false, error: 'bridge not available' }),
+    routes: {
+      list: () => Promise.resolve([]),
+      listAll: () => Promise.resolve([])
+    },
+    onChange: () => () => {},
+    onProgress: () => () => {}
   }
 }
 

@@ -85,6 +85,7 @@ export default function CompanyForm({
         legalEntityType,
         settlementCurrency: 'CC',
         fiscalYearStart,
+        paymentTemplates: initial?.paymentTemplates ?? [],
         createdAt: initial?.createdAt ?? '',
         updatedAt: initial?.updatedAt ?? ''
       })

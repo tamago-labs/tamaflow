@@ -162,5 +162,28 @@ contextBridge.exposeInMainWorld('bridge', {
       ipcRenderer.on('company:onChange', handler)
       return () => ipcRenderer.removeListener('company:onChange', handler)
     }
+  },
+  flows: {
+    list: () => ipcRenderer.invoke('flows:list'),
+    get: (id) => ipcRenderer.invoke('flows:get', id),
+    save: (flow) => ipcRenderer.invoke('flows:save', flow),
+    remove: (id) => ipcRenderer.invoke('flows:remove', id),
+    start: (id) => ipcRenderer.invoke('flows:start', id),
+    stop: (id) => ipcRenderer.invoke('flows:stop', id),
+    routes: {
+      list: (flowId) => ipcRenderer.invoke('flows:routes:list', flowId),
+      listAll: () => ipcRenderer.invoke('flows:routes:listAll'),
+      get: (flowId, routeId) => ipcRenderer.invoke('flows:routes:get', flowId, routeId)
+    },
+    onChange: (cb) => {
+      const handler = (_evt, list) => cb(list)
+      ipcRenderer.on('flows:onChange', handler)
+      return () => ipcRenderer.removeListener('flows:onChange', handler)
+    },
+    onProgress: (cb) => {
+      const handler = (_evt, flowId, routes) => cb(flowId, routes)
+      ipcRenderer.on('flows:onProgress', handler)
+      return () => ipcRenderer.removeListener('flows:onProgress', handler)
+    }
   }
 })

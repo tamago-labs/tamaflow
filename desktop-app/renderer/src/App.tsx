@@ -15,6 +15,8 @@ import { useEffect, useState } from 'react'
 import { SplashPage } from './components/SplashPage'
 import { AppShell } from './components/AppShell'
 import { EmployeeProvider } from './context/EmployeeContext'
+import { CompanyProvider } from './context/CompanyContext'
+import { FlowProvider } from './context/FlowContext'
 import { useRoom, type RoomRole } from './hooks/useRoom'
 import { useWorkerStatus } from './hooks/useWorkerStatus'
 
@@ -40,25 +42,29 @@ export function App() {
 
   return (
     <EmployeeProvider>
-      <AnimatePresence mode='wait'>
-        {phase === 'splash' ? (
-          <SplashPage
-            role={room.role as RoomRole | null}
-            invite={room.invite}
-            writable={room.writable}
-            me={room.me}
-            error={room.error ?? (status === 'error' ? 'Updater worker exited unexpectedly.' : null)}
-            onOpenCanvas={() => {
-              setHostDismissed(true)
-              setPhase('app')
-            }}
-            onJoinInvite={room.joinInvite}
-            onRenameSelf={room.renameSelf}
-          />
-        ) : (
-          <AppShell initialPage='employees' />
-        )}
-      </AnimatePresence>
+      <CompanyProvider>
+        <FlowProvider>
+          <AnimatePresence mode='wait'>
+            {phase === 'splash' ? (
+              <SplashPage
+                role={room.role as RoomRole | null}
+                invite={room.invite}
+                writable={room.writable}
+                me={room.me}
+                error={room.error ?? (status === 'error' ? 'Updater worker exited unexpectedly.' : null)}
+                onOpenCanvas={() => {
+                  setHostDismissed(true)
+                  setPhase('app')
+                }}
+                onJoinInvite={room.joinInvite}
+                onRenameSelf={room.renameSelf}
+              />
+            ) : (
+              <AppShell initialPage='employees' />
+            )}
+          </AnimatePresence>
+        </FlowProvider>
+      </CompanyProvider>
     </EmployeeProvider>
   )
 }
