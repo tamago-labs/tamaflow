@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.tamarind.app</id>
+
+  <name>Tamarind</name>
+  <summary>Local-first P2P collaborative whiteboard</summary>
+
+  <metadata_license>MIT</metadata_license>
+  <project_license>Apache-2.0</project_license>
+
+  <developer id="dev.tamarind">
+    <name>Tamarind Developers</name>
+  </developer>
+
+  <content_rating type="oars-1.1" />
+
+  <url type="homepage">https://github.com/dev-tamarind/tamarind</url>
+  <url type="help">https://github.com/dev-tamarind/tamarind#tamarind-</url>
+  <url type="bugtracker">https://github.com/dev-tamarind/tamarind/issues</url>
+
+  <releases>
+    <release date="2026-06-30" version="1.0.0"/>
+  </releases>
+
+  <recommends>
+    <display_length compare="ge">600</display_length>
+  </recommends>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+
+  <description>
+    <p>Tamarind is a local-first, peer-to-peer collaborative whiteboard. Designed for teams working in network-congested environments like stadiums, concerts, and coffee shops.</p>
+  </description>
+
+  <launchable type="desktop-id">io.tamarind.app.desktop</launchable>
+</component>
