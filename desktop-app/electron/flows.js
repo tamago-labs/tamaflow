@@ -153,4 +153,4 @@ function registerFlowIpcHandlers() {
   console.log('[flows] IPC handlers registered')
 }
 
-module.exports = { registerFlowIpcHandlers, FlowStore }
+module.exports = { registerFlowIpcHandlers, FlowStore, getFlowStore: () => flowStore, getRouteStore: () => routeStore }

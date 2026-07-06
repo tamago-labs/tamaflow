@@ -22,7 +22,8 @@ const sessions = require('./sessions')
 const { registerWalletIpcHandlers } = require('./wallet')
 const { EmployeeStore } = require('./employeeStore')
 const { CompanyStore } = require('./companyStore')
-const { registerFlowIpcHandlers } = require('./flows')
+const { registerFlowIpcHandlers, getFlowStore, getRouteStore } = require('./flows')
+const { flowWorker } = require('./flowWorker')
 const path = require('path')
 const PearRuntime = require('pear-runtime')
 const FramedStream = require('framed-stream')
@@ -991,6 +992,10 @@ if (!lock) {
     registerEmployeeIpc()
     registerCompanyIpc()
     registerFlowIpcHandlers()
+    flowWorker.start(
+      { flowStore: getFlowStore(), routeStore: getRouteStore() },
+      require('./wallet')
+    )
 
     // Create the 'main' AI chat session directory + empty
     // messages.json so the first `sessions:list` from the renderer
