@@ -106,7 +106,7 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
                 }
               >
                 {currentPage === 'dashboard' ? (
-                  <DashboardPage roomRole={roomRole} invite={invite} me={me} />
+                  <DashboardPage roomRole={roomRole} invite={invite} me={me} onNavigate={setCurrentPage} />
                 ) : (
                   <Page />
                 )}

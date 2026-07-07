@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { MessageSquare, Bot } from 'lucide-react'
 import { useEmployees } from '../../context/EmployeeContext'
 import { useFlows } from '../../context/FlowContext'
-import { StatCards } from './StatCards'
-import { HeatmapCard } from './HeatmapCard'
-import { CountryChartCard } from './CountryChartCard'
-import { EmployeeListCard } from './EmployeeListCard'
-import { FlowListCard } from './FlowListCard'
+import { StatCards } from '../dashboard/StatCards'
+import { HeatmapCard } from '../dashboard/HeatmapCard'
+import { CountryChartCard } from '../dashboard/CountryChartCard'
+import { EmployeeListCard } from '../dashboard/EmployeeListCard'
+import { FlowListCard } from '../dashboard/FlowListCard'
 import Drawer from '../Drawer'
 import type { RoomRole } from '../../hooks/useRoom'
 
@@ -15,10 +14,10 @@ interface DashboardPageProps {
   roomRole: RoomRole | null
   invite: string | null
   me: { name: string } | null
+  onNavigate?: (page: string) => void
 }
 
-export function DashboardPage({ roomRole, invite, me }: DashboardPageProps) {
-  const navigate = useNavigate()
+export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPageProps) {
   const { employees } = useEmployees()
   const { flows } = useFlows()
   const [teamChatOpen, setTeamChatOpen] = useState(false)
@@ -62,8 +61,8 @@ export function DashboardPage({ roomRole, invite, me }: DashboardPageProps) {
 
       {/* Row 3: Employee list (70%) + Flow list (30%) */}
       <div className="grid grid-cols-[7fr_3fr] gap-4">
-        <EmployeeListCard employees={employees} onNavigate={() => navigate('/employees')} />
-        <FlowListCard flows={flows} onNavigate={() => navigate('/flow-builder')} />
+        <EmployeeListCard employees={employees} onNavigate={() => onNavigate?.('employees')} />
+        <FlowListCard flows={flows} onNavigate={() => onNavigate?.('flow-builder')} />
       </div>
 
       {/* Team Chat Drawer */}
