@@ -170,7 +170,7 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
           </div>
         </div>
 
-        {/* Center: Flow name */}
+        {/* Center: Flow name + Add Card */}
         <div className="flex items-center gap-3">
           <input
             type="text"
@@ -180,10 +180,30 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
             className="text-sm font-medium text-gray-900 bg-transparent border-none outline-none text-center min-w-[120px] max-w-[240px] disabled:opacity-60"
             placeholder="Flow name"
           />
+          {flowStatus === 'draft' && (
+            <button onClick={() => setAddCardOpen(!addCardOpen)} className="flex items-center gap-1 px-2 py-1 text-xs font-bold text-blue-600 border border-blue-200 rounded hover:bg-blue-50 transition"><Plus size={12} /> Add Card</button>
+          )}
         </div>
 
-        {/* Right: empty (actions are bottom-right) */}
-        <div />
+        {/* Right: Preview + Start/Stop/Delete */}
+        <div className="flex items-center gap-2">
+          {flowStatus === 'draft' && (
+            <>
+              <button onClick={() => setPreviewOpen(true)} className="flex items-center gap-1 px-2 py-1 text-xs font-bold text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition"><Eye size={12} /> Preview</button>
+              <button onClick={handleStart} disabled={startInFlight} className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-60 transition"><Play size={12} />{startInFlight ? 'Starting…' : 'Start'}</button>
+              <button onClick={handleDelete} disabled={deleting} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition" title="Delete flow"><Trash2 size={14} /></button>
+            </>
+          )}
+          {flowStatus === 'active' && (
+            <>
+              <button onClick={handleStop} disabled={stopping} className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-red-600 bg-white border border-red-200 rounded hover:bg-red-50 disabled:opacity-60 transition"><Square size={12} />{stopping ? 'Stopping…' : 'Stop'}</button>
+              <button onClick={handleDelete} disabled={deleting} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition" title="Delete flow"><Trash2 size={14} /></button>
+            </>
+          )}
+          {flowStatus === 'completed' && (
+            <button onClick={handleDelete} disabled={deleting} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition" title="Delete flow"><Trash2 size={14} /></button>
+          )}
+        </div>
       </div>
 
       {/* Canvas area */}
@@ -203,31 +223,14 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
           onAddCardClose={() => setAddCardOpen(false)}
         />
 
-        {/* Bottom-right action cluster */}
-        <div className="absolute bottom-4 right-4 z-200 flex items-center gap-2" style={{ zIndex: 200 }}>
-          {badgeLabel && (
-            <span className={`px-2 py-1 text-[10px] font-mono font-bold uppercase tracking-wider rounded ${saveStatus === 'saving' ? 'text-blue-600 bg-blue-50' : saveStatus === 'saved' ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'}`}>
+        {/* Bottom-right save badge */}
+        {badgeLabel && (
+          <div className="absolute bottom-4 right-4 z-200" style={{ zIndex: 200 }}>
+            <span className={`px-3 py-1.5 text-[10px] font-mono font-bold uppercase tracking-wider rounded shadow-sm ${saveStatus === 'saving' ? 'text-blue-600 bg-blue-50 border border-blue-200' : saveStatus === 'saved' ? 'text-green-600 bg-green-50 border border-green-200' : 'text-red-600 bg-red-50 border border-red-200'}`}>
               {badgeLabel}
             </span>
-          )}
-          {flowStatus === 'draft' && (
-            <>
-              <button onClick={() => setAddCardOpen(!addCardOpen)} className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-blue-600 bg-white border border-blue-200 rounded-md hover:bg-blue-50 transition shadow-sm"><Plus size={12} /> Add Card</button>
-              <button onClick={() => setPreviewOpen(true)} className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-gray-600 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition shadow-sm"><Eye size={12} /> Preview</button>
-              <button onClick={handleStart} disabled={startInFlight} className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-60 transition shadow-sm"><Play size={12} />{startInFlight ? 'Starting…' : 'Start'}</button>
-              <button onClick={handleDelete} disabled={deleting} className="p-1.5 text-red-500 bg-white border border-red-200 rounded-md hover:bg-red-50 transition shadow-sm" title="Delete flow"><Trash2 size={14} /></button>
-            </>
-          )}
-          {flowStatus === 'active' && (
-            <>
-              <button onClick={handleStop} disabled={stopping} className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-red-600 bg-white border border-red-200 rounded-md hover:bg-red-50 disabled:opacity-60 transition shadow-sm"><Square size={12} />{stopping ? 'Stopping…' : 'Stop'}</button>
-              <button onClick={handleDelete} disabled={deleting} className="p-1.5 text-red-500 bg-white border border-red-200 rounded-md hover:bg-red-50 transition shadow-sm" title="Delete flow"><Trash2 size={14} /></button>
-            </>
-          )}
-          {flowStatus === 'completed' && (
-            <button onClick={handleDelete} disabled={deleting} className="p-1.5 text-red-500 bg-white border border-red-200 rounded-md hover:bg-red-50 transition shadow-sm" title="Delete flow"><Trash2 size={14} /></button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Routes panel (above bottom edge) */}
