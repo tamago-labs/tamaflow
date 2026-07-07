@@ -21,6 +21,7 @@ import { ChatPage } from './pages/ChatPage'
 import { ShareablePage } from './pages/ShareablePage'
 import { EmployeesPage } from './pages/EmployeesPage'
 import { FlowBuilderPage } from './pages/FlowBuilderPage'
+import { PaymentSettingsPage } from './pages/PaymentSettingsPage'
 import { SettlementsPage } from './pages/SettlementsPage'
 import { AssetsPage } from './pages/AssetsPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -42,6 +43,7 @@ const PAGES: Record<PageId, () => JSX.Element> = {
   shareable: ShareablePage,
   employees: EmployeesPage,
   'flow-builder': FlowBuilderPage,
+  'payment-settings': PaymentSettingsPage,
   settlements: SettlementsPage,
   assets: AssetsPage,
   settings: SettingsPage
