@@ -71,12 +71,12 @@ export function AppShell({ initialPage = 'dashboard', roomRole, invite, me }: Ap
 
   return (
     <FlowViewProvider>
-      <AppShellInner currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      <AppShellInner currentPage={currentPage} setCurrentPage={setCurrentPage} roomRole={roomRole} invite={invite} me={me} />
     </FlowViewProvider>
   )
 }
 
-function AppShellInner({ currentPage, setCurrentPage }: { currentPage: PageId; setCurrentPage: (p: PageId) => void }) {
+function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { currentPage: PageId; setCurrentPage: (p: PageId) => void; roomRole: any; invite: string | null; me: { name: string } | null }) {
   const { view } = useFlowView()
   const Page = PAGES[currentPage]
   const isFlowBuilder = currentPage === 'flow-builder'
