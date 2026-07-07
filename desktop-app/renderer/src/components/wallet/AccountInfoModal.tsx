@@ -1,6 +1,5 @@
-// Account info modal — shows the wallet's party ID, fingerprint,
-// creation date, and storage path. Each value has a copy button.
-// No private key displayed (that's behind Export).
+// Account info modal — shows the wallet's party ID and QR code.
+// Each value has a copy button.
 
 import { useState } from 'react'
 import { useWallet } from '../../context/WalletContext'
@@ -22,56 +21,84 @@ export function AccountInfoModal() {
     }
   }
 
-  const fields: Array<{
-    label: string
-    value: string | undefined
-  }> = [
-    { label: 'Party ID', value: status?.partyId },
-    { label: 'Fingerprint', value: status?.fingerprint },
-    { label: 'Public Key', value: status?.publicKey },
-    { label: 'Created', value: status?.createdAt },
-    { label: 'Storage', value: status?.filePath }
-  ]
+  const partyId = status?.partyId
+
+  // Generate QR code URL for party ID
+  const qrUrl = partyId
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(partyId)}`
+    : null
 
   return (
     <WalletModal
       open={modal.accountInfoOpen}
       onClose={closeAccountInfo}
       title='Account Info'
-      subtitle='Canton DevNet wallet'
     >
-      <div className='space-y-3'>
-        {fields.map((f) => (
-          <div key={f.label} className='space-y-1'>
-            <p className='m-0 font-mono text-[10px] uppercase tracking-wider2 text-brand-muted'>
-              {f.label}
+      <div className='space-y-4'>
+        {/* QR Code */}
+        {qrUrl && (
+          <div className='flex justify-center'>
+            <img
+              src={qrUrl}
+              alt='Party ID QR Code'
+              className='w-32 h-32 rounded-lg border border-gray-200'
+            />
+          </div>
+        )}
+
+        {/* Party ID */}
+        <div className='space-y-1'>
+          <p className='m-0 font-mono text-[10px] uppercase tracking-wider2 text-gray-400'>
+            Party ID
+          </p>
+          <div className='flex items-center gap-2'>
+            <code className='flex-1 break-all rounded border border-gray-200 bg-gray-50 px-2 py-1.5 font-mono text-xs text-gray-900'>
+              {partyId ?? '—'}
+            </code>
+            {partyId && (
+              <button
+                type='button'
+                onClick={() => copy('Party ID', partyId)}
+                aria-label='Copy Party ID'
+                title='Copy Party ID'
+                className='flex-shrink-0 cursor-pointer rounded border border-gray-200 bg-white p-1.5 hover:bg-gray-50'
+              >
+                {copied === 'Party ID' ? (
+                  <Check size={12} className='text-green-600' />
+                ) : (
+                  <Copy size={12} className='text-gray-600' />
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Public Key */}
+        {status?.publicKey && (
+          <div className='space-y-1'>
+            <p className='m-0 font-mono text-[10px] uppercase tracking-wider2 text-gray-400'>
+              Public Key
             </p>
             <div className='flex items-center gap-2'>
-              <code className='flex-1 break-all rounded border border-brand-border bg-brand-light px-2 py-1.5 font-mono text-xs text-brand-navy'>
-                {f.value ?? '—'}
+              <code className='flex-1 break-all rounded border border-gray-200 bg-gray-50 px-2 py-1.5 font-mono text-xs text-gray-900'>
+                {status.publicKey}
               </code>
-              {f.value && (
-                <button
-                  type='button'
-                  onClick={() => copy(f.label, f.value)}
-                  aria-label={`Copy ${f.label}`}
-                  title={`Copy ${f.label}`}
-                  className='flex-shrink-0 cursor-pointer rounded border border-brand-border bg-white p-1.5 hover:bg-brand-light'
-                >
-                  {copied === f.label ? (
-                    <Check size={12} className='text-brand-tealAccent' />
-                  ) : (
-                    <Copy size={12} className='text-brand-navy' />
-                  )}
-                </button>
-              )}
+              <button
+                type='button'
+                onClick={() => copy('Public Key', status.publicKey)}
+                aria-label='Copy Public Key'
+                title='Copy Public Key'
+                className='flex-shrink-0 cursor-pointer rounded border border-gray-200 bg-white p-1.5 hover:bg-gray-50'
+              >
+                {copied === 'Public Key' ? (
+                  <Check size={12} className='text-green-600' />
+                ) : (
+                  <Copy size={12} className='text-gray-600' />
+                )}
+              </button>
             </div>
           </div>
-        ))}
-
-        <p className='m-0 pt-2 font-mono text-[10px] uppercase tracking-wider2 text-brand-muted'>
-          Network · DevNet
-        </p>
+        )}
       </div>
     </WalletModal>
   )

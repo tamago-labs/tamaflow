@@ -2,9 +2,9 @@ import {
   Boxes,
   CircleDollarSign,
   FileBox,
+  FileText,
   CalendarCheck,
   LayoutDashboard,
-  Receipt,
   Users,
   Wallet,
   Workflow
@@ -42,7 +42,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
-      { id: 'payslips', label: 'Payslips', icon: Receipt }
+      { id: 'payslips', label: 'Payslips', icon: FileText }
     ]
   },
   {
