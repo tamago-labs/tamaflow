@@ -7,7 +7,8 @@ import { HeatmapCard } from '../dashboard/HeatmapCard'
 import { CountryChartCard } from '../dashboard/CountryChartCard'
 import { EmployeeListCard } from '../dashboard/EmployeeListCard'
 import { FlowListCard } from '../dashboard/FlowListCard'
-import Drawer from '../Drawer'
+import { TeamChatDrawer } from '../dashboard/TeamChatDrawer'
+import { AIChatDrawer } from '../dashboard/AIChatDrawer'
 import type { RoomRole } from '../../hooks/useRoom'
 
 interface DashboardPageProps {
@@ -66,22 +67,10 @@ export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPag
       </div>
 
       {/* Team Chat Drawer */}
-      <Drawer open={teamChatOpen} onClose={() => setTeamChatOpen(false)} title="Team Chat" subtitle="Chat with your team via P2P sync" width="480px">
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <MessageSquare size={40} className="text-gray-300 mb-4" />
-          <p className="text-sm text-gray-500 m-0">Team chat coming soon.</p>
-          <p className="text-xs text-gray-400 m-0 mt-1">Messages will sync peer-to-peer via Hyperswarm.</p>
-        </div>
-      </Drawer>
+      <TeamChatDrawer open={teamChatOpen} onClose={() => setTeamChatOpen(false)} />
 
       {/* AI Chat Drawer */}
-      <Drawer open={aiChatOpen} onClose={() => setAiChatOpen(false)} title="AI Assistant" subtitle="Ask questions about your payroll data" width="520px">
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Bot size={40} className="text-gray-300 mb-4" />
-          <p className="text-sm text-gray-500 m-0">AI assistant coming soon.</p>
-          <p className="text-xs text-gray-400 m-0 mt-1">On-device AI will help analyze your payroll data.</p>
-        </div>
-      </Drawer>
+      <AIChatDrawer open={aiChatOpen} onClose={() => setAiChatOpen(false)} />
     </div>
   )
 }
