@@ -109,7 +109,9 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
 
   const createFlow = useCallback(async () => {
     try {
-      const file = await save({ name: 'Untitled flow', status: 'draft', cards: [], connections: [] })
+      const today = new Date()
+      const dateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`
+      const file = await save({ name: `Payroll ${dateStr}`, status: 'draft', cards: [], connections: [] })
       setCanvas({ cards: file.flow.cards, connections: file.flow.connections })
       setFlowName(file.flow.name || ''); setFlowStatus(file.flow.status ?? 'draft'); setFlowId(file.flow.id); setLoadStatus('present')
       onViewChange?.('canvas'); setFlowView('canvas')
