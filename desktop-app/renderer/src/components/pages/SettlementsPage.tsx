@@ -86,8 +86,7 @@ export default function SettlementsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Settlements</h1>
-        <p className="font-sans text-sm text-gray-500 mt-1">All payroll settlements on the Canton network.</p>
+        <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Settlements</h1>
       </div>
 
       {/* Filter chips */}

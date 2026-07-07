@@ -17,6 +17,7 @@ import { useState, type JSX } from 'react'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { CanvasFooter } from './CanvasFooter'
+import { DashboardPage } from './pages/DashboardPage'
 import { ChatPage } from './pages/ChatPage'
 import { ShareablePage } from './pages/ShareablePage'
 import { EmployeesPage } from './pages/EmployeesPage'
@@ -40,6 +41,7 @@ import type { PageId } from '../lib/nav'
 // Page → component map. `null` entries (none right now) would render
 // the placeholder. The FlowBuilderPage renders the real canvas.
 const PAGES: Record<PageId, () => JSX.Element> = {
+  dashboard: DashboardPage,
   chat: ChatPage,
   shareable: ShareablePage,
   employees: EmployeesPage,
@@ -51,13 +53,13 @@ const PAGES: Record<PageId, () => JSX.Element> = {
 }
 
 interface AppShellProps {
-  // The page to land on after the splash dismisses. Defaults to
-  // 'employees' per the locked-in decision (employees is the home
-  // surface, Flow Builder is one click away).
   initialPage?: PageId
+  roomRole?: any
+  invite?: string | null
+  me?: { name: string } | null
 }
 
-export function AppShell({ initialPage = 'employees' }: AppShellProps) {
+export function AppShell({ initialPage = 'dashboard', roomRole, invite, me }: AppShellProps) {
   const [currentPage, setCurrentPage] = useState<PageId>(initialPage)
 
   const Page = PAGES[currentPage]
@@ -103,7 +105,11 @@ function AppShellInner({ currentPage, setCurrentPage }: { currentPage: PageId; s
                     : 'flex-1 overflow-y-auto p-8'
                 }
               >
-                <Page />
+                {currentPage === 'dashboard' ? (
+                  <DashboardPage roomRole={roomRole} invite={invite} me={me} />
+                ) : (
+                  <Page />
+                )}
               </main>
               {/* Global status footer — AI model pill (left) + worker
                  status pill (right). Lives INSIDE the `ml-[200px]`

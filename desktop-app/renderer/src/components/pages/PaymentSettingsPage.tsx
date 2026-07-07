@@ -69,7 +69,6 @@ export default function PaymentSettingsPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Payment Settings</h1>
-          <p className="font-sans text-xs text-gray-400 m-0 mt-1">Templates become palette tiles on the flow canvas.</p>
         </div>
         <button type="button" onClick={() => { setEditTarget(null); setDrawerOpen(true) }} className="flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-[#1A1AE8] px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90">
           <Plus size={12} />New Template

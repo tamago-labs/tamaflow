@@ -60,7 +60,12 @@ export function App() {
                 onRenameSelf={room.renameSelf}
               />
             ) : (
-              <AppShell initialPage='employees' />
+              <AppShell
+                initialPage='dashboard'
+                roomRole={room.role}
+                invite={room.invite}
+                me={room.me}
+              />
             )}
           </AnimatePresence>
         </FlowProvider>

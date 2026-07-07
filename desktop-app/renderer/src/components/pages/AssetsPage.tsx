@@ -98,6 +98,9 @@ export function AssetsPage() {
 
   return (
     <div>
+      <div className="mb-6">
+        <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Assets</h1>
+      </div>
       {!walletPresent && (
         <div className='rounded-md border border-brand-border bg-white'>
           <div className='flex flex-col items-center gap-3 py-16 text-center'>
