@@ -23,9 +23,14 @@ export interface FlowBuilderProps {
   onRequestPreview: () => void
   saveBadge?: { label: string; tone: 'idle' | 'saving' | 'saved' | 'error' }
   locked?: boolean
+  zoom?: number
+  onZoomChange?: (z: number) => void
+  addCardOpen?: boolean
+  onAddCardToggle?: () => void
+  onAddCardClose?: () => void
 }
 
-export default function FlowBuilder({ canvas, onCanvasChange, flowName, onFlowNameChange, flowId, onRequestPreview, saveBadge, locked = false }: FlowBuilderProps) {
+export default function FlowBuilder({ canvas, onCanvasChange, flowName, onFlowNameChange, flowId, onRequestPreview, saveBadge, locked = false, zoom: zoomProp, onZoomChange, addCardOpen: addCardOpenProp, onAddCardToggle, onAddCardClose }: FlowBuilderProps) {
   const { employees } = useEmployees()
   const { status: walletStatus, loadStatus: walletLoadStatus } = useWallet()
   const { profile: companyProfile } = useCompany()
@@ -34,7 +39,11 @@ export default function FlowBuilder({ canvas, onCanvasChange, flowName, onFlowNa
   const hasEmployees = employees.length > 0
   const paymentTemplates: PaymentTemplate[] = (companyProfile as any)?.paymentTemplates ?? []
 
-  const [addOpen, setAddOpen] = useState(false)
+  // Use prop-controlled state when provided, otherwise use local state
+  const [localAddOpen, setLocalAddOpen] = useState(false)
+  const addOpen = addCardOpenProp !== undefined ? addCardOpenProp : localAddOpen
+  const setAddOpen = onAddCardToggle ? onAddCardToggle : setLocalAddOpen
+
   const [connectFrom, setConnectFrom] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -95,14 +104,16 @@ export default function FlowBuilder({ canvas, onCanvasChange, flowName, onFlowNa
   function handleToggleCollapse(id: string) { if (locked) return; onCanvasChange({ ...canvas, cards: canvas.cards.map((c) => c.placementId === id ? { ...c, collapsed: !c.collapsed } : c) }) }
   function handleDeleteConnection(id: string) { if (locked) return; onCanvasChange({ ...canvas, connections: canvas.connections.filter((c) => c.id !== id) }) }
 
+  const isControlled = zoomProp !== undefined || addCardOpenProp !== undefined
+
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', background: '#f7f7fc' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', background: '#f7f7fc' }}>
       <DndContext onDragEnd={handleDragEnd}>
-        <Canvas state={canvas} selectedId={selectedId} connectFrom={connectFrom} editingId={editingId} flowId={flowId} employees={employees} walletReady={walletReady} paymentTemplates={paymentTemplates} locked={locked} onSelectCard={handleSelectCard} onDeleteCard={handleDeleteCard} onToggleCollapse={handleToggleCollapse} onPortClick={handlePortClick} onDeleteConnection={handleDeleteConnection} onCancelConnect={handleCancelConnect} onRequestEdit={handleRequestEdit} onEditCard={handleEditCard} onEditCancel={handleEditCancel} />
+        <Canvas state={canvas} selectedId={selectedId} connectFrom={connectFrom} editingId={editingId} flowId={flowId} employees={employees} walletReady={walletReady} paymentTemplates={paymentTemplates} locked={locked} onSelectCard={handleSelectCard} onDeleteCard={handleDeleteCard} onToggleCollapse={handleToggleCollapse} onPortClick={handlePortClick} onDeleteConnection={handleDeleteConnection} onCancelConnect={handleCancelConnect} onRequestEdit={handleRequestEdit} onEditCard={handleEditCard} onEditCancel={handleEditCancel} zoom={zoomProp} onZoomChange={onZoomChange} />
       </DndContext>
-      {locked ? <LockedBanner flowName={flowName} /> : <CanvasToolbar flowName={flowName} addOpen={addOpen} onToggleAdd={() => setAddOpen((v) => !v)} onRequestPreview={onRequestPreview} onNameChange={onFlowNameChange} />}
-      {!locked && <AddCardPopover open={addOpen} hasWallet={walletReady} walletPartyId={walletPartyId} hasEmployees={hasEmployees} employees={employees} paymentTemplates={paymentTemplates} onPick={handleAddTemplate} onClose={() => setAddOpen(false)} />}
-      {!locked && saveBadge && <SaveBadge label={saveBadge.label} tone={saveBadge.tone} />}
+      {!isControlled && !locked && <CanvasToolbar flowName={flowName} addOpen={addOpen} onToggleAdd={() => setAddOpen(!addOpen)} onRequestPreview={onRequestPreview} onNameChange={onFlowNameChange} />}
+      {!locked && <AddCardPopover open={addOpen} hasWallet={walletReady} walletPartyId={walletPartyId} hasEmployees={hasEmployees} employees={employees} paymentTemplates={paymentTemplates} onPick={handleAddTemplate} onClose={onAddCardClose || (() => setAddOpen(false))} />}
+      {!isControlled && !locked && saveBadge && <SaveBadge label={saveBadge.label} tone={saveBadge.tone} />}
       {locked && <LockedOverlay />}
       <AnimatePresence>
         {warning && <motion.div key="warning-toast" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.18 }} style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', padding: '0 18px', height: 32, background: 'rgba(200,48,48,0.10)', border: '1px solid #c83030', borderRadius: 16, color: '#c83030', fontFamily: monoFont, fontSize: 11, fontWeight: 600, letterSpacing: '0.10em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 110, pointerEvents: 'none', whiteSpace: 'nowrap', maxWidth: '80%' }}>{warning}</motion.div>}

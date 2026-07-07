@@ -17,6 +17,8 @@ interface CanvasProps {
   walletReady: boolean
   paymentTemplates: PaymentTemplate[]
   locked?: boolean
+  zoom?: number
+  onZoomChange?: (z: number) => void
   onSelectCard: (id: string | null) => void
   onDeleteCard: (id: string) => void
   onToggleCollapse: (id: string) => void
@@ -32,12 +34,14 @@ const ZOOM_MIN = 0.25
 const ZOOM_MAX = 3
 const ZOOM_STEP = 0.1
 
-export default function Canvas({ state, selectedId, connectFrom, editingId, flowId, employees, walletReady, paymentTemplates, locked = false, onSelectCard, onDeleteCard, onToggleCollapse, onPortClick, onDeleteConnection, onCancelConnect, onRequestEdit, onEditCard, onEditCancel }: CanvasProps) {
+export default function Canvas({ state, selectedId, connectFrom, editingId, flowId, employees, walletReady, paymentTemplates, locked = false, zoom: zoomProp, onZoomChange, onSelectCard, onDeleteCard, onToggleCollapse, onPortClick, onDeleteConnection, onCancelConnect, onRequestEdit, onEditCard, onEditCancel }: CanvasProps) {
   const surfaceRef = useRef<HTMLDivElement>(null)
   const worldRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const [pan, setPan] = useState({ x: 0, y: 0 })
-  const [zoom, setZoom] = useState(1)
+  const [localZoom, setLocalZoom] = useState(1)
+  const zoom = zoomProp !== undefined ? zoomProp : localZoom
+  const setZoom = onZoomChange || setLocalZoom
   const [isPanning, setIsPanning] = useState(false)
   const panStart = useRef({ panX: 0, panY: 0, mouseX: 0, mouseY: 0, button: 0 })
 
@@ -107,7 +111,6 @@ export default function Canvas({ state, selectedId, connectFrom, editingId, flow
         ))}
       </div>
       {connectFrom && !locked && <div style={{ position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)', padding: '0 18px', height: 32, background: 'rgba(26,26,232,0.08)', border: '1px solid ' + BLUE, borderRadius: 16, color: BLUE, fontFamily: monoFont, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 95, pointerEvents: 'none', whiteSpace: 'nowrap' }}>Click a port to draw a line — Esc to cancel</div>}
-      <ZoomBadge zoom={zoom} onZoomIn={() => zoomBy(+ZOOM_STEP)} onZoomOut={() => zoomBy(-ZOOM_STEP)} onReset={resetView} />
     </div>
   )
 }
