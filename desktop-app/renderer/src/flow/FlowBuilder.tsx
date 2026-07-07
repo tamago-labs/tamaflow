@@ -104,7 +104,8 @@ export default function FlowBuilder({ canvas, onCanvasChange, flowName, onFlowNa
   function handleToggleCollapse(id: string) { if (locked) return; onCanvasChange({ ...canvas, cards: canvas.cards.map((c) => c.placementId === id ? { ...c, collapsed: !c.collapsed } : c) }) }
   function handleDeleteConnection(id: string) { if (locked) return; onCanvasChange({ ...canvas, connections: canvas.connections.filter((c) => c.id !== id) }) }
 
-  const isControlled = zoomProp !== undefined || addCardOpenProp !== undefined
+  // Check if parent is controlling these props
+  const isControlled = onZoomChange !== undefined || onAddCardToggle !== undefined
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', background: '#f7f7fc' }}>
