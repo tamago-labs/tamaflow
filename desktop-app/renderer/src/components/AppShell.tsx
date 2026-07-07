@@ -20,7 +20,7 @@ import { CanvasFooter } from './CanvasFooter'
 import { DashboardPage } from './pages/DashboardPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { ChatPage } from './pages/ChatPage'
-import { ShareablePage } from './pages/ShareablePage'
+import { PayslipsPage } from './pages/PayslipsPage'
 import { EmployeesPage } from './pages/EmployeesPage'
 import { FlowBuilderPage } from './pages/FlowBuilderPage'
 import PaymentSettingsPage from './pages/PaymentSettingsPage'
@@ -45,7 +45,7 @@ const PAGES: Record<PageId, () => JSX.Element> = {
   dashboard: DashboardPage,
   attendance: AttendancePage,
   chat: ChatPage,
-  shareable: ShareablePage,
+  payslips: PayslipsPage,
   employees: EmployeesPage,
   'flow-builder': FlowBuilderPage,
   'payment-settings': PaymentSettingsPage,

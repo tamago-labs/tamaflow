@@ -4,7 +4,7 @@ import {
   FileBox,
   CalendarCheck,
   LayoutDashboard,
-  Share2,
+  Receipt,
   Users,
   Wallet,
   Workflow
@@ -15,7 +15,7 @@ export type PageId =
   | 'dashboard'
   | 'attendance'
   | 'chat'
-  | 'shareable'
+  | 'payslips'
   | 'employees'
   | 'flow-builder'
   | 'payment-settings'
@@ -42,7 +42,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
-      { id: 'shareable', label: 'Shareable', icon: Share2 }
+      { id: 'payslips', label: 'Payslips', icon: Receipt }
     ]
   },
   {
