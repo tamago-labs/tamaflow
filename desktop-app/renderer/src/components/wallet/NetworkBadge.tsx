@@ -11,7 +11,6 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
-import { TokenAvatar } from '../TokenAvatar'
 
 interface Network {
   key: string
@@ -56,10 +55,13 @@ export function NetworkBadge() {
         aria-haspopup='menu'
         aria-expanded={open}
         aria-label={`Connected network: ${active.label}`}
-        className='flex cursor-pointer items-center gap-1.5 rounded-md border border-brand-blue bg-white px-2 py-1 text-xs font-semibold text-brand-blue hover:bg-brand-light'
+        className='flex cursor-pointer items-center gap-1.5 rounded-md border border-brand-blue bg-white px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-light'
       >
-        <TokenAvatar symbol='CC' />
-        <span>{active.label}</span>
+        <span
+          className='h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-teal'
+          aria-hidden
+        />
+        <span className='font-mono text-[10px] font-bold uppercase tracking-wider2 '>{active.label}</span>
         <ChevronDown
           size={11}
           className={`text-brand-muted transition-transform ${open ? 'rotate-180' : ''}`}
@@ -83,6 +85,11 @@ export function NetworkBadge() {
                   onClick={() => setOpen(false)}
                   className='flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent px-3 py-2 text-left hover:bg-brand-light'
                 >
+                  <img
+                    src="https://s2.coinmarketcap.com/static/img/coins/64x64/37263.png"
+                    alt="Canton"
+                    className='h-5 w-5 rounded-full border border-gray-200'
+                  />
                   <span className='min-w-0 flex-1'>
                     <span className='block font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-navy'>
                       {n.label}

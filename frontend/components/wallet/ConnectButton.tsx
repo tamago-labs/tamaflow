@@ -59,7 +59,7 @@ export default function ConnectButton() {
           aria-haspopup="menu"
           aria-expanded={menuOpen}
         >
-          <span className="font-sans text-[11px] font-medium tracking-normal text-brand-navy">
+          <span className="font-mono  text-[11px] font-medium tracking-normal text-brand-navy">
             {truncateParty(partyId)}
           </span>
           <span className="w-px h-3 bg-brand-border" aria-hidden="true" />
