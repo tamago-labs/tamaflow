@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
-const HOURS = ['9am', '10am', '11am', '12pm', '1pm', '2pm', '3pm', '4pm', '5pm']
+const HOURS = ['00-04', '04-08', '08-12', '12-16', '16-20', '20-24']
 
 function generateMockData(): Record<string, number> {
   const data: Record<string, number> = {}

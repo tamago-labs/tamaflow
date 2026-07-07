@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { MessageSquare, Bot } from 'lucide-react'
+import { MessageSquare, Bot, Copy, Check, AlertTriangle } from 'lucide-react'
 import { useEmployees } from '../../context/EmployeeContext'
 import { useFlows } from '../../context/FlowContext'
+import { useCompany } from '../../context/CompanyContext'
 import { StatCards } from '../dashboard/StatCards'
 import { HeatmapCard } from '../dashboard/HeatmapCard'
 import { CountryChartCard } from '../dashboard/CountryChartCard'
@@ -21,8 +22,10 @@ interface DashboardPageProps {
 export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPageProps) {
   const { employees } = useEmployees()
   const { flows } = useFlows()
+  const { profile } = useCompany()
   const [teamChatOpen, setTeamChatOpen] = useState(false)
   const [aiChatOpen, setAiChatOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const settledCount = useMemo(() => {
     let count = 0
@@ -36,19 +39,62 @@ export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPag
     return Object.entries(counts).sort((a, b) => b[1] - a[1])
   }, [employees])
 
+  function handleCopyInvite() {
+    if (!invite) return
+    navigator.clipboard?.writeText(invite).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4">
         <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Dashboard</h1>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setTeamChatOpen(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition">
-            <MessageSquare size={14} /> Team Chat
-          </button>
-          <button onClick={() => setAiChatOpen(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-[#1A1AE8] rounded-md hover:bg-[#1515c0] transition">
-            <Bot size={14} /> Ask AI
-          </button>
+      </div>
+
+      {/* Company info row */}
+      {profile ? (
+        <div className="mb-4 flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span className="font-medium text-gray-900">{profile.companyName}</span>
+            <span className="text-gray-300">·</span>
+            <span>{profile.country}</span>
+            <span className="text-gray-300">·</span>
+            <span>{profile.baseCurrency}</span>
+            <span className="text-gray-300">·</span>
+            <span className="capitalize">{profile.legalEntityType?.replace('_', ' ')}</span>
+          </div>
+          {invite && (
+            <div className="flex items-center gap-2">
+              <code className="text-xs text-gray-500 truncate max-w-[120px]" title={invite}>{invite}</code>
+              <button onClick={handleCopyInvite} className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition" title="Copy invite code">
+                {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
+              </button>
+            </div>
+          )}
         </div>
+      ) : (
+        <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <AlertTriangle size={16} className="text-amber-600 flex-shrink-0" />
+          <span className="text-sm text-amber-800">
+            Company profile not set.{' '}
+            <button onClick={() => onNavigate?.('settings')} className="font-medium underline hover:text-amber-900 bg-transparent border-0 p-0 cursor-pointer text-sm text-amber-800">
+              Set up in Settings
+            </button>
+          </span>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="mb-6 flex items-center gap-2">
+        <button onClick={() => setTeamChatOpen(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition">
+          <MessageSquare size={14} /> Team Chat
+        </button>
+        <button onClick={() => setAiChatOpen(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-[#1A1AE8] rounded-md hover:bg-[#1515c0] transition">
+          <Bot size={14} /> Ask AI
+        </button>
       </div>
 
       {/* Row 1: Stat cards */}
