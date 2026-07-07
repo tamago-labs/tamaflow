@@ -233,6 +233,12 @@ export function AIChatDrawer({ open, onClose }: AIChatDrawerProps) {
                       <span className="flex items-center gap-1 text-[10px] text-teal-600 font-bold"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-teal-500" />streaming</span>
                       <button onClick={() => void chat.cancel()} className="ml-auto px-2 py-0.5 text-[10px] font-bold text-red-600 border border-red-200 rounded hover:bg-red-50"><Square size={10} /> Stop</button>
                     </div>
+                    {streamingThinking && (
+                      <details open className="mt-1">
+                        <summary className="text-[10px] text-gray-400 cursor-pointer">Thinking</summary>
+                        <div className="mt-1 whitespace-pre-wrap break-words rounded-md bg-amber-50 border border-amber-100 px-2 py-1.5 font-mono text-[11px] text-amber-900">{streamingThinking}</div>
+                      </details>
+                    )}
                     {streamingContent && <div className="prose prose-xs mt-0.5 max-w-none text-sm text-gray-900"><ReactMarkdown remarkPlugins={[remarkGfm]}>{streamingContent}</ReactMarkdown></div>}
                   </div>
                 </li>

@@ -25,7 +25,7 @@ export function HeatmapCard() {
       <div className="mb-3">
         <span className="font-mono text-[10px] uppercase tracking-wider2 text-gray-400 font-semibold">Check-in Heatmap</span>
       </div>
-      <div className="w-full">
+      <div className="w-full max-w-[320px] mx-auto">
         <div className="grid gap-0.5" style={{ gridTemplateColumns: `40px repeat(${DAYS.length}, 1fr)` }}>
           <div />
           {DAYS.map(d => <div key={d} className="font-mono text-[9px] text-gray-400 text-center pb-1">{d}</div>)}
