@@ -47,6 +47,10 @@ function validateProfile(input) {
 
   const fiscalYearStart = typeof p.fiscalYearStart === 'string' ? p.fiscalYearStart : '01'
 
+  // Preserve paymentTemplates and directPaymentDefaultMemo
+  const paymentTemplates = Array.isArray(p.paymentTemplates) ? p.paymentTemplates : []
+  const directPaymentDefaultMemo = typeof p.directPaymentDefaultMemo === 'string' ? p.directPaymentDefaultMemo : ''
+
   const createdAt = typeof p.createdAt === 'string' ? p.createdAt : ''
   const updatedAt = typeof p.updatedAt === 'string' ? p.updatedAt : ''
 
@@ -57,6 +61,8 @@ function validateProfile(input) {
     legalEntityType,
     settlementCurrency,
     fiscalYearStart,
+    paymentTemplates,
+    directPaymentDefaultMemo,
     createdAt,
     updatedAt
   }
