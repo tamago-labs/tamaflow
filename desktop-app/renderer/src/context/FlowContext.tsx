@@ -83,6 +83,8 @@ interface FlowContextValue {
    * an unsubscribe function.
    */
   onChange: (cb: (list: FlowSummary[]) => void) => () => void
+  exportJson: (id: string) => Promise<{ success: boolean; canceled?: boolean; path?: string; error?: string }>
+  importJson: () => Promise<{ success: boolean; canceled?: boolean; file?: FlowFile; error?: string }>
   clearError: () => void
 }
 
@@ -225,6 +227,30 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  const exportJson = useCallback(async (id: string) => {
+    try {
+      return await bridge.flows.exportJson(id)
+    } catch (e) {
+      const msg = errMsg(e)
+      setError(msg)
+      return { success: false, error: msg }
+    }
+  }, [])
+
+  const importJson = useCallback(async () => {
+    try {
+      const result = await bridge.flows.importJson()
+      if (result.file) {
+        await refresh()
+      }
+      return result
+    } catch (e) {
+      const msg = errMsg(e)
+      setError(msg)
+      return { success: false, error: msg }
+    }
+  }, [refresh])
+
   const clearError = useCallback(() => setError(null), [])
 
   // Subscribe to push channel + initial fetch on mount.
@@ -257,6 +283,8 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       listAllRoutes,
       onProgress,
       onChange,
+      exportJson,
+      importJson,
       clearError,
     }),
     [
@@ -273,6 +301,8 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       listAllRoutes,
       onProgress,
       onChange,
+      exportJson,
+      importJson,
       clearError,
     ],
   )

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Plus, Search, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Download } from 'lucide-react'
 import FlowBuilder from '../flow/FlowBuilder'
 import RoutesPreviewModal from '../flow/RoutesPreviewModal'
 import RouteStatusPill from './RouteStatusPill'
@@ -258,7 +258,7 @@ function RoutesPanel({ status, routes, employees, canvas }: { status: FlowStatus
 // ─── Flows List ─────────────────────────────────────────────────
 
 function FlowsList({ flows, loadStatus, onSelect, onCreate }: { flows: FlowSummary[]; loadStatus: string; onSelect: (id: string) => void; onCreate: () => void }) {
-  const { remove } = useFlows()
+  const { remove, exportJson, importJson } = useFlows()
   const [deleteTarget, setDeleteTarget] = useState<FlowSummary | null>(null)
   const [search, setSearch] = useState('')
 
@@ -285,7 +285,10 @@ function FlowsList({ flows, loadStatus, onSelect, onCreate }: { flows: FlowSumma
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Flow Builder</h1>
-        <button type="button" onClick={onCreate} className="flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-[#1A1AE8] px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90"><Plus size={12} />New Flow</button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={async () => { const r = await importJson(); if (r.error) alert(r.error) }} className="flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-gray-900 hover:bg-gray-50"><Download size={11} />Import</button>
+          <button type="button" onClick={onCreate} className="flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-[#1A1AE8] px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90"><Plus size={12} />New Flow</button>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
@@ -349,6 +352,7 @@ function FlowsList({ flows, loadStatus, onSelect, onCreate }: { flows: FlowSumma
                 </div>
                 <div className="flex items-center justify-end gap-1">
                   <button type="button" onClick={() => onSelect(flow.id)} className="flex items-center gap-1 px-2 py-1 bg-white text-[#0a0a5c] border border-gray-200 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-gray-50 cursor-pointer"><Pencil size={10} />edit</button>
+                  <button type="button" onClick={async () => { const r = await exportJson(flow.id); if (r.error) alert(r.error) }} className="flex items-center gap-1 px-2 py-1 bg-white text-gray-600 border border-gray-200 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-gray-50 cursor-pointer"><Download size={10} />export</button>
                   <button type="button" onClick={() => setDeleteTarget(flow)} className="flex items-center gap-1 px-2 py-1 bg-white text-red-500 border border-red-200 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-red-50 cursor-pointer"><Trash2 size={10} />delete</button>
                 </div>
               </li>

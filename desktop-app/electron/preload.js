@@ -175,6 +175,8 @@ contextBridge.exposeInMainWorld('bridge', {
       listAll: () => ipcRenderer.invoke('flows:routes:listAll'),
       get: (flowId, routeId) => ipcRenderer.invoke('flows:routes:get', flowId, routeId)
     },
+    exportJson: (id) => ipcRenderer.invoke('flows:exportJson', id),
+    importJson: () => ipcRenderer.invoke('flows:importJson'),
     onChange: (cb) => {
       const handler = (_evt, list) => cb(list)
       ipcRenderer.on('flows:onChange', handler)

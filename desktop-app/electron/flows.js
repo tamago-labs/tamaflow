@@ -135,6 +135,49 @@ function registerFlowIpcHandlers() {
     return routeStore.get(flowId, routeId)
   })
 
+  ipcMain.handle('flows:exportJson', async (_e, id) => {
+    const cur = BrowserWindow.getFocusedWindow()
+    if (!cur) return { success: false, error: 'No focused window' }
+    const file = flowStore.get(id)
+    if (!file) return { success: false, error: 'Flow not found' }
+    const result = await require('electron').dialog.showSaveDialog(cur, {
+      title: 'Export flow',
+      defaultPath: `${file.flow.name || 'flow'}.json`,
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    })
+    if (result.canceled || !result.filePath) return { success: true, canceled: true }
+    try {
+      require('fs').writeFileSync(result.filePath, JSON.stringify(file, null, 2), 'utf-8')
+      return { success: true, path: result.filePath }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Export failed' }
+    }
+  })
+
+  ipcMain.handle('flows:importJson', async () => {
+    const cur = BrowserWindow.getFocusedWindow()
+    if (!cur) return { success: false, error: 'No focused window' }
+    const result = await require('electron').dialog.showOpenDialog(cur, {
+      title: 'Import flow',
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      properties: ['openFile']
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: true, canceled: true }
+    }
+    try {
+      const data = require('fs').readFileSync(result.filePaths[0], 'utf-8')
+      const parsed = JSON.parse(data)
+      if (!parsed || !parsed.flow) throw new Error('Invalid flow file')
+      // Save as new flow (generate new id)
+      const file = flowStore.save({ ...parsed.flow, id: undefined })
+      notifyChange(flowStore.listWithRoutes(routeStore))
+      return { success: true, file }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Import failed' }
+    }
+  })
+
   console.log('[flows] IPC handlers registered')
 }
 

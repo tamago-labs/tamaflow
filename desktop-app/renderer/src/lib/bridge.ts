@@ -207,6 +207,8 @@ export interface BridgeAPI {
       list(flowId: string): Promise<RouteSummary[]>
       listAll(): Promise<RouteSummary[]>
     }
+    exportJson(id: string): Promise<{ success: boolean; canceled?: boolean; path?: string; error?: string }>
+    importJson(): Promise<{ success: boolean; canceled?: boolean; file?: FlowFile; error?: string }>
     onChange(cb: (list: FlowSummary[]) => void): () => void
     onProgress(cb: (flowId: string, routes: RouteSummary[]) => void): () => void
   }
@@ -417,6 +419,8 @@ const noopBridge: BridgeAPI = {
       list: () => Promise.resolve([]),
       listAll: () => Promise.resolve([])
     },
+    exportJson: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    importJson: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     onChange: () => () => {},
     onProgress: () => () => {}
   }
