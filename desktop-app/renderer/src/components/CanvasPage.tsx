@@ -267,14 +267,44 @@ function FlowsList({ flows, loadStatus, onSelect, onCreate }: { flows: FlowSumma
       {flows.length === 0 ? (
         <div className="flex-1 flex items-center justify-center"><div className="text-center"><p className="text-lg font-medium text-gray-900 mb-2">No flows yet</p><p className="text-sm text-gray-500">Create your first flow to get started</p></div></div>
       ) : (
-        <div className="flex-1 overflow-y-auto"><div className="grid gap-4">
-          {flows.map((flow) => (
-            <button key={flow.id} onClick={() => onSelect(flow.id)} className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm transition-all text-left">
-              <div><h3 className="font-medium text-gray-900">{flow.name}</h3><p className="text-sm text-gray-500 mt-1">{flow.payeeCount} recipients · {flow.routeCount} routes</p></div>
-              <div className="flex items-center gap-3"><span className={`px-2 py-1 text-xs font-medium rounded ${flow.status === 'draft' ? 'bg-gray-100 text-gray-700' : flow.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{flow.status}</span><span className="text-gray-400">→</span></div>
-            </button>
-          ))}
-        </div></div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {flows.map((flow) => (
+              <button key={flow.id} onClick={() => onSelect(flow.id)} className="flex flex-col p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all text-left h-full">
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="font-medium text-gray-900 truncate flex-1 mr-2">{flow.name}</h3>
+                  <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded flex-shrink-0 ${flow.status === 'draft' ? 'bg-gray-100 text-gray-600' : flow.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{flow.status}</span>
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span className="font-mono text-gray-400">👥</span>
+                    <span>{flow.payeeCount} recipients</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span className="font-mono text-gray-400">📋</span>
+                    <span>{flow.routeCount} routes</span>
+                  </div>
+                  {flow.settledCount > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-green-600">
+                      <span className="font-mono">✓</span>
+                      <span>{flow.settledCount} settled</span>
+                    </div>
+                  )}
+                  {flow.failedCount > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-red-500">
+                      <span className="font-mono">✕</span>
+                      <span>{flow.failedCount} failed</span>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                  <span className="font-mono text-[10px] text-gray-400">{new Date(flow.updatedAt).toLocaleDateString()}</span>
+                  <span className="text-gray-300">→</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
