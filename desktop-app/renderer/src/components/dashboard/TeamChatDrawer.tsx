@@ -100,7 +100,7 @@ export function TeamChatDrawer({ open, onClose }: TeamChatDrawerProps) {
                 const isFromMe = !!me && g.senderKey === me.key
                 const color = avatarColor(g.senderKey)
                 return (
-                  <li key={`${gi}-${g.senderKey}`} className={`flex gap-3 rounded-md px-2 py-1 ${isFromMe ? 'bg-blue-50' : ''}`}>
+                  <li key={`${gi}-${g.senderKey}`} className={`group relative flex gap-3 rounded-md px-2 py-1 ${isFromMe ? 'bg-blue-50' : ''}`}>
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0" style={{ background: color }}>
                       {initialsOf(g.sender)}
                     </div>
@@ -110,8 +110,20 @@ export function TeamChatDrawer({ open, onClose }: TeamChatDrawerProps) {
                         <span className="text-[10px] text-gray-400">{formatTimeShort(g.firstAt)}</span>
                       </div>
                       <div className="mt-0.5 space-y-0.5">
-                        {g.messages.map((m) => (
-                          <div key={m.id} className="text-sm text-gray-700 break-words">{m.text}</div>
+                        {g.messages.map((m, mi) => (
+                          <div key={m.id} className="group/msg relative text-sm text-gray-700 break-words pr-5">
+                            {m.text}
+                            {room.writable && mi === 0 && (
+                              <button
+                                type="button"
+                                onClick={() => room.removeChats([m.id])}
+                                className="absolute right-0 top-0 p-0.5 text-gray-400 opacity-0 hover:text-red-500 group-hover/msg:opacity-100 transition-opacity"
+                                title="Delete"
+                              >
+                                <X size={11} />
+                              </button>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </div>
