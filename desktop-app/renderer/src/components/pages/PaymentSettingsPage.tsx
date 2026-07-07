@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, X, Layers, Pencil, Trash2, AlertTriangle } from 'lucide-react'
+import { Check, X, Layers, Pencil, Trash2, AlertTriangle, Save } from 'lucide-react'
 import { useCompany } from '../../context/CompanyContext'
 import type { CompanyProfile, PaymentTemplate } from '../../ai/types'
 import { paymentTemplateSubtitle } from '../../flow/flowCards'
@@ -27,7 +27,7 @@ function toDraft(t: PaymentTemplate): DraftPaymentTemplate {
 }
 
 function fromDraft(d: DraftPaymentTemplate, now: string): PaymentTemplate {
-  return { id: d.id ?? 'tpl_pending', name: d.name.trim(), withholdingRate: d.withholdingRate.trim(), defaultMemo: d.defaultMemo.trim(), createdAt: d.createdAt ?? now, updatedAt: now }
+  return { id: d.id ?? 'tpl_' + Date.now().toString(36), name: d.name.trim(), withholdingRate: d.withholdingRate.trim(), defaultMemo: d.defaultMemo.trim(), createdAt: d.createdAt ?? now, updatedAt: now }
 }
 
 function validateRow(d: DraftPaymentTemplate): { name?: string; withholdingRate?: string; defaultMemo?: string } {
@@ -38,6 +38,11 @@ function validateRow(d: DraftPaymentTemplate): { name?: string; withholdingRate?
   if (d.defaultMemo.trim().length === 0) errors.defaultMemo = 'Default memo is required'
   else if (d.defaultMemo.trim().length > 200) errors.defaultMemo = 'Memo must be 200 characters or fewer'
   return errors
+}
+
+function isDraftDirty(draft: DraftPaymentTemplate, saved: PaymentTemplate | undefined): boolean {
+  if (!saved) return true // new template
+  return draft.name.trim() !== saved.name || draft.withholdingRate.trim() !== saved.withholdingRate || draft.defaultMemo.trim() !== saved.defaultMemo
 }
 
 export default function PaymentSettingsPage() {
@@ -95,6 +100,8 @@ export default function PaymentSettingsPage() {
     if (!tpl) return
     if (!window.confirm(`Delete template "${tpl.name}"? Canvas cards using it will fall back to Direct Payment.`)) return
     setDrafts((current) => current.filter((d) => d.id !== id))
+    // Auto-save after delete
+    setTimeout(() => handleSaveAll(), 0)
   }
 
   function addRow() {
@@ -103,12 +110,18 @@ export default function PaymentSettingsPage() {
     setEditing((s) => new Set([...s, stubKey]))
   }
 
+  // Check if any draft has changes compared to saved state
+  const hasChanges = drafts.some((d) => {
+    if (d.id?.startsWith('__new__')) return true // new template
+    const saved = (profile!.paymentTemplates ?? []).find((t) => t.id === d.id)
+    return isDraftDirty(d, saved)
+  }) || drafts.length !== (profile.paymentTemplates ?? []).length
+
   const allValid = drafts.every((d) => Object.keys(validateRow(d)).length === 0)
-  const anyInEdit = editing.size > 0
-  const dirty = anyInEdit && allValid
+  const canSave = hasChanges && allValid && !saving
 
   async function handleSaveAll() {
-    if (!profile || !dirty) return
+    if (!profile || !canSave) return
     setSaving(true); setError(null)
     try {
       const now = new Date().toISOString()
@@ -123,7 +136,27 @@ export default function PaymentSettingsPage() {
     setDrafts((profile.paymentTemplates ?? []).map(toDraft)); setEditing(new Set()); setError(null)
   }
 
-  const canSave = dirty && !saving
+  // Save a single row
+  async function handleSaveRow(id: string) {
+    if (!profile) return
+    const draft = drafts.find((d) => d.id === id)
+    if (!draft) return
+    const errors = validateRow(draft)
+    if (Object.keys(errors).length > 0) return
+
+    setSaving(true); setError(null)
+    try {
+      const now = new Date().toISOString()
+      const template = fromDraft(draft, now)
+      const existing = (profile.paymentTemplates ?? []).filter((t) => t.id !== id && !t.id?.startsWith('__new__'))
+      const next: CompanyProfile = { ...profile, paymentTemplates: [...existing, template] }
+      await save(next)
+      setSavedAt(Date.now())
+      // Update draft with saved id
+      setDrafts((current) => current.map((d) => d.id === id ? { ...d, id: template.id, createdAt: template.createdAt, updatedAt: template.updatedAt } : d))
+      setEditing((s) => { const next = new Set(s); next.delete(id); return next })
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setSaving(false) }
+  }
 
   return (
     <div className="max-w-2xl">
@@ -155,8 +188,11 @@ export default function PaymentSettingsPage() {
                 const key = d.id
                 const isEditing = editing.has(key)
                 const errors = validateRow(d)
+                const isNew = key?.startsWith('__new__')
+                const saved = (profile.paymentTemplates ?? []).find((t) => t.id === key)
+                const rowDirty = isDraftDirty(d, saved)
                 return (
-                  <TemplateRow key={key} draft={d} isEditing={isEditing} errors={errors} onStartEdit={() => startEdit(key)} onCancelEdit={() => cancelEdit(key)} onChange={(patch) => updateDraft(key, patch)} onDelete={() => deleteRow(d.id!)} />
+                  <TemplateRow key={key} draft={d} isEditing={isEditing} errors={errors} isNew={isNew} rowDirty={rowDirty} onStartEdit={() => startEdit(key)} onCancelEdit={() => cancelEdit(key)} onChange={(patch) => updateDraft(key, patch)} onDelete={() => deleteRow(d.id!)} onSave={() => handleSaveRow(key)} />
                 )
               })}
             </div>
@@ -169,10 +205,10 @@ export default function PaymentSettingsPage() {
           <button type="button" onClick={handleSaveAll} disabled={!canSave} className={`flex items-center gap-1.5 px-4 py-2 border-0 rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase ${canSave ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
             <Check size={12} />{saving ? 'Saving…' : 'Save all'}
           </button>
-          <button type="button" onClick={handleReset} disabled={!dirty || saving} className={`flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase ${dirty && !saving ? 'text-gray-900 cursor-pointer hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'}`}>
+          <button type="button" onClick={handleReset} disabled={!hasChanges || saving} className={`flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase ${hasChanges && !saving ? 'text-gray-900 cursor-pointer hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'}`}>
             <X size={12} />Discard
           </button>
-          {savedAt && !error && !dirty && <span className="font-mono text-[10px] uppercase tracking-wider2 text-green-600">Saved</span>}
+          {savedAt && !error && !hasChanges && <span className="font-mono text-[10px] uppercase tracking-wider2 text-green-600">Saved</span>}
           {error && <span className="font-mono text-[10px] uppercase tracking-wider2 text-red-500">{error}</span>}
         </div>
       </div>
@@ -186,13 +222,16 @@ interface TemplateRowProps {
   draft: DraftPaymentTemplate
   isEditing: boolean
   errors: ReturnType<typeof validateRow>
+  isNew?: boolean
+  rowDirty?: boolean
   onStartEdit: () => void
   onCancelEdit: () => void
   onChange: (patch: Partial<DraftPaymentTemplate>) => void
   onDelete: () => void
+  onSave: () => void
 }
 
-function TemplateRow({ draft, isEditing, errors, onStartEdit, onCancelEdit, onChange, onDelete }: TemplateRowProps) {
+function TemplateRow({ draft, isEditing, errors, isNew, rowDirty, onStartEdit, onCancelEdit, onChange, onDelete, onSave }: TemplateRowProps) {
   const subtitle = (() => {
     const t: PaymentTemplate = { id: draft.id ?? 'pending', name: draft.name, withholdingRate: draft.withholdingRate, defaultMemo: draft.defaultMemo, createdAt: draft.createdAt ?? '', updatedAt: draft.updatedAt ?? '' }
     return paymentTemplateSubtitle(t)
@@ -200,14 +239,14 @@ function TemplateRow({ draft, isEditing, errors, onStartEdit, onCancelEdit, onCh
 
   if (!isEditing) {
     return (
-      <div className="bg-white border border-gray-200 rounded-md p-3 flex items-start gap-3">
+      <div className={`bg-white border rounded-md p-3 flex items-start gap-3 ${isNew ? 'border-blue-300 bg-blue-50' : 'border-gray-200'}`}>
         <div className="flex-1 min-w-0">
           <div className="font-sans text-sm font-semibold text-gray-900 m-0 truncate">{draft.name || <em className="text-gray-400">Untitled</em>}</div>
           <div className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase m-0 mt-0.5 truncate">{subtitle}</div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           <button type="button" onClick={onStartEdit} className="flex items-center gap-1 px-2 py-1 bg-white text-gray-900 border border-gray-200 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-gray-50"><Pencil size={10} />edit</button>
-          {draft.id && <button type="button" onClick={onDelete} className="flex items-center gap-1 px-2 py-1 bg-white text-red-500 border border-red-200 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-red-50"><Trash2 size={10} />delete</button>}
+          {!isNew && draft.id && <button type="button" onClick={onDelete} className="flex items-center gap-1 px-2 py-1 bg-white text-red-500 border border-red-200 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-red-50"><Trash2 size={10} />delete</button>}
         </div>
       </div>
     )
@@ -229,6 +268,7 @@ function TemplateRow({ draft, isEditing, errors, onStartEdit, onCancelEdit, onCh
       </Field>
       <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200">
         <button type="button" onClick={onCancelEdit} className="px-3 py-1.5 bg-white text-gray-900 border border-gray-200 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-gray-50">Cancel</button>
+        <button type="button" onClick={onSave} disabled={Object.keys(errors).length > 0} className={`flex items-center gap-1 px-3 py-1.5 border-0 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase ${Object.keys(errors).length === 0 ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}><Save size={10} />Save</button>
       </div>
     </div>
   )

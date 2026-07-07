@@ -75,7 +75,7 @@ export function FaucetModal() {
         {result && (
           <div className='space-y-1 rounded-md border border-brand-border bg-brand-light p-3'>
             <p className='m-0 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-tealAccent'>
-              Faucet succeeded
+              Succeeded
             </p>
             <p className='m-0 font-sans text-xs text-brand-navy'>
               Minted <strong>{result.amount ?? amount}</strong> to your wallet.
@@ -108,7 +108,7 @@ export function FaucetModal() {
             ) : (
               <Droplets size={12} />
             )}
-            {isBusy ? 'Running…' : 'Mint'}
+            {isBusy ? 'Minting…' : 'Mint'}
           </button>
         </div>
       </div>

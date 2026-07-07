@@ -92,7 +92,7 @@ class FlowStore {
       if (existing && (existing.flow.status === 'active' || existing.flow.status === 'completed')) {
         if (!shapesEqual(existing.flow, file.flow)) {
           throw new Error(
-            `Flow is ${existing.flow.status} — stop it from the Active Flow page before editing the canvas.`
+            `Flow is ${existing.flow.status} — stop the flow from the canvas before editing.`
           )
         }
       }
