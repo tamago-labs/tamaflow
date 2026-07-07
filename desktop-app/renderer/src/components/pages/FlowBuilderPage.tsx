@@ -1,13 +1,9 @@
-import { useState } from 'react'
 import { CanvasPage } from '../CanvasPage'
+import { useFlowView } from '../../context/FlowViewContext'
 
 export function FlowBuilderPage() {
-  const [view, setView] = useState<'list' | 'canvas'>('list')
-  return (
-    <div className={view === 'canvas' ? '-mt-[56px] -ml-8 -mr-8 -mb-8' : ''}>
-      <CanvasPage onViewChange={setView} />
-    </div>
-  )
+  const { setView } = useFlowView()
+  return <CanvasPage onViewChange={setView} />
 }
 
 export default FlowBuilderPage

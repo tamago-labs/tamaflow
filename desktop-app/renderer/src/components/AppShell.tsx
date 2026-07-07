@@ -27,6 +27,7 @@ import { AssetsPage } from './pages/AssetsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { WalletProvider } from '../context/WalletContext'
 import { PriceProvider } from '../context/PriceContext'
+import { FlowViewProvider, useFlowView } from '../context/FlowViewContext'
 import { SetupWalletModal } from './wallet/SetupWalletModal'
 import { RestoreWalletModal } from './wallet/RestoreWalletModal'
 import { AccountInfoModal } from './wallet/AccountInfoModal'
@@ -67,6 +68,19 @@ export function AppShell({ initialPage = 'employees' }: AppShellProps) {
   const isFlowBuilder = currentPage === 'flow-builder'
 
   return (
+    <FlowViewProvider>
+      <AppShellInner currentPage={currentPage} setCurrentPage={setCurrentPage} />
+    </FlowViewProvider>
+  )
+}
+
+function AppShellInner({ currentPage, setCurrentPage }: { currentPage: PageId; setCurrentPage: (p: PageId) => void }) {
+  const { view } = useFlowView()
+  const Page = PAGES[currentPage]
+  const isFlowBuilder = currentPage === 'flow-builder'
+  const isCanvasView = isFlowBuilder && view === 'canvas'
+
+  return (
     <PriceProvider>
       <WalletProvider>
         <div className='flex h-screen min-h-screen flex-col bg-brand-light'>
@@ -76,13 +90,15 @@ export function AppShell({ initialPage = 'employees' }: AppShellProps) {
               onNavigate={setCurrentPage}
             />
             <div className='ml-[200px] flex flex min-h-screen flex-1 flex-col'>
-              <TopBar
-                currentPage={currentPage}
-                onHome={() => setCurrentPage('employees')}
-              />
+              {!isCanvasView && (
+                <TopBar
+                  currentPage={currentPage}
+                  onHome={() => setCurrentPage('employees')}
+                />
+              )}
               <main
                 className={
-                  isFlowBuilder
+                  isCanvasView
                     ? 'flex min-h-0 flex-1 overflow-hidden w-full'
                     : 'flex-1 overflow-y-auto p-8'
                 }
