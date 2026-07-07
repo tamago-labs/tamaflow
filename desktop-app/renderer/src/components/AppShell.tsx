@@ -76,12 +76,10 @@ export function AppShell({ initialPage = 'employees' }: AppShellProps) {
               onNavigate={setCurrentPage}
             />
             <div className='ml-[200px] flex flex min-h-screen flex-1 flex-col'>
-              {!isFlowBuilder && (
-                <TopBar
-                  currentPage={currentPage}
-                  onHome={() => setCurrentPage('employees')}
-                />
-              )}
+              <TopBar
+                currentPage={currentPage}
+                onHome={() => setCurrentPage('employees')}
+              />
               <main
                 className={
                   isFlowBuilder

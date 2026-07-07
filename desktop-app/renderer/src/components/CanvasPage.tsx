@@ -23,7 +23,7 @@ function errMsg(err: unknown): string {
   return String(err)
 }
 
-export function CanvasPage() {
+export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'canvas') => void }) {
   const { flows, get, save, remove, start, stop, listRoutes, onProgress } = useFlows()
   const { employees } = useEmployees()
   const { profile: companyProfile } = useCompany()
@@ -151,6 +151,11 @@ export function CanvasPage() {
   }, [flowId, start, performSave])
 
   const handleStop = useCallback(async () => { if (stopping || !flowId) return; setStopping(true); try { const result = await stop(flowId); if (result.ok) { setFlowStatus('draft') } else { setSaveError(result.error) } } catch (e) { setSaveError(errMsg(e)) } finally { setStopping(false) } }, [flowId, stop, stopping])
+
+  // Notify parent of view changes
+  useEffect(() => {
+    onViewChange?.(flowId ? 'canvas' : 'list')
+  }, [flowId, onViewChange])
 
   if (!flowId) return <FlowsList flows={flows} loadStatus={loadStatus} onSelect={loadFlow} onCreate={createFlow} />
   if (loadStatus === 'loading') return <div className="flex items-center justify-center h-full text-gray-400">Loading flow…</div>
@@ -282,7 +287,7 @@ function FlowsList({ flows, loadStatus, onSelect, onCreate }: { flows: FlowSumma
 
   if (loadStatus === 'loading') return <div className="flex items-center justify-center h-full text-gray-400">Loading flows…</div>
   return (
-    <div>
+    <div className="p-8">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Flow Builder</h1>
         <div className="flex items-center gap-2">
