@@ -43,6 +43,7 @@ export function AIChatDrawer({ open, onClose }: AIChatDrawerProps) {
   const messages = chat.messages
   const isStreaming = chat.isStreaming
   const streamingContent = chat.streamingContent
+  const streamingThinking = chat.streamingThinking
   const aiSource = chat.aiSource
   const modelName = chat.aiSource?.modelName ?? null
 
