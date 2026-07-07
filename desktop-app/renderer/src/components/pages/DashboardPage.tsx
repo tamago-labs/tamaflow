@@ -49,9 +49,17 @@ export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPag
 
   return (
     <div className="max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="mb-4">
+      {/* Header with title and action buttons */}
+      <div className="mb-4 flex items-center justify-between">
         <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Dashboard</h1>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setTeamChatOpen(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition">
+            <MessageSquare size={14} /> Team Chat
+          </button>
+          <button onClick={() => setAiChatOpen(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-[#1A1AE8] rounded-md hover:bg-[#1515c0] transition">
+            <Bot size={14} /> Ask AI
+          </button>
+        </div>
       </div>
 
       {/* Company info row */}
@@ -86,16 +94,6 @@ export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPag
           </span>
         </div>
       )}
-
-      {/* Action buttons */}
-      <div className="mb-6 flex items-center gap-2">
-        <button onClick={() => setTeamChatOpen(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition">
-          <MessageSquare size={14} /> Team Chat
-        </button>
-        <button onClick={() => setAiChatOpen(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-[#1A1AE8] rounded-md hover:bg-[#1515c0] transition">
-          <Bot size={14} /> Ask AI
-        </button>
-      </div>
 
       {/* Row 1: Stat cards */}
       <StatCards employeeCount={employees.length} settledCount={settledCount} />

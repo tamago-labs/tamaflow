@@ -2,6 +2,7 @@ import {
   Boxes,
   CircleDollarSign,
   FileBox,
+  CalendarCheck,
   LayoutDashboard,
   Share2,
   Users,
@@ -12,6 +13,7 @@ import type { LucideIcon } from 'lucide-react'
 
 export type PageId =
   | 'dashboard'
+  | 'attendance'
   | 'chat'
   | 'shareable'
   | 'employees'
@@ -35,16 +37,11 @@ export interface NavCategory {
 
 export const NAV_CATEGORIES: NavCategory[] = [
   {
-    key: 'workspace',
-    label: 'Workspace',
-    items: [
-      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }
-    ]
-  },
-  {
     key: 'teamspace',
     label: 'Teamspace',
     items: [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
       { id: 'shareable', label: 'Shareable', icon: Share2 }
     ]
   },

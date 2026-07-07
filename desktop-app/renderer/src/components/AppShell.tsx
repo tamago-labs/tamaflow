@@ -18,6 +18,7 @@ import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { CanvasFooter } from './CanvasFooter'
 import { DashboardPage } from './pages/DashboardPage'
+import { AttendancePage } from './pages/AttendancePage'
 import { ChatPage } from './pages/ChatPage'
 import { ShareablePage } from './pages/ShareablePage'
 import { EmployeesPage } from './pages/EmployeesPage'
@@ -42,6 +43,7 @@ import type { PageId } from '../lib/nav'
 // the placeholder. The FlowBuilderPage renders the real canvas.
 const PAGES: Record<PageId, () => JSX.Element> = {
   dashboard: DashboardPage,
+  attendance: AttendancePage,
   chat: ChatPage,
   shareable: ShareablePage,
   employees: EmployeesPage,
