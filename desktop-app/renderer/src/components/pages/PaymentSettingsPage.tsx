@@ -51,7 +51,7 @@ export default function PaymentSettingsPage() {
   useEffect(() => {
     if (!profile) return
     if (saving) return
-    setDrafts(profile.paymentTemplates.map(toDraft))
+    setDrafts((profile.paymentTemplates ?? []).map(toDraft))
     setEditing(new Set())
   }, [profile, saving])
 
@@ -73,7 +73,7 @@ export default function PaymentSettingsPage() {
       const row = current.find((d) => d.id === id)
       if (!row) return current
       if (row.id?.startsWith('__new__')) return current.filter((d) => d.id !== id)
-      const saved = profile!.paymentTemplates.find((t) => t.id === row.id)
+      const saved = (profile!.paymentTemplates ?? []).find((t) => t.id === row.id)
       return saved ? current.map((d) => (d.id === row.id ? toDraft(saved) : d)) : current.filter((d) => d.id !== id)
     })
     setEditing((s) => { const next = new Set(s); next.delete(id); return next })
@@ -85,7 +85,7 @@ export default function PaymentSettingsPage() {
 
   function deleteRow(id: string) {
     if (!id) return
-    const tpl = profile!.paymentTemplates.find((t) => t.id === id)
+    const tpl = (profile!.paymentTemplates ?? []).find((t) => t.id === id)
     if (!tpl) return
     if (!window.confirm(`Delete template "${tpl.name}"? Canvas cards using it will fall back to Direct Payment.`)) return
     setDrafts((current) => current.filter((d) => d.id !== id))
@@ -114,7 +114,7 @@ export default function PaymentSettingsPage() {
 
   function handleReset() {
     if (!profile) return
-    setDrafts(profile.paymentTemplates.map(toDraft)); setEditing(new Set()); setError(null)
+    setDrafts((profile.paymentTemplates ?? []).map(toDraft)); setEditing(new Set()); setError(null)
   }
 
   const canSave = dirty && !saving
