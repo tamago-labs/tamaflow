@@ -1,283 +1,223 @@
-import { useEffect, useState } from 'react'
-import { Check, X, Layers, Pencil, Trash2, AlertTriangle, Save } from 'lucide-react'
+import { useState } from 'react'
+import { Plus, Search, Pencil, Trash2 } from 'lucide-react'
 import { useCompany } from '../../context/CompanyContext'
 import type { CompanyProfile, PaymentTemplate } from '../../ai/types'
 import { paymentTemplateSubtitle } from '../../flow/flowCards'
-
-const RATE_REGEX = /^\d+(\.\d+)?$/
-
-function isValidRate(s: string): boolean {
-  if (s === '') return true
-  if (!RATE_REGEX.test(s)) return false
-  const n = Number(s)
-  return Number.isFinite(n) && n >= 0 && n <= 1
-}
-
-interface DraftPaymentTemplate {
-  id?: string
-  name: string
-  withholdingRate: string
-  defaultMemo: string
-  createdAt?: string
-  updatedAt?: string
-}
-
-function toDraft(t: PaymentTemplate): DraftPaymentTemplate {
-  return { id: t.id, name: t.name, withholdingRate: t.withholdingRate, defaultMemo: t.defaultMemo, createdAt: t.createdAt, updatedAt: t.updatedAt }
-}
-
-function fromDraft(d: DraftPaymentTemplate, now: string): PaymentTemplate {
-  return { id: d.id ?? 'tpl_' + Date.now().toString(36), name: d.name.trim(), withholdingRate: d.withholdingRate.trim(), defaultMemo: d.defaultMemo.trim(), createdAt: d.createdAt ?? now, updatedAt: now }
-}
-
-function validateRow(d: DraftPaymentTemplate): { name?: string; withholdingRate?: string; defaultMemo?: string } {
-  const errors: { name?: string; withholdingRate?: string; defaultMemo?: string } = {}
-  if (d.name.trim().length === 0) errors.name = 'Name is required'
-  else if (d.name.trim().length > 60) errors.name = 'Name must be 60 characters or fewer'
-  if (!isValidRate(d.withholdingRate)) errors.withholdingRate = 'Decimal between 0 and 1, or blank'
-  if (d.defaultMemo.trim().length === 0) errors.defaultMemo = 'Default memo is required'
-  else if (d.defaultMemo.trim().length > 200) errors.defaultMemo = 'Memo must be 200 characters or fewer'
-  return errors
-}
-
-function isDraftDirty(draft: DraftPaymentTemplate, saved: PaymentTemplate | undefined): boolean {
-  if (!saved) return true // new template
-  return draft.name.trim() !== saved.name || draft.withholdingRate.trim() !== saved.withholdingRate || draft.defaultMemo.trim() !== saved.defaultMemo
-}
+import Drawer from '../Drawer'
 
 export default function PaymentSettingsPage() {
   const { profile, save } = useCompany()
-  const [drafts, setDrafts] = useState<DraftPaymentTemplate[]>(() => (profile?.paymentTemplates ?? []).map(toDraft))
-  const [editing, setEditing] = useState<Set<string>>(new Set())
+  const [search, setSearch] = useState('')
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<PaymentTemplate | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<PaymentTemplate | null>(null)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [savedAt, setSavedAt] = useState<number | null>(null)
 
-  useEffect(() => {
-    if (!profile) return
-    if (saving) return
-    setDrafts((profile.paymentTemplates ?? []).map(toDraft))
-    setEditing(new Set())
-  }, [profile, saving])
+  const templates = profile?.paymentTemplates ?? []
+  const filtered = templates.filter((t) => !search || t.name.toLowerCase().includes(search.toLowerCase()))
 
   if (!profile) {
     return (
-      <div className="max-w-2xl">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Payment Settings</h1>
-        <div className="bg-amber-50 border border-amber-200 rounded-md p-6">
-          <div className="flex items-start gap-3">
-            <AlertTriangle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-sans text-sm font-medium text-amber-800 m-0">Company profile not set up</p>
-              <p className="font-sans text-sm text-amber-700 m-0 mt-1">You need to set up your company profile before configuring payment templates. Go to Settings to complete your company setup.</p>
-            </div>
+      <div>
+        <h1 className="text-2xl font-light tracking-tight text-[#0a0a5c] mb-6">Payment Settings</h1>
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-6 flex items-start gap-3">
+          <span className="text-amber-600 text-lg">⚠</span>
+          <div>
+            <p className="font-sans text-sm font-medium text-amber-800 m-0">Company profile not set up</p>
+            <p className="font-sans text-sm text-amber-700 m-0 mt-1">Set up your company profile in Settings before configuring payment templates.</p>
           </div>
         </div>
       </div>
     )
   }
 
-  function startEdit(id: string) { setEditing((s) => new Set([...s, id])) }
-
-  function cancelEdit(id: string) {
-    setDrafts((current) => {
-      const row = current.find((d) => d.id === id)
-      if (!row) return current
-      if (row.id?.startsWith('__new__')) return current.filter((d) => d.id !== id)
-      const saved = (profile!.paymentTemplates ?? []).find((t) => t.id === row.id)
-      return saved ? current.map((d) => (d.id === row.id ? toDraft(saved) : d)) : current.filter((d) => d.id !== id)
-    })
-    setEditing((s) => { const next = new Set(s); next.delete(id); return next })
-  }
-
-  function updateDraft(id: string, patch: Partial<DraftPaymentTemplate>) {
-    setDrafts((current) => current.map((d) => (d.id === id ? { ...d, ...patch } : d)))
-  }
-
-  function deleteRow(id: string) {
-    if (!id) return
-    const tpl = (profile!.paymentTemplates ?? []).find((t) => t.id === id)
-    if (!tpl) return
-    if (!window.confirm(`Delete template "${tpl.name}"? Canvas cards using it will fall back to Direct Payment.`)) return
-    setDrafts((current) => current.filter((d) => d.id !== id))
-    // Auto-save after delete
-    setTimeout(() => handleSaveAll(), 0)
-  }
-
-  function addRow() {
-    const stubKey = `__new__${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
-    setDrafts((current) => [...current, { id: stubKey, name: '', withholdingRate: '', defaultMemo: 'Payroll' }])
-    setEditing((s) => new Set([...s, stubKey]))
-  }
-
-  // Check if any draft has changes compared to saved state
-  const hasChanges = drafts.some((d) => {
-    if (d.id?.startsWith('__new__')) return true // new template
-    const saved = (profile!.paymentTemplates ?? []).find((t) => t.id === d.id)
-    return isDraftDirty(d, saved)
-  }) || drafts.length !== (profile.paymentTemplates ?? []).length
-
-  const allValid = drafts.every((d) => Object.keys(validateRow(d)).length === 0)
-  const canSave = hasChanges && allValid && !saving
-
-  async function handleSaveAll() {
-    if (!profile || !canSave) return
-    setSaving(true); setError(null)
+  async function handleSaveTemplate(data: { name: string; withholdingRate: string; defaultMemo: string }) {
+    setSaving(true)
     try {
       const now = new Date().toISOString()
-      const next: CompanyProfile = { ...profile, paymentTemplates: drafts.map((d) => fromDraft(d, now)) }
-      await save(next)
-      setSavedAt(Date.now()); setEditing(new Set())
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setSaving(false) }
+      const template: PaymentTemplate = {
+        id: editTarget?.id ?? 'tpl_' + Date.now().toString(36),
+        name: data.name.trim(),
+        withholdingRate: data.withholdingRate.trim(),
+        defaultMemo: data.defaultMemo.trim(),
+        createdAt: editTarget?.createdAt ?? now,
+        updatedAt: now
+      }
+      const next = editTarget
+        ? templates.map((t) => t.id === editTarget.id ? template : t)
+        : [...templates, template]
+      const profileNext: CompanyProfile = { ...profile, paymentTemplates: next }
+      await save(profileNext)
+      setDrawerOpen(false)
+      setEditTarget(null)
+    } catch (e) {
+      console.error('[PaymentSettings] save failed:', e)
+    } finally {
+      setSaving(false)
+    }
   }
 
-  function handleReset() {
-    if (!profile) return
-    setDrafts((profile.paymentTemplates ?? []).map(toDraft)); setEditing(new Set()); setError(null)
-  }
-
-  // Save a single row
-  async function handleSaveRow(id: string) {
-    if (!profile) return
-    const draft = drafts.find((d) => d.id === id)
-    if (!draft) return
-    const errors = validateRow(draft)
-    if (Object.keys(errors).length > 0) return
-
-    setSaving(true); setError(null)
-    try {
-      const now = new Date().toISOString()
-      const template = fromDraft(draft, now)
-      const existing = (profile.paymentTemplates ?? []).filter((t) => t.id !== id && !t.id?.startsWith('__new__'))
-      const next: CompanyProfile = { ...profile, paymentTemplates: [...existing, template] }
-      await save(next)
-      setSavedAt(Date.now())
-      // Update draft with saved id
-      setDrafts((current) => current.map((d) => d.id === id ? { ...d, id: template.id, createdAt: template.createdAt, updatedAt: template.updatedAt } : d))
-      setEditing((s) => { const next = new Set(s); next.delete(id); return next })
-    } catch (e) { setError(e instanceof Error ? e.message : String(e)) } finally { setSaving(false) }
+  async function handleDelete() {
+    if (!deleteTarget) return
+    const next = templates.filter((t) => t.id !== deleteTarget.id)
+    await save({ ...profile, paymentTemplates: next })
+    setDeleteTarget(null)
   }
 
   return (
-    <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Settings</h1>
-      <p className="font-sans text-sm text-gray-500 mb-6">Each template becomes its own palette tile on the flow canvas. Direct Payment is built-in and always available.</p>
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Payment Settings</h1>
+          <p className="font-sans text-xs text-gray-400 m-0 mt-1">Templates become palette tiles on the flow canvas.</p>
+        </div>
+        <button type="button" onClick={() => { setEditTarget(null); setDrawerOpen(true) }} className="flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-[#1A1AE8] px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90">
+          <Plus size={12} />New Template
+        </button>
+      </div>
 
-      <div className="bg-white border border-gray-200 rounded-md p-6">
-        {/* Direct Payment (built-in) */}
-        <div className="mb-6">
-          <p className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase m-0 mb-2">Built-in</p>
-          <div className="bg-gray-50 border border-gray-200 rounded-md p-3 flex items-start gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="font-sans text-sm font-semibold text-gray-900 m-0">Direct Payment</div>
-              <div className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase m-0 mt-0.5">No deductions · built-in card</div>
-              <p className="font-sans text-xs text-gray-500 m-0 mt-1">No deductions applied. You set the memo per card on the canvas.</p>
-            </div>
-            <span className="font-mono text-[9px] uppercase tracking-wider2 text-gray-400 whitespace-nowrap">Always available</span>
+      <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
+        {/* Filter */}
+        <div className="flex items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3">
+          <div className="relative min-w-[200px] flex-1">
+            <Search size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter by name…" className="w-full rounded-md border border-gray-200 bg-white py-1.5 pl-8 pr-3 font-sans text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none" />
           </div>
         </div>
 
-        {/* Custom templates */}
-        <div>
-          <p className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase m-0 mb-2">Custom templates</p>
-          {drafts.length === 0 ? (
-            <div className="font-sans text-xs italic text-gray-400 p-4 border border-dashed border-gray-300 rounded-md text-center">No custom templates yet. Click "+ New template" to add one.</div>
-          ) : (
-            <div className="space-y-2">
-              {drafts.map((d) => {
-                const key = d.id
-                const isEditing = editing.has(key)
-                const errors = validateRow(d)
-                const isNew = key?.startsWith('__new__')
-                const saved = (profile.paymentTemplates ?? []).find((t) => t.id === key)
-                const rowDirty = isDraftDirty(d, saved)
-                return (
-                  <TemplateRow key={key} draft={d} isEditing={isEditing} errors={errors} isNew={isNew} rowDirty={rowDirty} onStartEdit={() => startEdit(key)} onCancelEdit={() => cancelEdit(key)} onChange={(patch) => updateDraft(key, patch)} onDelete={() => deleteRow(d.id!)} onSave={() => handleSaveRow(key)} />
-                )
-              })}
-            </div>
-          )}
-          <button type="button" onClick={addRow} disabled={saving} className="flex items-center gap-1.5 px-3 py-1.5 mt-3 bg-white text-blue-600 border border-dashed border-blue-600 rounded-md font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-blue-50 disabled:opacity-50">+ New template</button>
+        {/* Header */}
+        <div className="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 border-b border-gray-200 bg-white px-4 py-2.5">
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Name</span>
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Withholding</span>
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Default Memo</span>
+          <span className="text-right font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Actions</span>
         </div>
 
-        {/* Save row */}
-        <div className="flex items-center gap-2 pt-5 mt-5 border-t border-gray-200">
-          <button type="button" onClick={handleSaveAll} disabled={!canSave} className={`flex items-center gap-1.5 px-4 py-2 border-0 rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase ${canSave ? 'bg-blue-600 text-white cursor-pointer hover:bg-blue-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}>
-            <Check size={12} />{saving ? 'Saving…' : 'Save all'}
-          </button>
-          <button type="button" onClick={handleReset} disabled={!hasChanges || saving} className={`flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase ${hasChanges && !saving ? 'text-gray-900 cursor-pointer hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'}`}>
-            <X size={12} />Discard
-          </button>
-          {savedAt && !error && !hasChanges && <span className="font-mono text-[10px] uppercase tracking-wider2 text-green-600">Saved</span>}
-          {error && <span className="font-mono text-[10px] uppercase tracking-wider2 text-red-500">{error}</span>}
+        {/* Direct Payment row */}
+        <div className="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 items-center">
+          <div>
+            <span className="font-sans text-sm font-medium text-gray-900">Direct Payment</span>
+            <span className="ml-2 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-gray-200 text-gray-500">Built-in</span>
+          </div>
+          <span className="font-mono text-xs text-gray-400">—</span>
+          <span className="font-mono text-xs text-gray-400">—</span>
+          <span className="font-mono text-[10px] text-gray-400">Always available</span>
         </div>
+
+        {/* Empty state */}
+        {filtered.length === 0 && (
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-400"><Plus size={20} /></div>
+            <p className="m-0 font-sans text-sm font-medium text-gray-900">No templates yet</p>
+            <p className="m-0 max-w-sm font-sans text-xs text-gray-400">Create your first payment template to get started.</p>
+          </div>
+        )}
+
+        {/* Rows */}
+        {filtered.length > 0 && (
+          <ul className="divide-y divide-gray-200">
+            {filtered.map((t) => (
+              <li key={t.id} className="grid grid-cols-[2fr_1fr_1fr_auto] items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors">
+                <div className="min-w-0">
+                  <div className="font-sans text-sm font-medium text-gray-900 truncate">{t.name}</div>
+                </div>
+                <div className="font-mono text-xs text-gray-600">
+                  {t.withholdingRate ? `${(Number(t.withholdingRate) * 100).toFixed(1)}%` : '—'}
+                </div>
+                <div className="font-mono text-xs text-gray-600 truncate" title={t.defaultMemo}>{t.defaultMemo || '—'}</div>
+                <div className="flex items-center justify-end gap-1">
+                  <button type="button" onClick={() => { setEditTarget(t); setDrawerOpen(true) }} className="p-1.5 bg-white text-[#0a0a5c] border border-gray-200 rounded hover:bg-gray-50 cursor-pointer" title="Edit"><Pencil size={14} /></button>
+                  <button type="button" onClick={() => setDeleteTarget(t)} className="p-1.5 bg-white text-red-500 border border-red-200 rounded hover:bg-red-50 cursor-pointer" title="Delete"><Trash2 size={14} /></button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
+
+      {/* Add/Edit Drawer */}
+      <TemplateDrawer open={drawerOpen} onClose={() => { setDrawerOpen(false); setEditTarget(null) }} initial={editTarget} onSave={handleSaveTemplate} saving={saving} />
+
+      {/* Delete confirmation */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 m-0 mb-2">Delete template?</h3>
+            <p className="text-sm text-gray-500 m-0 mb-4">Delete "{deleteTarget.name}"? Canvas cards using it will fall back to Direct Payment.</p>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50">Cancel</button>
+              <button type="button" onClick={handleDelete} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-// ─── Per-row component ─────────────────────────────────────────
+// ─── Template Drawer ─────────────────────────────────────────────────
 
-interface TemplateRowProps {
-  draft: DraftPaymentTemplate
-  isEditing: boolean
-  errors: ReturnType<typeof validateRow>
-  isNew?: boolean
-  rowDirty?: boolean
-  onStartEdit: () => void
-  onCancelEdit: () => void
-  onChange: (patch: Partial<DraftPaymentTemplate>) => void
-  onDelete: () => void
-  onSave: () => void
+interface TemplateDrawerProps {
+  open: boolean
+  onClose: () => void
+  initial?: PaymentTemplate | null
+  onSave: (data: { name: string; withholdingRate: string; defaultMemo: string }) => void
+  saving: boolean
 }
 
-function TemplateRow({ draft, isEditing, errors, isNew, rowDirty, onStartEdit, onCancelEdit, onChange, onDelete, onSave }: TemplateRowProps) {
-  const subtitle = (() => {
-    const t: PaymentTemplate = { id: draft.id ?? 'pending', name: draft.name, withholdingRate: draft.withholdingRate, defaultMemo: draft.defaultMemo, createdAt: draft.createdAt ?? '', updatedAt: draft.updatedAt ?? '' }
-    return paymentTemplateSubtitle(t)
-  })()
+function TemplateDrawer({ open, onClose, initial, onSave, saving }: TemplateDrawerProps) {
+  const [name, setName] = useState(initial?.name ?? '')
+  const [withholdingRate, setWithholdingRate] = useState(initial?.withholdingRate ?? '')
+  const [defaultMemo, setDefaultMemo] = useState(initial?.defaultMemo ?? 'Payroll')
 
-  if (!isEditing) {
-    return (
-      <div className={`bg-white border rounded-md p-3 flex items-start gap-3 ${isNew ? 'border-blue-300 bg-blue-50' : 'border-gray-200'}`}>
-        <div className="flex-1 min-w-0">
-          <div className="font-sans text-sm font-semibold text-gray-900 m-0 truncate">{draft.name || <em className="text-gray-400">Untitled</em>}</div>
-          <div className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase m-0 mt-0.5 truncate">{subtitle}</div>
-        </div>
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button type="button" onClick={onStartEdit} className="flex items-center gap-1 px-2 py-1 bg-white text-gray-900 border border-gray-200 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-gray-50"><Pencil size={10} />edit</button>
-          {!isNew && draft.id && <button type="button" onClick={onDelete} className="flex items-center gap-1 px-2 py-1 bg-white text-red-500 border border-red-200 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-red-50"><Trash2 size={10} />delete</button>}
-        </div>
-      </div>
-    )
-  }
+  // Reset form when drawer opens with new initial
+  useState(() => {
+    if (open) {
+      setName(initial?.name ?? '')
+      setWithholdingRate(initial?.withholdingRate ?? '')
+      setDefaultMemo(initial?.defaultMemo ?? 'Payroll')
+    }
+  })
+
+  const isValid = name.trim().length > 0 && defaultMemo.trim().length > 0
+    && (withholdingRate === '' || (/^\d+(\.\d+)?$/.test(withholdingRate) && Number(withholdingRate) >= 0 && Number(withholdingRate) <= 1))
 
   return (
-    <div className="bg-white border border-blue-500 rounded-md p-3 space-y-3">
-      <Field label="Name" error={errors.name}>
-        <input type="text" value={draft.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="US payroll deductions" maxLength={60} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-sans text-sm text-gray-900 focus:outline-none focus:border-blue-500" />
-      </Field>
-      <Field label="Withholding rate" hint="Decimal between 0 and 1 (e.g. 0.27 = 27%)" error={errors.withholdingRate}>
-        <div className="flex items-center gap-2">
-          <input type="text" inputMode="decimal" value={draft.withholdingRate} onChange={(e) => onChange({ withholdingRate: e.target.value })} placeholder="0.27" className="w-32 px-3 py-2 bg-white border border-gray-300 rounded-md font-mono text-sm text-gray-900 focus:outline-none focus:border-blue-500" />
-          <span className="font-mono text-[11px] text-gray-400 uppercase tracking-wider2">= {(Number(draft.withholdingRate) * 100).toFixed(2)}%</span>
-        </div>
-      </Field>
-      <Field label="Default memo" error={errors.defaultMemo}>
-        <input type="text" value={draft.defaultMemo} onChange={(e) => onChange({ defaultMemo: e.target.value })} placeholder="March payroll" maxLength={200} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-mono text-sm text-gray-900 focus:outline-none focus:border-blue-500" />
-      </Field>
-      <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200">
-        <button type="button" onClick={onCancelEdit} className="px-3 py-1.5 bg-white text-gray-900 border border-gray-200 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-gray-50">Cancel</button>
-        <button type="button" onClick={onSave} disabled={Object.keys(errors).length > 0} className={`flex items-center gap-1 px-3 py-1.5 border-0 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase ${Object.keys(errors).length === 0 ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}><Save size={10} />Save</button>
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title={initial ? 'Edit Template' : 'New Template'}
+      subtitle={initial?.name ?? 'Payment template configuration'}
+    >
+      <div className="space-y-5">
+        <Field label="Name" error={name.trim().length === 0 ? 'Name is required' : name.trim().length > 60 ? 'Max 60 characters' : undefined}>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="US payroll deductions" maxLength={60} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-sans text-sm text-gray-900 focus:outline-none focus:border-blue-500" />
+        </Field>
+
+        <Field label="Withholding rate" hint="Decimal between 0 and 1 (e.g. 0.27 = 27%)" error={withholdingRate !== '' && !isValid ? 'Invalid rate' : undefined}>
+          <div className="flex items-center gap-2">
+            <input type="text" inputMode="decimal" value={withholdingRate} onChange={(e) => setWithholdingRate(e.target.value)} placeholder="0.27" className="w-32 px-3 py-2 bg-white border border-gray-300 rounded-md font-mono text-sm text-gray-900 focus:outline-none focus:border-blue-500" />
+            <span className="font-mono text-[11px] text-gray-400">= {(Number(withholdingRate) * 100).toFixed(2)}%</span>
+          </div>
+        </Field>
+
+        <Field label="Default memo" error={defaultMemo.trim().length === 0 ? 'Memo is required' : defaultMemo.trim().length > 200 ? 'Max 200 characters' : undefined}>
+          <input type="text" value={defaultMemo} onChange={(e) => setDefaultMemo(e.target.value)} placeholder="March payroll" maxLength={200} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-mono text-sm text-gray-900 focus:outline-none focus:border-blue-500" />
+        </Field>
       </div>
-    </div>
+
+      <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-200">
+        <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50">Cancel</button>
+        <button type="button" onClick={() => onSave({ name, withholdingRate, defaultMemo })} disabled={!isValid || saving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">{saving ? 'Saving…' : initial ? 'Save Changes' : 'Add Template'}</button>
+      </div>
+    </Drawer>
   )
 }
 
 function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold m-0 mb-1">{label}</p>
+      <label className="block font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold mb-1">{label}</label>
       {children}
       {hint && !error && <p className="font-sans text-[11px] text-gray-400 m-0 mt-1 italic">{hint}</p>}
       {error && <p className="font-sans text-[11px] text-red-500 m-0 mt-1">{error}</p>}
