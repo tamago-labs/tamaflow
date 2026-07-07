@@ -154,34 +154,11 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
 
   return (
     <div className="relative w-full h-full overflow-hidden flex flex-col">
-      {saveError && <div className="absolute top-2 left-1/2 -translate-x-1/2 z-300 px-3 py-1.5 text-xs font-mono text-red-600 bg-red-50 border border-red-200 rounded-md">{saveError}</div>}
-      {startError && <div className="absolute top-2 left-1/2 -translate-x-1/2 z-300 px-3 py-1.5 text-xs font-mono text-red-600 bg-red-50 border border-red-200 rounded-md max-w-md">{startError}</div>}
+      {saveError && <div className="absolute top-14 left-1/2 -translate-x-1/2 z-300 px-3 py-1.5 text-xs font-mono text-red-600 bg-red-50 border border-red-200 rounded-md">{saveError}</div>}
+      {startError && <div className="absolute top-14 left-1/2 -translate-x-1/2 z-300 px-3 py-1.5 text-xs font-mono text-red-600 bg-red-50 border border-red-200 rounded-md max-w-md">{startError}</div>}
 
-      {/* Canvas area */}
-      <div className="flex-1 min-h-0">
-        <FlowBuilder
-          flowId={flowId}
-          canvas={canvas}
-          onCanvasChange={handleCanvasChange}
-          flowName={flowName}
-          onFlowNameChange={handleNameChange}
-          onRequestPreview={() => setPreviewOpen(true)}
-          locked={flowStatus === 'active'}
-          zoom={zoom}
-          onZoomChange={setZoom}
-          addCardOpen={addCardOpen}
-          onAddCardToggle={() => setAddCardOpen((v) => !v)}
-          onAddCardClose={() => setAddCardOpen(false)}
-        />
-      </div>
-
-      {/* Routes panel (above toolbar) */}
-      {(flowStatus === 'active' || flowStatus === 'completed') && (
-        <RoutesPanel status={flowStatus} routes={routes} employees={employees} canvas={canvas} />
-      )}
-
-      {/* Unified toolbar */}
-      <div className="flex items-center justify-between px-3 py-2 bg-white border-t border-gray-200 z-200 flex-shrink-0" style={{ zIndex: 200 }}>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-3 py-2 bg-white border-b border-gray-200 z-200 flex-shrink-0" style={{ zIndex: 200 }}>
         {/* Left: Back + Zoom */}
         <div className="flex items-center gap-2">
           <button onClick={goBack} className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded transition" title="Back to flows"><ArrowLeft size={16} /></button>
@@ -235,6 +212,29 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
           )}
         </div>
       </div>
+
+      {/* Canvas area */}
+      <div className="flex-1 min-h-0">
+        <FlowBuilder
+          flowId={flowId}
+          canvas={canvas}
+          onCanvasChange={handleCanvasChange}
+          flowName={flowName}
+          onFlowNameChange={handleNameChange}
+          onRequestPreview={() => setPreviewOpen(true)}
+          locked={flowStatus === 'active'}
+          zoom={zoom}
+          onZoomChange={setZoom}
+          addCardOpen={addCardOpen}
+          onAddCardToggle={() => setAddCardOpen((v) => !v)}
+          onAddCardClose={() => setAddCardOpen(false)}
+        />
+      </div>
+
+      {/* Routes panel (above bottom edge) */}
+      {(flowStatus === 'active' || flowStatus === 'completed') && (
+        <RoutesPanel status={flowStatus} routes={routes} employees={employees} canvas={canvas} />
+      )}
 
       <RoutesPreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} flowId={flowId} canvas={canvas} employees={employees} companyProfile={companyProfile} />
     </div>
