@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Plus, Search, Pencil, Trash2 } from 'lucide-react'
 import FlowBuilder from '../flow/FlowBuilder'
 import RoutesPreviewModal from '../flow/RoutesPreviewModal'
 import RouteStatusPill from './RouteStatusPill'
@@ -257,52 +258,115 @@ function RoutesPanel({ status, routes, employees, canvas }: { status: FlowStatus
 // ─── Flows List ─────────────────────────────────────────────────
 
 function FlowsList({ flows, loadStatus, onSelect, onCreate }: { flows: FlowSummary[]; loadStatus: string; onSelect: (id: string) => void; onCreate: () => void }) {
+  const { remove } = useFlows()
+  const [deleteTarget, setDeleteTarget] = useState<FlowSummary | null>(null)
+  const [search, setSearch] = useState('')
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return flows
+    return flows.filter((f) => f.name.toLowerCase().includes(q))
+  }, [flows, search])
+
+  const hasAny = flows.length > 0
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    try {
+      await remove(deleteTarget.id)
+      setDeleteTarget(null)
+    } catch (e) {
+      console.error('[FlowsList] delete failed:', e)
+    }
+  }
+
   if (loadStatus === 'loading') return <div className="flex items-center justify-center h-full text-gray-400">Loading flows…</div>
   return (
-    <div className="flex flex-col h-full w-full p-6 box-border">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Flow Builder</h1>
-        <button onClick={onCreate} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">New Flow</button>
+    <div>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Flow Builder</h1>
+        <button type="button" onClick={onCreate} className="flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-[#1A1AE8] px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90"><Plus size={12} />New Flow</button>
       </div>
-      {flows.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center"><div className="text-center"><p className="text-lg font-medium text-gray-900 mb-2">No flows yet</p><p className="text-sm text-gray-500">Create your first flow to get started</p></div></div>
-      ) : (
-        <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {flows.map((flow) => (
-              <button key={flow.id} onClick={() => onSelect(flow.id)} className="flex flex-col p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all text-left h-full">
-                <div className="flex items-start justify-between mb-3">
-                  <h3 className="font-medium text-gray-900 truncate flex-1 mr-2">{flow.name}</h3>
-                  <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded flex-shrink-0 ${flow.status === 'draft' ? 'bg-gray-100 text-gray-600' : flow.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{flow.status}</span>
+
+      <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
+        {/* Filter row */}
+        {hasAny && (
+          <div className="flex items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3">
+            <div className="relative min-w-[200px] flex-1">
+              <Search size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter by name…" className="w-full rounded-md border border-gray-200 bg-white py-1.5 pl-8 pr-3 font-sans text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none" />
+            </div>
+          </div>
+        )}
+
+        {/* Column header */}
+        {hasAny && (
+          <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-4 border-b border-gray-200 bg-white px-4 py-2.5">
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Name</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Status</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Routes</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Updated</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Settled</span>
+            <span className="text-right font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Actions</span>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!hasAny && (
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-400"><Plus size={20} /></div>
+            <p className="m-0 font-sans text-sm font-medium text-gray-900">No flows yet</p>
+            <p className="m-0 max-w-sm font-sans text-xs text-gray-400">Create your first flow to get started.</p>
+            <button type="button" onClick={onCreate} className="mt-2 cursor-pointer rounded-md border-0 bg-[#1A1AE8] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-white hover:opacity-90"><Plus size={11} />New Flow</button>
+          </div>
+        )}
+
+        {/* No matches */}
+        {hasAny && filtered.length === 0 && (
+          <div className="flex flex-col items-center gap-2 py-12 text-center">
+            <p className="m-0 font-sans text-sm text-gray-400">No flows match your search.</p>
+            <button type="button" onClick={() => setSearch('')} className="cursor-pointer border-0 bg-transparent font-mono text-[10px] uppercase tracking-wider2 text-[#1A1AE8] underline">Clear search</button>
+          </div>
+        )}
+
+        {/* Rows */}
+        {filtered.length > 0 && (
+          <ul className="divide-y divide-gray-200">
+            {filtered.map((flow) => (
+              <li key={flow.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors">
+                <div className="min-w-0">
+                  <div className="font-sans text-sm font-medium text-gray-900 truncate">{flow.name}</div>
                 </div>
-                <div className="flex-1 space-y-1.5">
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span className="font-mono text-gray-400">👥</span>
-                    <span>{flow.payeeCount} recipients</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span className="font-mono text-gray-400">📋</span>
-                    <span>{flow.routeCount} routes</span>
-                  </div>
-                  {flow.settledCount > 0 && (
-                    <div className="flex items-center gap-2 text-xs text-green-600">
-                      <span className="font-mono">✓</span>
-                      <span>{flow.settledCount} settled</span>
-                    </div>
-                  )}
-                  {flow.failedCount > 0 && (
-                    <div className="flex items-center gap-2 text-xs text-red-500">
-                      <span className="font-mono">✕</span>
-                      <span>{flow.failedCount} failed</span>
-                    </div>
-                  )}
+                <div>
+                  <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded ${flow.status === 'draft' ? 'bg-gray-100 text-gray-600' : flow.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{flow.status}</span>
                 </div>
-                <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                  <span className="font-mono text-[10px] text-gray-400">{new Date(flow.updatedAt).toLocaleDateString()}</span>
-                  <span className="text-gray-300">→</span>
+                <div className="font-sans text-sm text-gray-600">{flow.routeCount} routes</div>
+                <div className="font-mono text-[11px] text-gray-400">{flow.updatedAt ? new Date(flow.updatedAt).toLocaleDateString() : '—'}</div>
+                <div className="font-sans text-sm text-gray-600">
+                  {flow.settledCount > 0 && <span className="text-green-600">{flow.settledCount} ✓</span>}
+                  {flow.failedCount > 0 && <span className="text-red-500 ml-2">{flow.failedCount} ✕</span>}
+                  {flow.settledCount === 0 && flow.failedCount === 0 && '—'}
                 </div>
-              </button>
+                <div className="flex items-center justify-end gap-1">
+                  <button type="button" onClick={() => onSelect(flow.id)} className="flex items-center gap-1 px-2 py-1 bg-white text-[#0a0a5c] border border-gray-200 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-gray-50 cursor-pointer"><Pencil size={10} />edit</button>
+                  <button type="button" onClick={() => setDeleteTarget(flow)} className="flex items-center gap-1 px-2 py-1 bg-white text-red-500 border border-red-200 rounded font-mono text-[10px] font-bold tracking-wider2 uppercase hover:bg-red-50 cursor-pointer"><Trash2 size={10} />delete</button>
+                </div>
+              </li>
             ))}
+          </ul>
+        )}
+      </div>
+
+      {/* Delete confirmation */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 m-0 mb-2">Delete flow?</h3>
+            <p className="text-sm text-gray-500 m-0 mb-4">This will permanently delete "{deleteTarget.name}" and all its routes. This cannot be undone.</p>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setDeleteTarget(null)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50">Cancel</button>
+              <button type="button" onClick={handleDelete} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700">Delete</button>
+            </div>
           </div>
         </div>
       )}
