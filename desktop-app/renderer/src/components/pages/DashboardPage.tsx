@@ -19,6 +19,24 @@ interface DashboardPageProps {
   onNavigate?: (page: string) => void
 }
 
+// Format fiscal year start (MM-DD) to show period like "Jan 2025 - Dec 2025"
+function formatFiscalYear(fiscalYearStart: string): string {
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const [month] = fiscalYearStart.split('-')
+  const monthNum = parseInt(month, 10)
+  
+  if (monthNum === 1) {
+    // Calendar year: Jan - Dec
+    return `Jan ${currentYear} – Dec ${currentYear}`
+  }
+  
+  // Fiscal year spans two calendar years
+  const startMonth = new Date(currentYear, monthNum - 1).toLocaleString('en', { month: 'short' })
+  const endMonth = new Date(currentYear, monthNum - 2).toLocaleString('en', { month: 'short' })
+  return `${startMonth} ${currentYear} – ${endMonth} ${currentYear + 1}`
+}
+
 export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPageProps) {
   const { employees } = useEmployees()
   const { flows } = useFlows()
@@ -69,10 +87,12 @@ export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPag
             <span className="font-medium text-gray-900">{profile.companyName}</span>
             <span className="text-gray-300">·</span>
             <span>{profile.country}</span>
-            <span className="text-gray-300">·</span>
-            <span>{profile.baseCurrency}</span>
-            <span className="text-gray-300">·</span>
-            <span className="capitalize">{profile.legalEntityType?.replace('_', ' ')}</span>
+            {profile.fiscalYearStart && (
+              <>
+                <span className="text-gray-300">·</span>
+                <span>FY {formatFiscalYear(profile.fiscalYearStart)}</span>
+              </>
+            )}
           </div>
           {invite && (
             <div className="flex items-center gap-2">

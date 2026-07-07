@@ -9,16 +9,14 @@
 // reduced to the lifecycle (status + create + export + destroy).
 
 import { useState, useEffect } from 'react'
-import { Cpu, Wallet, Power, KeyRound, Trash2, Building2 } from 'lucide-react'
+import { Wallet, Power, KeyRound, Trash2, Building2 } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useAI } from '../../hooks/useAI'
 import { useWallet } from '../../context/WalletContext'
 import { bridge } from '../../lib/bridge'
 import type { CompanyProfile, CompanyFile } from '../../ai/types'
-import { PageHeader } from '../PageHeader'
 import CompanyForm from '../CompanyForm'
 
-type Tab = 'wallet' | 'ai' | 'company'
+type Tab = 'company' | 'wallet'
 
 interface TabDef {
   key: Tab
@@ -27,14 +25,12 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-  { key: 'wallet', label: 'Wallet', icon: <Wallet size={12} /> },
-  { key: 'ai', label: 'AI Model', icon: <Cpu size={12} /> },
-  { key: 'company', label: 'Company', icon: <Building2 size={12} /> }
+  { key: 'company', label: 'Company', icon: <Building2 size={12} /> },
+  { key: 'wallet', label: 'Wallet', icon: <Wallet size={12} /> }
 ]
 
 export function SettingsPage() {
-  const [tab, setTab] = useState<Tab>('wallet')
-  const { activeModel, unload, resetCache, setError } = useAI()
+  const [tab, setTab] = useState<Tab>('company')
   const { status, openSetup, openAccountInfo, openExportKey, openDestroy } =
     useWallet()
 
@@ -66,11 +62,9 @@ export function SettingsPage() {
 
   return (
     <div>
-      <PageHeader
-        label='Account'
-        title='Settings'
-        subtitle='Configure your Canton wallet and local AI model.'
-      />
+      <div className="mb-6">
+        <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Settings</h1>
+      </div>
 
       {/* Sub-tabs */}
       <div className='mb-6 flex items-center gap-1 border-b border-brand-border'>

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Plus, Search, Pencil, Trash2, Download, Upload } from 'lucide-react'
 import EmployeeFormDrawer from '../EmployeeFormDrawer'
 import ConfirmDeleteModal from '../ConfirmDeleteModal'
+import { PartyIdModal } from '../wallet/PartyIdModal'
 import { useEmployees } from '../../context/EmployeeContext'
 import {
   EMPLOYEE_TYPES,
@@ -20,6 +21,7 @@ export function EmployeesPage() {
   const [addOpen, setAddOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Employee | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null)
+  const [partyIdTarget, setPartyIdTarget] = useState<Employee | null>(null)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<EmployeeType | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<EmployeeStatus | 'all'>('all')
@@ -207,6 +209,7 @@ export function EmployeesPage() {
                 employee={e}
                 onEdit={() => setEditTarget(e)}
                 onDelete={() => setDeleteTarget(e)}
+                onPartyIdClick={() => setPartyIdTarget(e)}
               />
             ))}
           </ul>
@@ -230,6 +233,12 @@ export function EmployeesPage() {
           setDeleteTarget(null)
         }}
       />
+      <PartyIdModal
+        open={!!partyIdTarget}
+        onClose={() => setPartyIdTarget(null)}
+        employeeId={partyIdTarget?.id ?? ''}
+        partyId={partyIdTarget?.cantonPartyId}
+      />
     </div>
   )
 }
@@ -241,11 +250,13 @@ export function EmployeesPage() {
 function EmployeeRow({
   employee,
   onEdit,
-  onDelete
+  onDelete,
+  onPartyIdClick
 }: {
   employee: Employee
   onEdit: () => void
   onDelete: () => void
+  onPartyIdClick: () => void
 }) {
   const countryDisplay = employee.country ? worldCountryLabel(employee.country) : '—'
   const currencyDisplay = employee.payCurrency ?? '—'
@@ -280,14 +291,25 @@ function EmployeeRow({
                 </>
               )}
             </span>
-            {missingPartyId && (
-              <span
-                className='rounded-sm border border-amber-200 bg-amber-100 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider2 text-amber-900'
-                title='No Canton partyId — cannot receive payroll yet'
+            {missingPartyId ? (
+              <button
+                onClick={onPartyIdClick}
+                className='rounded-sm border border-amber-200 bg-amber-100 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider2 text-amber-900 cursor-pointer hover:bg-amber-200 transition'
+                title='Click to set Canton partyId'
               >
                 No partyId
-              </span>
-            )}
+              </button>
+            ) : employee.cantonPartyId ? (
+              <button
+                onClick={onPartyIdClick}
+                className='rounded-sm border border-gray-200 bg-gray-100 px-1.5 py-0.5 font-mono text-[9px] text-gray-600 cursor-pointer hover:bg-gray-200 transition'
+                title={employee.cantonPartyId}
+              >
+                {employee.cantonPartyId.length > 12
+                  ? `${employee.cantonPartyId.slice(0, 6)}…${employee.cantonPartyId.slice(-4)}`
+                  : employee.cantonPartyId}
+              </button>
+            ) : null}
           </div>
         </div>
       </div>
@@ -299,10 +321,7 @@ function EmployeeRow({
 
       {/* Compensation — currency + frequency */}
       <div>
-        <p className='m-0 whitespace-nowrap font-mono text-xs text-brand-navy'>{compensation}</p>
-        <p className='m-0 mt-0.5 whitespace-nowrap font-mono text-[10px] uppercase tracking-wider2 text-brand-muted/70'>
-          Contract currency
-        </p>
+        <p className='m-0 whitespace-nowrap font-mono text-xs text-brand-navy'>{compensation}</p> 
       </div>
 
       {/* Status badge */}

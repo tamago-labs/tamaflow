@@ -340,10 +340,6 @@ export default function EmployeeForm({
                 </option>
               ))}
             </select>
-            <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted mt-1.5 m-0">
-              What the employment contract specifies. Payroll is paid in CC and
-              converted at payment time.
-            </p>
             {show('payCurrency') && !currencyValid && (
               <p className="font-sans text-xs text-brand-err mt-1 m-0">
                 Compensation currency is required.
