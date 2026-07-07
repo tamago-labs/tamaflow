@@ -11,6 +11,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
+import { TokenAvatar } from '../TokenAvatar'
 
 interface Network {
   key: string
@@ -20,7 +21,7 @@ interface Network {
 }
 
 const NETWORKS: Network[] = [
-  { key: 'devnet', label: 'Devnet', active: true, hint: 'Canton DevNet' }
+  { key: 'devnet', label: 'Devnet', active: true }
 ]
 
 export function NetworkBadge() {
@@ -55,12 +56,9 @@ export function NetworkBadge() {
         aria-haspopup='menu'
         aria-expanded={open}
         aria-label={`Connected network: ${active.label}`}
-        className='flex cursor-pointer items-center gap-1.5 rounded-md border border-brand-blue bg-white px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-light'
+        className='flex cursor-pointer items-center gap-1.5 rounded-md border border-brand-blue bg-white px-2 py-1 text-xs font-semibold text-brand-blue hover:bg-brand-light'
       >
-        <span
-          className='h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-teal'
-          aria-hidden
-        />
+        <TokenAvatar symbol='CC' />
         <span>{active.label}</span>
         <ChevronDown
           size={11}
@@ -89,11 +87,6 @@ export function NetworkBadge() {
                     <span className='block font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-navy'>
                       {n.label}
                     </span>
-                    {n.hint && (
-                      <span className='mt-0.5 block font-mono text-[9px] uppercase tracking-wider2 text-brand-muted'>
-                        {n.hint}
-                      </span>
-                    )}
                   </span>
                   {n.active && (
                     <Check

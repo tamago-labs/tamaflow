@@ -76,6 +76,7 @@ export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPag
           </div>
           {invite && (
             <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-gray-600 font-semibold">Invite code</span>
               <code className="text-xs text-gray-500 truncate max-w-[120px]" title={invite}>{invite}</code>
               <button onClick={handleCopyInvite} className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition" title="Copy invite code">
                 {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
