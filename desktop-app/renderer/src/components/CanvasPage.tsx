@@ -160,6 +160,13 @@ export function CanvasPage() {
 
   return (
     <div className="relative w-full h-full overflow-hidden">
+      {!companyProfile && (
+        <div className="absolute top-0 left-0 right-0 z-200 bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center gap-2" style={{ zIndex: 200 }}>
+          <span className="text-amber-600 text-sm">⚠</span>
+          <span className="font-sans text-sm text-amber-800">Company profile not set up. </span>
+          <span className="font-sans text-sm text-amber-700">Payment templates and route computation require a company profile.</span>
+        </div>
+      )}
       <FlowBuilder flowId={flowId} canvas={canvas} onCanvasChange={handleCanvasChange} flowName={flowName} onFlowNameChange={handleNameChange} onRequestPreview={() => setPreviewOpen(true)} locked={flowStatus === 'active'} {...(badgeLabel ? { saveBadge: { label: badgeLabel, tone: saveStatus as 'idle' | 'saving' | 'saved' | 'error' } } : {})} />
 
       {(flowStatus === 'active' || flowStatus === 'completed') && (

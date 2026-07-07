@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Check, X, Layers, Pencil, Trash2 } from 'lucide-react'
+import { Check, X, Layers, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import { useCompany } from '../../context/CompanyContext'
 import type { CompanyProfile, PaymentTemplate } from '../../ai/types'
 import { paymentTemplateSubtitle } from '../../flow/flowCards'
@@ -59,8 +59,14 @@ export default function PaymentSettingsPage() {
     return (
       <div className="max-w-2xl">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Payment Settings</h1>
-        <div className="bg-white border border-gray-200 rounded-md p-6">
-          <p className="font-sans text-sm text-gray-500 m-0">Set up a company profile first to configure payment templates.</p>
+        <div className="bg-amber-50 border border-amber-200 rounded-md p-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-sans text-sm font-medium text-amber-800 m-0">Company profile not set up</p>
+              <p className="font-sans text-sm text-amber-700 m-0 mt-1">You need to set up your company profile before configuring payment templates. Go to Settings to complete your company setup.</p>
+            </div>
+          </div>
         </div>
       </div>
     )
