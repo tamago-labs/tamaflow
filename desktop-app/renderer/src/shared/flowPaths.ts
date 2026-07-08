@@ -1,7 +1,6 @@
-import type { Employee, CompanyProfile, PaymentTemplate, RouteSummary, CanvasCard, Connection } from '../ai/types'
+import type { Employee, CompanyProfile, PaymentTemplate, RouteSummary, CanvasCard, Connection, TaxObligation } from '../ai/types'
 import { computeOutcome, type ComputeInput, type PayCurrency } from './computeOutcome'
 import { convert, type PricedCurrency } from '../lib/priceProvider'
-import { DIRECT_PAYMENT_TEMPLATE_ID } from './paymentTemplate'
 import type { PayeeFields, PaymentFields } from '../flow/types'
 
 export interface EnumerateInput {
@@ -73,63 +72,117 @@ function readPaymentFields(card: CanvasCard): PaymentFields | null {
   return card.paymentFields as unknown as PaymentFields
 }
 
-function applyDeductions(grossPay: string, template: PaymentTemplate | null): { adjustedGross: string; withholdingAmount?: string; socialSecurityAmount?: string } {
-  if (!template) return { adjustedGross: grossPay }
-  let withholdingAmount: string | undefined
-  let net = grossPay
+/**
+ * Normalize an obligation amount based on pay frequency.
+ * - per_year: divide by 12 for monthly, by 2 for biweekly, etc.
+ * - per_month: use as-is for monthly, multiply for biweekly, etc.
+ */
+function normalizeObligationAmount(
+  obligation: TaxObligation | undefined,
+  payFrequency: string,
+  grossPayCurrency: string
+): { amount: string; converted: boolean } {
+  if (!obligation || !obligation.amount || parseDecimal(obligation.amount) === null) {
+    return { amount: '0', converted: false }
+  }
+
+  let amount = parseDecimal(obligation.amount) ?? 0
+
+  // Convert currency if different from pay currency
+  let converted = false
+  if (obligation.currency !== grossPayCurrency) {
+    const rate = convert(1, obligation.currency as any, grossPayCurrency as any)
+    if (rate !== null) {
+      amount = amount * rate
+      converted = true
+    }
+  }
+
+  // Normalize based on term and pay frequency
+  const periodsPerYear = getPeriodsPerYear(payFrequency)
+  if (obligation.term === 'per_year') {
+    // Divide annual amount by number of pay periods per year
+    amount = amount / periodsPerYear
+  }
+  // per_month: already monthly, no adjustment needed for monthly pay
+  // For other frequencies, multiply by months in period
+  else if (obligation.term === 'per_month') {
+    if (payFrequency === 'biweekly') amount = amount * 2
+    else if (payFrequency === 'weekly') amount = amount * 4.33
+    else if (payFrequency === 'hourly') amount = amount * (160 / 160) // hourly is already monthly equivalent
+  }
+
+  return { amount: Math.max(0, amount).toFixed(2), converted }
+}
+
+function getPeriodsPerYear(payFrequency: string): number {
+  switch (payFrequency) {
+    case 'monthly': return 12
+    case 'biweekly': return 26
+    case 'weekly': return 52
+    case 'hourly': return 12
+    case 'one-off': return 1
+    default: return 12
+  }
+}
+
+/**
+ * Apply deductions based on the payment template's settings.
+ * - If template has withholdingRate, apply it as a percentage
+ * - If template has applyEmployeeTax, deduct employee's tax obligation
+ * - If template has applyEmployeeSocialSecurity, deduct employee's SS
+ * - Direct Payment (no template) = no deductions
+ */
+function applyDeductionsFromTemplate(
+  grossPay: string,
+  employee: Employee,
+  template: PaymentTemplate | null
+): { adjustedGross: string; taxAmount?: string; socialSecurityAmount?: string; netPay: string } {
+  let taxAmount = '0'
+  let ssAmount = '0'
+  let net = parseDecimal(grossPay) ?? 0
+
+  // Direct Payment (no template) = no deductions
+  if (!template) {
+    return { adjustedGross: grossPay, netPay: grossPay }
+  }
+
+  // Apply withholding rate from template if set
   if (template.withholdingRate && template.withholdingRate.trim() !== '') {
-    withholdingAmount = mulDecimal(grossPay, template.withholdingRate, 2)
-    net = subDecimal(net, withholdingAmount, 2)
+    const rate = parseDecimal(template.withholdingRate)
+    if (rate !== null && rate > 0) {
+      const deduction = net * rate
+      taxAmount = deduction.toFixed(2)
+      net = net - deduction
+    }
   }
-  return { adjustedGross: net, ...(withholdingAmount && { withholdingAmount }) }
-}
 
-function mulDecimal(value: string, rate: string, precision: number): string {
-  const trimValue = value.trim()
-  const trimRate = rate.trim()
-  if (!/^\d+(\.\d+)?$/.test(trimValue)) throw new Error(`Invalid value: ${value}`)
-  if (!/^\d+(\.\d+)?$/.test(trimRate)) throw new Error(`Invalid rate: ${rate}`)
-  const RATE_PRECISION = 18
-  const toMinor = (s: string, d: number): bigint => {
-    const [whole, frac = ''] = s.split('.')
-    const padded = (frac + '0'.repeat(d)).slice(0, d)
-    return BigInt(whole) * BigInt(10) ** BigInt(d) + BigInt(padded || '0')
+  // Apply per-employee tax if template enables it
+  if (template.applyEmployeeTax && employee.taxObligation) {
+    const { amount } = normalizeObligationAmount(employee.taxObligation, employee.payFrequency, employee.payCurrency)
+    const taxAmt = parseDecimal(amount) ?? 0
+    if (taxAmt > 0) {
+      taxAmount = (parseDecimal(taxAmount) ?? 0 + taxAmt).toFixed(2)
+      net = net - taxAmt
+    }
   }
-  const valueMinor = toMinor(trimValue, precision)
-  const rateMinor = toMinor(trimRate, RATE_PRECISION)
-  const product = valueMinor * rateMinor
-  const divisor = BigInt(10) ** BigInt(RATE_PRECISION)
-  const quotient = product / divisor
-  const remainder = product % divisor
-  const rounded = remainder * 2n >= divisor ? quotient + 1n : quotient
-  const factor = BigInt(10) ** BigInt(precision)
-  const whole = rounded / factor
-  const frac = rounded % factor
-  const fracStr = frac.toString().padStart(precision, '0')
-  const trimmed = fracStr.replace(/0+$/, '')
-  return trimmed === '' ? whole.toString() : `${whole.toString()}.${trimmed}`
-}
 
-function subDecimal(a: string, b: string, precision: number): string {
-  const trimA = a.trim()
-  const trimB = b.trim()
-  if (!/^\d+(\.\d+)?$/.test(trimA)) throw new Error(`Invalid value: ${a}`)
-  if (!/^\d+(\.\d+)?$/.test(trimB)) throw new Error(`Invalid value: ${b}`)
-  const toMinor = (s: string, d: number): bigint => {
-    const [whole, frac = ''] = s.split('.')
-    const padded = (frac + '0'.repeat(d)).slice(0, d)
-    return BigInt(whole) * BigInt(10) ** BigInt(d) + BigInt(padded || '0')
+  // Apply per-employee social security if template enables it
+  if (template.applyEmployeeSocialSecurity && employee.socialSecurity) {
+    const { amount } = normalizeObligationAmount(employee.socialSecurity, employee.payFrequency, employee.payCurrency)
+    const ssAmt = parseDecimal(amount) ?? 0
+    if (ssAmt > 0) {
+      ssAmount = ssAmt.toFixed(2)
+      net = net - ssAmt
+    }
   }
-  const aMinor = toMinor(trimA, precision)
-  const bMinor = toMinor(trimB, precision)
-  const diff = aMinor - bMinor
-  const factor = BigInt(10) ** BigInt(precision)
-  const whole = diff / factor
-  const frac = diff % factor
-  if (diff < 0n) return '0'
-  const fracStr = frac.toString().padStart(precision, '0')
-  const trimmed = fracStr.replace(/0+$/, '')
-  return trimmed === '' ? whole.toString() : `${whole.toString()}.${trimmed}`
+
+  return {
+    adjustedGross: Math.max(0, net).toFixed(2),
+    taxAmount: (parseDecimal(taxAmount) ?? 0) > 0 ? taxAmount : undefined,
+    socialSecurityAmount: (parseDecimal(ssAmount) ?? 0) > 0 ? ssAmount : undefined,
+    netPay: Math.max(0, net).toFixed(2)
+  }
 }
 
 function freshRouteId(): string {
@@ -198,14 +251,15 @@ export function enumerateRoutes(input: EnumerateInput): EnumerationResult {
     const payeeFields = readPayeeFields(payee)
     const paymentFields = readPaymentFields(paymentCard)
 
+    // Find the template for this payment card
     const templateId = paymentFields?.templateId
+    console.log('[flowPaths] templateId:', templateId, 'paymentTemplates:', companyProfile?.paymentTemplates?.map(t => ({ id: t.id, name: t.name, applyTax: t.applyEmployeeTax, applySS: t.applyEmployeeSocialSecurity })))
     let template: PaymentTemplate | null = null
-    if (templateId && templateId !== DIRECT_PAYMENT_TEMPLATE_ID) {
+    if (templateId && templateId !== 'direct') {
       template = companyProfile?.paymentTemplates?.find((t) => t.id === templateId) ?? null
-      if (template === null) {
-        warnings.push({ payeePlacementId: payee.placementId, message: `${employee.displayName}: payment template deleted — falling back to Direct Payment.` })
-      }
+      console.log('[flowPaths] found template:', template)
     }
+    console.log('[flowPaths] employee taxObligation:', employee.taxObligation, 'socialSecurity:', employee.socialSecurity)
 
     const gross = resolveGrossPay(employee)
     if ('error' in gross) {
@@ -213,14 +267,17 @@ export function enumerateRoutes(input: EnumerateInput): EnumerationResult {
       continue
     }
 
+    // Apply deductions based on template settings
     let adjustedGross: string
-    let withholdingAmount: string | undefined
+    let taxAmount: string | undefined
     let socialSecurityAmount: string | undefined
+    let netPay: string
     try {
-      const result = applyDeductions(gross.value, template)
+      const result = applyDeductionsFromTemplate(gross.value, employee, template)
       adjustedGross = result.adjustedGross
-      withholdingAmount = result.withholdingAmount
+      taxAmount = result.taxAmount
       socialSecurityAmount = result.socialSecurityAmount
+      netPay = result.netPay
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       warnings.push({ payeePlacementId: payee.placementId, message: `${employee.displayName}: deduction error — ${msg}` })
@@ -237,7 +294,7 @@ export function enumerateRoutes(input: EnumerateInput): EnumerationResult {
       fxRate = ccPerUnit.toFixed(18).replace(/0+$/, '').replace(/\.$/, '')
     }
 
-    const computeInput: ComputeInput = { grossPay: adjustedGross, payCurrency: gross.payCurrency, fxRate }
+    const computeInput: ComputeInput = { grossPay: netPay, payCurrency: gross.payCurrency, fxRate }
 
     let computed
     try {
@@ -248,7 +305,7 @@ export function enumerateRoutes(input: EnumerateInput): EnumerationResult {
       continue
     }
 
-    const memo = paymentFields?.memo?.trim() || template?.defaultMemo?.trim() || companyProfile?.directPaymentDefaultMemo?.trim() || ''
+    const memo = paymentFields?.memo?.trim() || companyProfile?.directPaymentDefaultMemo?.trim() || ''
 
     const route: RouteSummary = {
       id: freshRouteId(),
@@ -261,12 +318,13 @@ export function enumerateRoutes(input: EnumerateInput): EnumerationResult {
       amountCC: computed.amountCC,
       payCurrency: computed.payCurrency,
       grossPay: gross.value,
+      netPay,
       recipientPartyId: employee.cantonPartyId ?? '',
       memo,
       createdAt: new Date().toISOString(),
     }
     if (computed.fxRateApplied !== undefined) route.fxRate = computed.fxRateApplied
-    if (withholdingAmount) route.withholdingAmount = withholdingAmount
+    if (taxAmount) route.taxAmount = taxAmount
     if (socialSecurityAmount) route.socialSecurityAmount = socialSecurityAmount
     void payeeFields
     routes.push(route)

@@ -213,8 +213,16 @@ export interface Employee {
   startDate?: string
   endDate?: string
   note?: string
+  taxObligation?: TaxObligation
+  socialSecurity?: TaxObligation
   createdAt: string
   updatedAt: string
+}
+
+export interface TaxObligation {
+  amount: string
+  currency: CurrencyCode
+  term: 'per_year' | 'per_month'
 }
 
 export interface EmployeeFile {
@@ -251,6 +259,8 @@ export interface PaymentTemplate {
   name: string
   withholdingRate: string
   defaultMemo: string
+  applyEmployeeTax?: boolean
+  applyEmployeeSocialSecurity?: boolean
   createdAt: string
   updatedAt: string
 }
@@ -341,11 +351,13 @@ export interface RouteSummary {
   payCurrency: CurrencyCode
   /** Echo of the gross pay (in payCurrency) BEFORE deductions. */
   grossPay: string
+  /** Net pay after deductions (in payCurrency). */
+  netPay?: string
   /** FX rate applied (CC per 1 unit of payCurrency). */
   fxRate?: string
-  /** Withholding amount (in payCurrency, 2dp). */
-  withholdingAmount?: string
-  /** Social-security amount (in payCurrency, 2dp). */
+  /** Tax amount (in payCurrency). */
+  taxAmount?: string
+  /** Social-security amount (in payCurrency). */
   socialSecurityAmount?: string
   recipientPartyId: string
   /** Baked-in transfer memo. */

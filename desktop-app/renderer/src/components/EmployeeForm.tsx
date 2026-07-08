@@ -170,6 +170,8 @@ export default function EmployeeForm({
         startDate: startDate.trim() || undefined,
         endDate: endDate.trim() || undefined,
         note: note.trim() || undefined,
+        taxObligation: initial?.taxObligation,
+        socialSecurity: initial?.socialSecurity,
         createdAt: initial?.createdAt ?? '',
         updatedAt: initial?.updatedAt ?? ''
       })

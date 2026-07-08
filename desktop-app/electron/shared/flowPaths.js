@@ -124,14 +124,80 @@ function resolveGrossPay(employee) {
   }
 }
 
-function applyDeductions(grossPay, template) {
-  if (!template) return { adjustedGross: grossPay }
-  let withholdingAmount; let net = grossPay
+function applyDeductions(grossPay, template, employee) {
+  if (!template) return { adjustedGross: grossPay, netPay: grossPay }
+  let withholdingAmount = '0'
+  let ssAmount = '0'
+  let net = Number(grossPay) || 0
+
+  // Apply withholding rate from template if set
   if (template.withholdingRate && template.withholdingRate.trim() !== '') {
-    withholdingAmount = mulDecimal(grossPay, template.withholdingRate, 2)
-    net = subDecimal(net, withholdingAmount, 2)
+    const rate = Number(template.withholdingRate)
+    if (rate > 0) {
+      const deduction = net * rate
+      withholdingAmount = deduction.toFixed(2)
+      net = net - deduction
+    }
   }
-  return { adjustedGross: net, ...(withholdingAmount && { withholdingAmount }) }
+
+  // Apply per-employee tax if template enables it
+  if (template.applyEmployeeTax && employee?.taxObligation) {
+    const taxAmt = normalizeObligationAmount(employee.taxObligation, employee.payFrequency, employee.payCurrency)
+    if (taxAmt > 0) {
+      withholdingAmount = (Number(withholdingAmount) + taxAmt).toFixed(2)
+      net = net - taxAmt
+    }
+  }
+
+  // Apply per-employee social security if template enables it
+  if (template.applyEmployeeSocialSecurity && employee?.socialSecurity) {
+    const ssAmt = normalizeObligationAmount(employee.socialSecurity, employee.payFrequency, employee.payCurrency)
+    if (ssAmt > 0) {
+      ssAmount = ssAmt.toFixed(2)
+      net = net - ssAmt
+    }
+  }
+
+  return {
+    adjustedGross: Math.max(0, net).toFixed(2),
+    netPay: Math.max(0, net).toFixed(2),
+    ...(Number(withholdingAmount) > 0 && { withholdingAmount }),
+    ...(Number(ssAmount) > 0 && { socialSecurityAmount: ssAmount })
+  }
+}
+
+function normalizeObligationAmount(obligation, payFrequency, payCurrency) {
+  if (!obligation || !obligation.amount) return 0
+  let amount = Number(obligation.amount) || 0
+  if (amount <= 0) return 0
+
+  // Convert currency if different
+  if (obligation.currency !== payCurrency) {
+    const rate = convert(1, obligation.currency, payCurrency)
+    if (rate !== null) amount = amount * rate
+  }
+
+  // Normalize based on term
+  const periodsPerYear = getPeriodsPerYear(payFrequency)
+  if (obligation.term === 'per_year') {
+    amount = amount / periodsPerYear
+  } else if (obligation.term === 'per_month') {
+    if (payFrequency === 'biweekly') amount = amount * 2
+    else if (payFrequency === 'weekly') amount = amount * 4.33
+  }
+
+  return Math.max(0, amount)
+}
+
+function getPeriodsPerYear(payFrequency) {
+  switch (payFrequency) {
+    case 'monthly': return 12
+    case 'biweekly': return 26
+    case 'weekly': return 52
+    case 'hourly': return 12
+    case 'one-off': return 1
+    default: return 12
+  }
 }
 
 function freshRouteId() {
@@ -177,10 +243,10 @@ function enumerateRoutes(input) {
     const gross = resolveGrossPay(employee)
     if ('error' in gross) { warnings.push({ payeePlacementId: payee.placementId, message: `${employee.displayName}: ${gross.error}` }); continue }
 
-    let adjustedGross, withholdingAmount
+    let adjustedGross, withholdingAmount, socialSecurityAmount, netPay
     try {
-      const r = applyDeductions(gross.value, template)
-      adjustedGross = r.adjustedGross; withholdingAmount = r.withholdingAmount
+      const r = applyDeductions(gross.value, template, employee)
+      adjustedGross = r.adjustedGross; withholdingAmount = r.withholdingAmount; socialSecurityAmount = r.socialSecurityAmount; netPay = r.netPay
     } catch (e) { warnings.push({ payeePlacementId: payee.placementId, message: `${employee.displayName}: deduction error` }); continue }
 
     let fxRate
@@ -201,11 +267,12 @@ function enumerateRoutes(input) {
       payeePlacementId: payee.placementId, sourcePlacementId: sourceCard.placementId,
       paymentPlacementId: paymentCard.placementId, amountCC: computed.amountCC,
       payCurrency: computed.payCurrency, grossPay: gross.value,
-      recipientPartyId: employee.cantonPartyId || '', memo,
+      netPay, recipientPartyId: employee.cantonPartyId || '', memo,
       createdAt: new Date().toISOString()
     }
     if (computed.fxRateApplied) route.fxRate = computed.fxRateApplied
-    if (withholdingAmount) route.withholdingAmount = withholdingAmount
+    if (withholdingAmount && Number(withholdingAmount) > 0) route.taxAmount = withholdingAmount
+    if (socialSecurityAmount && Number(socialSecurityAmount) > 0) route.socialSecurityAmount = socialSecurityAmount
     routes.push(route)
   }
 

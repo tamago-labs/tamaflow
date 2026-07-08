@@ -104,12 +104,13 @@ export default function SettlementsPage() {
 
       {/* Table */}
       <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
-        <div className="grid gap-4 py-3 px-4 border-b border-gray-200 bg-gray-50" style={{ gridTemplateColumns: '1.1fr 1.1fr 1.4fr 1fr 1fr auto 1.4fr' }}>
+        <div className="grid gap-4 py-3 px-4 border-b border-gray-200 bg-gray-50" style={{ gridTemplateColumns: '1.1fr 1.1fr 1.4fr 1fr 1fr 1fr auto 1.4fr' }}>
           <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Time</span>
           <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Flow</span>
           <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Recipient</span>
-          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Amount</span>
-          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">CC</span>
+          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Gross</span>
+          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Tax</span>
+          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">SS</span>
           <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Status</span>
           <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Result</span>
         </div>
@@ -131,7 +132,7 @@ export default function SettlementsPage() {
               const shortHash = truncateTxHash(r.txHash)
               const isFailed = r.status === 'failed'
               return (
-                <div key={r.id} className="grid gap-4 py-3 px-4 border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors items-start" style={{ gridTemplateColumns: '1.1fr 1.1fr 1.4fr 1fr 1fr auto 1.4fr' }}>
+                <div key={r.id} className="grid gap-4 py-3 px-4 border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors items-start" style={{ gridTemplateColumns: '1.1fr 1.1fr 1.4fr 1fr 1fr 1fr auto 1.4fr' }}>
                   <span className="font-mono text-[11px] text-gray-900">{time}</span>
                   <span className="font-sans text-sm text-gray-900 truncate" title={flowName}>{flowName}</span>
                   <div className="min-w-0">
@@ -143,8 +144,10 @@ export default function SettlementsPage() {
                     <div className="font-mono text-[10px] text-gray-400 uppercase">{r.payCurrency}</div>
                   </div>
                   <div>
-                    <div className="font-mono text-[12px] text-gray-900 font-semibold">{r.amountCC}</div>
-                    <div className="font-mono text-[10px] text-gray-400">CC</div>
+                    <div className="font-mono text-[12px]" style={{ color: r.taxAmount ? '#b45309' : '#999' }}>{r.taxAmount || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="font-mono text-[12px]" style={{ color: r.socialSecurityAmount ? '#b45309' : '#999' }}>{r.socialSecurityAmount || '—'}</div>
                   </div>
                   <div><RouteStatusPill status={r.status} /></div>
                   <div className="min-w-0">
