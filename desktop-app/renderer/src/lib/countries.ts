@@ -25,7 +25,7 @@ export const COUNTRIES: ReadonlyArray<CountryOption> = [
   { code: 'MH', flag: '🇲🇭', label: 'Marshall Islands', defaultCurrency: 'USD' }
 ]
 
-export const CURRENCIES: ReadonlyArray<CurrencyCode> = ['JPY', 'THB', 'USD', 'EUR']
+export const CURRENCIES: ReadonlyArray<CurrencyCode> = ['JPY', 'THB', 'USD', 'EUR', 'SGD', 'CHF', 'HKD']
 
 export interface LegalEntityTypeOption {
   value: LegalEntityType

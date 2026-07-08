@@ -184,7 +184,7 @@ export type PayFrequency = 'monthly' | 'biweekly' | 'weekly' | 'hourly' | 'one-o
 
 export type EmployeeStatus = 'active' | 'paused' | 'terminated'
 
-export type CurrencyCode = 'JPY' | 'THB' | 'USD' | 'EUR'
+export type CurrencyCode = 'JPY' | 'THB' | 'USD' | 'EUR' | 'SGD' | 'CHF' | 'HKD'
 
 export type CountryCode = 'JP' | 'TH' | 'US' | 'GB' | 'SG' | 'AE' | 'EE' | 'HK' | 'CH' | 'VG' | 'PA' | 'KY' | 'MH'
 

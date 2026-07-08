@@ -10,14 +10,17 @@ export const PRICE_TABLE: Record<string, number> = {
   EUR: 1.08,
   JPY: 0.0067,
   THB: 0.028,
+  SGD: 0.74,
+  CHF: 1.13,
+  HKD: 0.13,
   CC: 0.15
 }
 
 /** ISO date the rates were last touched. */
-export const PRICE_TABLE_UPDATED = '2026-07-05'
+export const PRICE_TABLE_UPDATED = '2026-07-08'
 
 /** Currencies the renderer knows how to convert. */
-export type PricedCurrency = 'CC' | 'USD' | 'EUR' | 'JPY' | 'THB'
+export type PricedCurrency = 'CC' | 'USD' | 'EUR' | 'JPY' | 'THB' | 'SGD' | 'CHF' | 'HKD' | 'SGD' | 'CHF' | 'HKD'
 
 /** Lookup the USD value of 1 unit of `ccy`. */
 function usdPerUnit(ccy: PricedCurrency): number | null {

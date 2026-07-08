@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Loader2, ChevronDown } from 'lucide-react'
 import type { CompanyProfile, CountryCode, CurrencyCode, LegalEntityType } from '../ai/types'
 import { COUNTRIES, CURRENCIES, LEGAL_ENTITY_TYPES } from '../lib/countries'
 import { getFlagUrl } from '../lib/flags'
@@ -104,32 +104,15 @@ export default function CompanyForm({
         {/* Country (jurisdiction) */}
         <div className="relative">
           <label
-            htmlFor="co-country"
             className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5"
           >
             Country (jurisdiction)
           </label>
-          <select
-            id="co-country"
+          <CountryDropdown
             value={country}
-            onChange={(e) => setCountry(e.target.value as CountryCode)}
+            onChange={setCountry}
             disabled={disabled}
-            className="w-full px-3 py-2 bg-white border border-brand-border rounded-md font-sans text-sm text-brand-navy focus:outline-none focus:border-brand-blue transition-colors disabled:opacity-60"
-          >
-            {COUNTRIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-            <img
-              src={getFlagUrl(country)}
-              alt=""
-              className="w-5 h-auto rounded-sm"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-            />
-          </div>
+          />
         </div>
 
         {/* Base currency */}
@@ -157,9 +140,6 @@ export default function CompanyForm({
               </option>
             ))}
           </select>
-          <p className="font-mono text-[10px] uppercase tracking-wider2 text-brand-muted mt-1.5 m-0">
-            Auto-filled from jurisdiction. Change manually if needed.
-          </p>
         </div>
 
         {/* Company name */}
@@ -270,5 +250,53 @@ export default function CompanyForm({
         </button>
       </div>
     </form>
+  )
+}
+
+// ─── Custom Country Dropdown with flags ─────────────────────────
+
+function CountryDropdown({ value, onChange, disabled }: { value: CountryCode; onChange: (v: CountryCode) => void; disabled?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const selected = COUNTRIES.find((c) => c.code === value)
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => !disabled && setOpen((v) => !v)}
+        disabled={disabled}
+        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-sans text-sm text-gray-900 text-left focus:outline-none focus:border-blue-500 disabled:opacity-60 flex items-center gap-2"
+      >
+        <img src={getFlagUrl(value)} alt="" className="w-5 h-auto rounded-sm flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+        <span className="flex-1 truncate">{selected?.code} {selected?.label}</span>
+        <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+          {COUNTRIES.map((c) => (
+            <button
+              key={c.code}
+              type="button"
+              onClick={() => { onChange(c.code); setOpen(false) }}
+              className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-gray-50 transition-colors ${c.code === value ? 'bg-blue-50' : ''}`}
+            >
+              <img src={getFlagUrl(c.code)} alt="" className="w-5 h-auto rounded-sm flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+              <span className="font-mono text-xs text-gray-500 w-6">{c.code}</span>
+              <span className="font-sans text-sm text-gray-900">{c.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
