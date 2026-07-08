@@ -5,8 +5,8 @@ import { useFlows } from '../../context/FlowContext'
 import { useEmployees } from '../../context/EmployeeContext'
 import type { Employee, RouteSummary } from '../../ai/types'
 
-type Filter = 'all' | 'settled' | 'failed'
-type LoadStatus = 'idle' | 'loading' | 'present' | 'error'
+type StatusFilter = 'all' | 'settled' | 'failed'
+type DateFilter = 'all' | 'today' | '7days' | '30days'
 
 const TERMINAL_STATUSES = new Set<RouteSummary['status']>(['settled', 'failed'])
 
@@ -21,11 +21,20 @@ function truncateTxHash(hash: string | undefined): string {
   return hash.length > 10 ? `${hash.slice(0, 10)}…` : hash
 }
 
-function chipClass(active: boolean): string {
-  const base = 'inline-flex items-center gap-2 px-3 py-1.5 rounded-full border font-mono text-[11px] font-bold uppercase tracking-wider2 transition-colors cursor-pointer'
-  return active
-    ? `${base} bg-blue-600 text-white border-blue-600`
-    : `${base} bg-white text-gray-900 border-gray-200 hover:bg-gray-50`
+function getDateCutoff(dateFilter: DateFilter): Date | null {
+  const now = new Date()
+  if (dateFilter === 'today') {
+    const start = new Date(now)
+    start.setHours(0, 0, 0, 0)
+    return start
+  }
+  if (dateFilter === '7days') {
+    return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  }
+  if (dateFilter === '30days') {
+    return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+  }
+  return null
 }
 
 export default function SettlementsPage() {
@@ -33,21 +42,16 @@ export default function SettlementsPage() {
   const { employees } = useEmployees()
 
   const [routes, setRoutes] = useState<RouteSummary[]>([])
-  const [filter, setFilter] = useState<Filter>('all')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [search, setSearch] = useState('')
-  const [loadStatus, setLoadStatus] = useState<LoadStatus>('idle')
-  const [error, setError] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
-    setLoadStatus((prev) => (prev === 'idle' ? 'loading' : prev))
     try {
       const list = await listAllRoutes()
       setRoutes(list)
-      setLoadStatus('present')
-      setError(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-      setLoadStatus('error')
+      console.error('[SettlementsPage] reload failed:', e)
     }
   }, [listAllRoutes])
 
@@ -81,8 +85,18 @@ export default function SettlementsPage() {
 
   const visible = useMemo(() => {
     let list = terminalRoutes
-    if (filter === 'settled') list = list.filter((r) => r.status === 'settled')
-    else if (filter === 'failed') list = list.filter((r) => r.status === 'failed')
+
+    if (statusFilter === 'settled') list = list.filter((r) => r.status === 'settled')
+    else if (statusFilter === 'failed') list = list.filter((r) => r.status === 'failed')
+
+    const cutoff = getDateCutoff(dateFilter)
+    if (cutoff) {
+      const cutoffMs = cutoff.getTime()
+      list = list.filter((r) => {
+        const ts = new Date(r.completedAt ?? r.createdAt).getTime()
+        return ts >= cutoffMs
+      })
+    }
 
     const q = search.trim().toLowerCase()
     if (q) {
@@ -97,57 +111,91 @@ export default function SettlementsPage() {
       })
     }
     return list
-  }, [terminalRoutes, filter, search, employeeById, flowNameById])
+  }, [terminalRoutes, statusFilter, dateFilter, search, employeeById, flowNameById])
+
+  const hasAny = terminalRoutes.length > 0
+  const hasMatches = visible.length > 0
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Settlements</h1>
       </div>
 
-      {/* Filter chips + search */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => setFilter('all')} className={chipClass(filter === 'all')}>
-            <span>All</span><span className="opacity-80">{counts.all}</span>
-          </button>
-          <button type="button" onClick={() => setFilter('settled')} className={chipClass(filter === 'settled')}>
-            <span>Settled</span><span className="opacity-80">{counts.settled}</span>
-          </button>
-          <button type="button" onClick={() => setFilter('failed')} className={chipClass(filter === 'failed')}>
-            <span>Failed</span><span className="opacity-80">{counts.failed}</span>
-          </button>
+      <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
+        {/* Filter row */}
+        <div className="flex flex-wrap items-center gap-3 border-b border-gray-200 bg-gray-50 px-4 py-3">
+          <div className="relative min-w-[200px] flex-1">
+            <Search size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filter by name…"
+              className="w-full rounded-md border border-gray-200 bg-white py-1.5 pl-8 pr-3 font-sans text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+            className="rounded-md border border-gray-200 bg-white px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider2 text-gray-900 focus:border-blue-500 focus:outline-none"
+          >
+            <option value="all">All statuses ({counts.all})</option>
+            <option value="settled">Settled ({counts.settled})</option>
+            <option value="failed">Failed ({counts.failed})</option>
+          </select>
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value as DateFilter)}
+            className="rounded-md border border-gray-200 bg-white px-2 py-1.5 font-mono text-[10px] uppercase tracking-wider2 text-gray-900 focus:border-blue-500 focus:outline-none"
+          >
+            <option value="all">All time</option>
+            <option value="today">Today</option>
+            <option value="7days">Last 7 days</option>
+            <option value="30days">Last 30 days</option>
+          </select>
         </div>
-        <div className="relative min-w-[200px] flex-1">
-          <Search size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter by name…" className="w-full rounded-md border border-gray-200 bg-white py-1.5 pl-8 pr-3 font-sans text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none" />
-        </div>
-      </div>
 
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
-        <div className="grid gap-4 py-3 px-4 border-b border-gray-200 bg-gray-50" style={{ gridTemplateColumns: '1.1fr 1.1fr 1.4fr 1fr 1fr 1fr 1fr auto 1.4fr' }}>
-          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Time</span>
-          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Flow</span>
-          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Recipient</span>
-          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Gross</span>
-          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Withholding</span>
-          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Tax</span>
-          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">SS</span>
-          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Status</span>
-          <span className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold">Result</span>
-        </div>
+        {/* Column header */}
+        {hasAny && (
+          <div className="grid gap-4 border-b border-gray-200 bg-white px-4 py-2.5" style={{ gridTemplateColumns: '1.1fr 1.1fr 1.4fr 1fr 1fr 1fr 1fr auto 1.4fr' }}>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Time</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Flow</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Recipient</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Gross</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Withholding</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Tax</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">SS</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Status</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Result</span>
+          </div>
+        )}
 
-        {error ? (
-          <div className="py-8 px-4 text-center font-sans text-sm text-red-500">{error}</div>
-        ) : loadStatus === 'loading' && routes.length === 0 ? (
-          <div className="py-12 text-center font-sans text-sm text-gray-400">Loading…</div>
-        ) : terminalRoutes.length === 0 ? (
-          <div className="py-12 text-center font-sans text-sm text-gray-400">No settlements yet. Settled and failed routes will appear here as you run flows.</div>
-        ) : visible.length === 0 ? (
-          <div className="py-12 text-center font-sans text-sm text-gray-400">No {filter === 'settled' ? 'settled' : 'failed'} settlements.</div>
-        ) : (
-          <div>
+        {/* Empty state */}
+        {!hasAny && (
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <p className="m-0 font-sans text-sm font-medium text-gray-900">No settlements yet</p>
+            <p className="m-0 max-w-sm font-sans text-xs text-gray-400">Settled and failed routes will appear here as you run flows.</p>
+          </div>
+        )}
+
+        {/* No matches under filter */}
+        {hasAny && !hasMatches && (
+          <div className="flex flex-col items-center gap-2 py-12 text-center">
+            <p className="m-0 font-sans text-sm text-gray-400">No settlements match these filters.</p>
+            <button
+              type="button"
+              onClick={() => { setSearch(''); setStatusFilter('all'); setDateFilter('all') }}
+              className="cursor-pointer border-0 bg-transparent font-mono text-[10px] uppercase tracking-wider2 text-blue-600 underline"
+            >
+              Clear filters
+            </button>
+          </div>
+        )}
+
+        {/* Rows */}
+        {hasMatches && (
+          <ul className="divide-y divide-gray-200">
             {visible.map((r) => {
               const employee = employeeById.get(r.employeeId)
               const flowName = flowNameById.get(r.flowId) ?? '—'
@@ -155,7 +203,7 @@ export default function SettlementsPage() {
               const shortHash = truncateTxHash(r.txHash)
               const isFailed = r.status === 'failed'
               return (
-                <div key={r.id} className="grid gap-4 py-3 px-4 border-b border-gray-200 last:border-b-0 hover:bg-gray-50 transition-colors items-start" style={{ gridTemplateColumns: '1.1fr 1.1fr 1.4fr 1fr 1fr 1fr 1fr auto 1.4fr' }}>
+                <li key={r.id} className="grid gap-4 py-3 px-4 transition-colors hover:bg-gray-50 items-start" style={{ gridTemplateColumns: '1.1fr 1.1fr 1.4fr 1fr 1fr 1fr 1fr auto 1.4fr' }}>
                   <span className="font-mono text-[11px] text-gray-900">{time}</span>
                   <span className="font-sans text-sm text-gray-900 truncate" title={flowName}>{flowName}</span>
                   <div className="min-w-0">
@@ -183,10 +231,16 @@ export default function SettlementsPage() {
                       <span className="font-mono text-[11px] text-blue-600">{shortHash}</span>
                     )}
                   </div>
-                </div>
+                </li>
               )
             })}
-            <div className="py-3 px-4 font-sans text-[11px] text-gray-400">{visible.length} {visible.length === 1 ? 'settlement' : 'settlements'}</div>
+          </ul>
+        )}
+
+        {/* Footer count */}
+        {hasMatches && (
+          <div className="border-t border-gray-200 bg-gray-50 px-4 py-2">
+            <span className="font-sans text-[11px] text-gray-400">{visible.length} {visible.length === 1 ? 'settlement' : 'settlements'}</span>
           </div>
         )}
       </div>
