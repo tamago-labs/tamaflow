@@ -217,8 +217,14 @@ class RouteStore {
     if (typeof r.withholdingAmount === 'string' && r.withholdingAmount.trim().length > 0) {
       record.withholdingAmount = r.withholdingAmount.trim()
     }
+    if (typeof r.taxAmount === 'string' && r.taxAmount.trim().length > 0) {
+      record.taxAmount = r.taxAmount.trim()
+    }
     if (typeof r.socialSecurityAmount === 'string' && r.socialSecurityAmount.trim().length > 0) {
       record.socialSecurityAmount = r.socialSecurityAmount.trim()
+    }
+    if (typeof r.netPay === 'string' && r.netPay.trim().length > 0) {
+      record.netPay = r.netPay.trim()
     }
     if (typeof r.error === 'string' && r.error.length > 0) {
       record.error = r.error
@@ -269,7 +275,9 @@ function toSummary(record) {
   }
   if (record.fxRate) summary.fxRate = record.fxRate
   if (record.withholdingAmount) summary.withholdingAmount = record.withholdingAmount
+  if (record.taxAmount) summary.taxAmount = record.taxAmount
   if (record.socialSecurityAmount) summary.socialSecurityAmount = record.socialSecurityAmount
+  if (record.netPay) summary.netPay = record.netPay
   if (record.error) summary.error = record.error
   if (record.txHash) summary.txHash = record.txHash
   if (record.startedAt) summary.startedAt = record.startedAt
