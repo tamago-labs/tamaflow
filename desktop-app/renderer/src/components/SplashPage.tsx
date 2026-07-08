@@ -76,7 +76,7 @@ export function SplashPage({
 
           {ready && (
             <h1 className="font-sans text-sm text-gray-600 mb-6 leading-relaxed m-0">
-              You're in. Your team can now chat, share <span className="font-semibold text-gray-900">time check-ins</span> through Hyperswarm, and run <span className="font-semibold text-gray-900">AI-powered payroll flows</span> that settle directly on <span className="font-semibold text-[#1A1AE8]">Canton</span>
+              You're in. Your team can now <span className="font-semibold text-gray-900">chat and collaborate</span> through Hyperswarm, and run <span className="font-semibold text-gray-900">AI-powered payroll flows</span> that settle directly on <span className="font-semibold text-[#1A1AE8]">Canton</span>
             </h1>
           )}
 

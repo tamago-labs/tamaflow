@@ -3,6 +3,7 @@ import { MessageSquare, Bot, Copy, Check, AlertTriangle } from 'lucide-react'
 import { useEmployees } from '../../context/EmployeeContext'
 import { useFlows } from '../../context/FlowContext'
 import { useCompany } from '../../context/CompanyContext'
+import { useWallet } from '../../context/WalletContext'
 import { StatCards } from '../dashboard/StatCards'
 import { HeatmapCard } from '../dashboard/HeatmapCard'
 import { CountryChartCard } from '../dashboard/CountryChartCard'
@@ -41,6 +42,7 @@ export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPag
   const { employees } = useEmployees()
   const { flows } = useFlows()
   const { profile } = useCompany()
+  const { status: walletStatus } = useWallet()
   const [teamChatOpen, setTeamChatOpen] = useState(false)
   const [aiChatOpen, setAiChatOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -111,6 +113,19 @@ export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPag
             Company profile not set.{' '}
             <button onClick={() => onNavigate?.('settings')} className="font-medium underline hover:text-amber-900 bg-transparent border-0 p-0 cursor-pointer text-sm text-amber-800">
               Set up in Settings
+            </button>
+          </span>
+        </div>
+      )}
+
+      {/* Wallet warning */}
+      {!walletStatus?.exists && (
+        <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <AlertTriangle size={16} className="text-amber-600 flex-shrink-0" />
+          <span className="text-sm text-amber-800">
+            Wallet not set up.{' '}
+            <button onClick={() => onNavigate?.('assets')} className="font-medium underline hover:text-amber-900 bg-transparent border-0 p-0 cursor-pointer text-sm text-amber-800">
+              Set up in Assets
             </button>
           </span>
         </div>

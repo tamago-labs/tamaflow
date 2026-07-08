@@ -102,25 +102,14 @@ export function AssetsPage() {
         <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Assets</h1>
       </div>
       {!walletPresent && (
-        <div className='rounded-md border border-brand-border bg-white'>
-          <div className='flex flex-col items-center gap-3 py-16 text-center'>
-            <div className='flex h-10 w-10 items-center justify-center rounded-full border border-brand-border bg-brand-light text-brand-muted'>
-              <Wallet size={20} />
-            </div>
-            <p className='m-0 font-sans text-sm font-medium text-brand-navy'>
-              Connect wallet to view tokens
-            </p>
-            <p className='m-0 max-w-sm font-sans text-xs text-brand-muted'>
-              Set up the local wallet to load your Canton token balances.
-            </p>
-            <button
-              type='button'
-              onClick={openSetup}
-              className='mt-2 cursor-pointer rounded-md border-0 bg-brand-blue px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-white hover:opacity-90'
-            >
-              Setup Wallet
+        <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <span className="text-amber-600 text-sm">⚠</span>
+          <span className="text-sm text-amber-800">
+            Wallet not set up.{' '}
+            <button onClick={openSetup} className="font-medium underline hover:text-amber-900 bg-transparent border-0 p-0 cursor-pointer text-sm text-amber-800">
+              Set up in Assets
             </button>
-          </div>
+          </span>
         </div>
       )}
 
