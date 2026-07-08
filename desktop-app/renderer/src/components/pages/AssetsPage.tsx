@@ -24,7 +24,8 @@ import {
   Repeat2,
   Send,
   Wallet,
-  Workflow
+  Workflow,
+  Boxes
 } from 'lucide-react'
 import { TokenAvatar } from '../TokenAvatar'
 import { PendingTransfersCard } from '../PendingTransfersCard'
@@ -73,7 +74,7 @@ function formatAmount(value: string | number | undefined): string {
   return n.toLocaleString('en-US', { maximumFractionDigits: 6 })
 }
 
-export function AssetsPage() {
+export function AssetsPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
   const {
     status,
     holdings,

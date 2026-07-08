@@ -1,6 +1,6 @@
 // ObligationsDrawer — edit tax and social security obligations for an employee.
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Drawer from '../Drawer'
 import { useEmployees } from '../../context/EmployeeContext'
 import type { Employee, TaxObligation, CurrencyCode } from '../../ai/types'
@@ -17,21 +17,21 @@ interface ObligationsDrawerProps {
   employee: Employee | null
 }
 
-export function ObligationsDrawer({ open, onClose, employee }: ObligationsDrawerProps) {
-  const { update } = useEmployees()
-
-  const [taxAmount, setTaxAmount] = useState(employee?.taxObligation?.amount ?? '')
-  const [taxCurrency, setTaxCurrency] = useState<CurrencyCode>(employee?.taxObligation?.currency ?? 'USD')
-  const [taxTerm, setTaxTerm] = useState<'per_year' | 'per_month'>(employee?.taxObligation?.term ?? 'per_year')
-
-  const [ssAmount, setSsAmount] = useState(employee?.socialSecurity?.amount ?? '')
-  const [ssCurrency, setSsCurrency] = useState<CurrencyCode>(employee?.socialSecurity?.currency ?? 'USD')
-  const [ssTerm, setSsTerm] = useState<'per_year' | 'per_month'>(employee?.socialSecurity?.term ?? 'per_month')
-
+export function ObligationsDrawer({ open, onClose, employee: employeeProp }: ObligationsDrawerProps) {
+  const { employees, update } = useEmployees()
+  const [taxAmount, setTaxAmount] = useState('')
+  const [taxCurrency, setTaxCurrency] = useState<CurrencyCode>('USD')
+  const [taxTerm, setTaxTerm] = useState<'per_year' | 'per_month'>('per_year')
+  const [ssAmount, setSsAmount] = useState('')
+  const [ssCurrency, setSsCurrency] = useState<CurrencyCode>('USD')
+  const [ssTerm, setSsTerm] = useState<'per_year' | 'per_month'>('per_month')
   const [saving, setSaving] = useState(false)
 
-  // Reset form when drawer opens with new employee
-  useState(() => {
+  // Get fresh employee data from context
+  const employee = employeeProp ? employees.find((e) => e.id === employeeProp.id) ?? employeeProp : null
+
+  // Sync form state when drawer opens with new employee
+  useEffect(() => {
     if (open && employee) {
       setTaxAmount(employee.taxObligation?.amount ?? '')
       setTaxCurrency(employee.taxObligation?.currency ?? 'USD')
@@ -40,7 +40,7 @@ export function ObligationsDrawer({ open, onClose, employee }: ObligationsDrawer
       setSsCurrency(employee.socialSecurity?.currency ?? 'USD')
       setSsTerm(employee.socialSecurity?.term ?? 'per_month')
     }
-  })
+  }, [open, employee])
 
   const handleSave = async () => {
     if (!employee) return
@@ -56,7 +56,7 @@ export function ObligationsDrawer({ open, onClose, employee }: ObligationsDrawer
       await update(employee.id, { taxObligation, socialSecurity })
       onClose()
     } catch (e) {
-      console.error('[ObligationsDrawer] save failed:', e)
+      console.error('[TaxObligations] save failed:', e)
     } finally {
       setSaving(false)
     }
@@ -66,7 +66,7 @@ export function ObligationsDrawer({ open, onClose, employee }: ObligationsDrawer
     <Drawer
       open={open}
       onClose={onClose}
-      title="Obligations"
+      title="Tax Obligations"
       subtitle={employee?.displayName ?? 'Employee obligations'}
     >
       <div className="space-y-6">
@@ -153,7 +153,7 @@ export function ObligationsDrawer({ open, onClose, employee }: ObligationsDrawer
         {/* Save button */}
         <div className="flex justify-end gap-2 pt-4 border-t border-gray-200">
           <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50">Cancel</button>
-          <button type="button" onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">{saving ? 'Saving…' : 'Save Obligations'}</button>
+          <button type="button" onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">{saving ? 'Saving…' : 'Save Tax Obligations'}</button>
         </div>
       </div>
     </Drawer>

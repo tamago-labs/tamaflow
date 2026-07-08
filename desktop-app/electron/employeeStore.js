@@ -158,6 +158,10 @@ function validateEmployee(input) {
   const createdAt = typeof e.createdAt === 'string' ? e.createdAt : ''
   const updatedAt = typeof e.updatedAt === 'string' ? e.updatedAt : ''
 
+  // Preserve taxObligation and socialSecurity
+  const taxObligation = e.taxObligation || undefined
+  const socialSecurity = e.socialSecurity || undefined
+
   return {
     id,
     displayName,
@@ -174,6 +178,8 @@ function validateEmployee(input) {
     startDate,
     endDate,
     note,
+    taxObligation,
+    socialSecurity,
     createdAt,
     updatedAt
   }

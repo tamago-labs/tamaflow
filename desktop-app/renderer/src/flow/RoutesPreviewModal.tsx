@@ -22,6 +22,7 @@ export default function RoutesPreviewModal({ open, onClose, flowId, canvas, empl
   const totals = useMemo(() => {
     let totalCC = 0
     let totalGross = 0
+    let totalWithholding = 0
     let totalTax = 0
     let totalSS = 0
     let totalNet = 0
@@ -30,6 +31,8 @@ export default function RoutesPreviewModal({ open, onClose, flowId, canvas, empl
       if (Number.isFinite(n)) totalCC += n
       const gross = Number(r.grossPay)
       if (Number.isFinite(gross)) totalGross += gross
+      const wh = Number(r.withholdingAmount)
+      if (Number.isFinite(wh)) totalWithholding += wh
       const tax = Number(r.taxAmount)
       if (Number.isFinite(tax)) totalTax += tax
       const ss = Number(r.socialSecurityAmount)
@@ -39,7 +42,7 @@ export default function RoutesPreviewModal({ open, onClose, flowId, canvas, empl
     }
     const baseCurrency = companyProfile?.baseCurrency ?? 'USD'
     const totalBase = convert(totalCC, 'CC', baseCurrency as any)
-    return { totalCC, totalBase, baseCurrency, totalGross, totalTax, totalSS, totalNet }
+    return { totalCC, totalBase, baseCurrency, totalGross, totalWithholding, totalTax, totalSS, totalNet }
   }, [routes, companyProfile?.baseCurrency, convert])
 
   return (
@@ -59,6 +62,7 @@ export default function RoutesPreviewModal({ open, onClose, flowId, canvas, empl
                 <thead><tr style={{ background: '#f7f7fc', fontFamily: monoFont, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: MUTED, fontWeight: 700 }}>
                   <th style={thStyle}>Payee</th>
                   <th style={thRightStyle}>Gross</th>
+                  <th style={thRightStyle}>Withholding</th>
                   <th style={thRightStyle}>Tax</th>
                   <th style={thRightStyle}>SS</th>
                   <th style={thRightStyle}>Net</th>
@@ -66,9 +70,12 @@ export default function RoutesPreviewModal({ open, onClose, flowId, canvas, empl
                   <th style={thRightStyle}>CC amount</th>
                 </tr></thead>
                 <tbody>
-                  {routes.length === 0 && <tr><td colSpan={7} style={{ padding: '24px 22px', textAlign: 'center', color: MUTED, fontStyle: 'italic' }}>No routes to preview.</td></tr>}
+                  {routes.length === 0 && <tr><td colSpan={8} style={{ padding: '24px 22px', textAlign: 'center', color: MUTED, fontStyle: 'italic' }}>No routes to preview.</td></tr>}
                   {routes.map((r) => {
                     const employee = employees.find((e) => e.id === r.employeeId)
+                    const whNum = Number(r.withholdingAmount) || 0
+                    const taxNum = Number(r.taxAmount) || 0
+                    const ssNum = Number(r.socialSecurityAmount) || 0
                     return (
                       <tr key={r.id} style={{ borderTop: '1px solid #ececf5' }}>
                         <td style={tdStyle}>
@@ -76,8 +83,9 @@ export default function RoutesPreviewModal({ open, onClose, flowId, canvas, empl
                           <div style={{ fontSize: 9, color: MUTED }}>{r.payCurrency}</div>
                         </td>
                         <td style={tdRightStyle}><span style={{ color: NAVY }}>{r.grossPay}</span></td>
-                        <td style={tdRightStyle}><span style={{ color: r.taxAmount ? '#8a5a18' : MUTED }}>{r.taxAmount || '—'}</span></td>
-                        <td style={tdRightStyle}><span style={{ color: r.socialSecurityAmount ? '#8a5a18' : MUTED }}>{r.socialSecurityAmount || '—'}</span></td>
+                        <td style={tdRightStyle}><span style={{ color: whNum > 0 ? '#b45309' : MUTED }}>{r.withholdingAmount || '—'}</span></td>
+                        <td style={tdRightStyle}><span style={{ color: taxNum > 0 ? '#b45309' : MUTED }}>{r.taxAmount || '—'}</span></td>
+                        <td style={tdRightStyle}><span style={{ color: ssNum > 0 ? '#b45309' : MUTED }}>{r.socialSecurityAmount || '—'}</span></td>
                         <td style={tdRightStyle}><span style={{ color: NAVY, fontWeight: 600 }}>{r.netPay || r.grossPay}</span></td>
                         <td style={tdRightStyle}>{r.fxRate ? <span style={{ color: MUTED, fontSize: 10 }}>{r.fxRate}</span> : <span style={{ color: MUTED }}>—</span>}</td>
                         <td style={tdRightStyle}><span style={{ color: NAVY, fontWeight: 700 }}>{r.amountCC}</span> <span style={{ color: MUTED, fontSize: 9 }}>CC</span></td>
@@ -88,8 +96,9 @@ export default function RoutesPreviewModal({ open, onClose, flowId, canvas, empl
                 {routes.length > 0 && <tfoot><tr style={{ borderTop: '2px solid #ececf5', background: '#fafaff' }}>
                   <td style={{ ...tdStyle, fontFamily: monoFont, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: MUTED, fontWeight: 700 }}>Totals</td>
                   <td style={tdRightStyle}><span style={{ fontWeight: 600 }}>{totals.totalGross.toFixed(2)}</span></td>
-                  <td style={tdRightStyle}><span style={{ color: totals.totalTax > 0 ? '#8a5a18' : MUTED }}>{totals.totalTax > 0 ? totals.totalTax.toFixed(2) : '—'}</span></td>
-                  <td style={tdRightStyle}><span style={{ color: totals.totalSS > 0 ? '#8a5a18' : MUTED }}>{totals.totalSS > 0 ? totals.totalSS.toFixed(2) : '—'}</span></td>
+                  <td style={tdRightStyle}><span style={{ color: totals.totalWithholding > 0 ? '#b45309' : MUTED }}>{totals.totalWithholding > 0 ? totals.totalWithholding.toFixed(2) : '—'}</span></td>
+                  <td style={tdRightStyle}><span style={{ color: totals.totalTax > 0 ? '#b45309' : MUTED }}>{totals.totalTax > 0 ? totals.totalTax.toFixed(2) : '—'}</span></td>
+                  <td style={tdRightStyle}><span style={{ color: totals.totalSS > 0 ? '#b45309' : MUTED }}>{totals.totalSS > 0 ? totals.totalSS.toFixed(2) : '—'}</span></td>
                   <td style={tdRightStyle}><span style={{ fontWeight: 600 }}>{totals.totalNet.toFixed(2)}</span></td>
                   <td style={tdRightStyle}></td>
                   <td style={tdRightStyle}><span style={{ color: NAVY, fontWeight: 700 }}>{formatConverted(totals.totalCC, 'CC')} CC</span>{totals.totalBase !== null && <div style={{ fontSize: 9, color: MUTED, fontFamily: monoFont, marginTop: 2 }}>≈ {formatConverted(totals.totalBase, totals.baseCurrency as any)} {totals.baseCurrency}</div>}</td>

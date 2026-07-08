@@ -53,7 +53,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
       { id: 'employees', label: 'Employees', icon: Users },
       { id: 'flow-builder', label: 'Flow Builder', icon: Workflow },
       { id: 'payment-settings', label: 'Payment Settings', icon: Percent },
-      // { id: 'settlements', label: 'Settlements', icon: Boxes },
+      { id: 'settlements', label: 'Settlements', icon: Boxes },
       { id: 'assets', label: 'Assets', icon: CircleDollarSign }
     ]
   }

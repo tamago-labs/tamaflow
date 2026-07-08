@@ -272,6 +272,7 @@ function RoutesPanel({ status, routes, employees, canvas }: { status: FlowStatus
               <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9999bb', fontWeight: 700, borderBottom: '1px solid #e5e7eb' }}>Payee</th>
               <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9999bb', fontWeight: 700, borderBottom: '1px solid #e5e7eb' }}>Status</th>
               <th style={{ padding: '6px 12px', textAlign: 'right', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9999bb', fontWeight: 700, borderBottom: '1px solid #e5e7eb' }}>Gross</th>
+              <th style={{ padding: '6px 12px', textAlign: 'right', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9999bb', fontWeight: 700, borderBottom: '1px solid #e5e7eb' }}>Withholding</th>
               <th style={{ padding: '6px 12px', textAlign: 'right', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9999bb', fontWeight: 700, borderBottom: '1px solid #e5e7eb' }}>Tax</th>
               <th style={{ padding: '6px 12px', textAlign: 'right', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9999bb', fontWeight: 700, borderBottom: '1px solid #e5e7eb' }}>SS</th>
               <th style={{ padding: '6px 12px', textAlign: 'right', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9999bb', fontWeight: 700, borderBottom: '1px solid #e5e7eb' }}>CC</th>
@@ -283,6 +284,7 @@ function RoutesPanel({ status, routes, employees, canvas }: { status: FlowStatus
                   <td style={{ padding: '6px 12px' }}><div className="font-sans text-xs font-medium text-gray-900">{employee?.displayName ?? '(unknown)'}</div><div className="font-mono text-[10px] text-gray-400">{payeeCard?.title ?? r.payeePlacementId.slice(0, 12)}</div></td>
                   <td style={{ padding: '6px 12px' }}><RouteStatusPill status={r.status} /></td>
                   <td style={{ padding: '6px 12px', textAlign: 'right' }}><span className="font-mono text-xs text-gray-900">{r.grossPay}</span><span className="font-mono text-[10px] text-gray-400 ml-1">{r.payCurrency}</span></td>
+                  <td style={{ padding: '6px 12px', textAlign: 'right' }}><span className="font-mono text-xs" style={{ color: r.withholdingAmount ? '#b45309' : '#999' }}>{r.withholdingAmount || '—'}</span></td>
                   <td style={{ padding: '6px 12px', textAlign: 'right' }}><span className="font-mono text-xs" style={{ color: r.taxAmount ? '#b45309' : '#999' }}>{r.taxAmount || '—'}</span></td>
                   <td style={{ padding: '6px 12px', textAlign: 'right' }}><span className="font-mono text-xs" style={{ color: r.socialSecurityAmount ? '#b45309' : '#999' }}>{r.socialSecurityAmount || '—'}</span></td>
                   <td style={{ padding: '6px 12px', textAlign: 'right' }}><span className="font-mono text-xs font-bold text-gray-900">{r.amountCC}</span><span className="font-mono text-[10px] text-gray-400 ml-1">CC</span></td>

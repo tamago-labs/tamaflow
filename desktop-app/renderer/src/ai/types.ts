@@ -355,7 +355,9 @@ export interface RouteSummary {
   netPay?: string
   /** FX rate applied (CC per 1 unit of payCurrency). */
   fxRate?: string
-  /** Tax amount (in payCurrency). */
+  /** Withholding amount from template rate (in payCurrency). */
+  withholdingAmount?: string
+  /** Tax amount from employee obligation (in payCurrency). */
   taxAmount?: string
   /** Social-security amount (in payCurrency). */
   socialSecurityAmount?: string

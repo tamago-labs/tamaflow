@@ -112,7 +112,7 @@ export default function PaymentSettingsPage() {
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-400"><Plus size={20} /></div>
             <p className="m-0 font-sans text-sm font-medium text-gray-900">No custom templates yet</p>
-            <p className="m-0 max-w-sm font-sans text-xs text-gray-400">Create payment templates with withholding tax and social security deductions for your payroll flows.</p>
+            <p className="m-0 max-w-sm font-sans text-xs text-gray-400">Create payment templates with withholding tax and social security deductions.</p>
           </div>
         )}
 
@@ -170,18 +170,17 @@ interface TemplateDrawerProps {
 
 function TemplateDrawer({ open, onClose, initial, onSave, saving }: TemplateDrawerProps) {
   const [name, setName] = useState(initial?.name ?? '')
-  const [withholdingRate, setWithholdingRate] = useState(initial?.withholdingRate ?? '')
-  const [defaultMemo, setDefaultMemo] = useState(initial?.defaultMemo ?? 'Payroll')
+  const [defaultMemo, setDefaultMemo] = useState(initial?.defaultMemo ?? 'Payroll with deductions')
+  const [withholdingRate, setWithholdingRate] = useState(initial?.withholdingRate ?? '0')
   const [applyTax, setApplyTax] = useState(initial?.applyEmployeeTax ?? false)
   const [applySS, setApplySS] = useState(initial?.applyEmployeeSocialSecurity ?? false)
 
   // Sync form state when initial changes (for edit mode)
   useEffect(() => {
-    console.log('[TemplateDrawer] open:', open, 'initial:', initial)
     if (open) {
       setName(initial?.name ?? '')
-      setWithholdingRate(initial?.withholdingRate ?? '')
-      setDefaultMemo(initial?.defaultMemo ?? 'Payroll')
+      setDefaultMemo(initial?.defaultMemo ?? 'Payroll with deductions')
+      setWithholdingRate(initial?.withholdingRate ?? '0')
       setApplyTax(initial?.applyEmployeeTax ?? false)
       setApplySS(initial?.applyEmployeeSocialSecurity ?? false)
     }
@@ -196,18 +195,22 @@ function TemplateDrawer({ open, onClose, initial, onSave, saving }: TemplateDraw
         <Field label="Name" error={name.trim().length === 0 ? 'Name is required' : undefined}>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="US payroll deductions" maxLength={60} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-sans text-sm text-gray-900 focus:outline-none focus:border-blue-500" />
         </Field>
-        <Field label="Withholding rate" hint="Decimal between 0 and 1 (e.g. 0.27 = 27%)" error={withholdingRate !== '' && !(/^\d+(\.\d+)?$/.test(withholdingRate) && Number(withholdingRate) >= 0 && Number(withholdingRate) <= 1) ? 'Invalid rate' : undefined}>
-          <div className="flex items-center gap-2">
-            <input type="text" inputMode="decimal" value={withholdingRate} onChange={(e) => setWithholdingRate(e.target.value)} placeholder="0.27" className="w-32 px-3 py-2 bg-white border border-gray-300 rounded-md font-mono text-sm text-gray-900 focus:outline-none focus:border-blue-500" />
-            <span className="font-mono text-[11px] text-gray-400">= {(Number(withholdingRate) * 100).toFixed(2)}%</span>
-          </div>
-        </Field>
         <Field label="Default memo" error={defaultMemo.trim().length === 0 ? 'Memo is required' : undefined}>
-          <input type="text" value={defaultMemo} onChange={(e) => setDefaultMemo(e.target.value)} placeholder="March payroll" maxLength={200} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-mono text-sm text-gray-900 focus:outline-none focus:border-blue-500" />
+          <input type="text" value={defaultMemo} onChange={(e) => setDefaultMemo(e.target.value)} placeholder="Payroll with deductions" maxLength={200} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-mono text-sm text-gray-900 focus:outline-none focus:border-blue-500" />
         </Field>
 
         <div className="border-t border-gray-200 pt-4">
-          <p className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold mb-3">Deductions</p>
+          <p className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold mb-3">Global Deductions</p>
+          <Field label="Withholding rate" hint="Decimal between 0 and 1 (e.g. 0.27 = 27%)" error={withholdingRate !== '' && !(/^\d+(\.\d+)?$/.test(withholdingRate) && Number(withholdingRate) >= 0 && Number(withholdingRate) <= 1) ? 'Invalid rate' : undefined}>
+            <div className="flex items-center gap-2">
+              <input type="text" inputMode="decimal" value={withholdingRate} onChange={(e) => setWithholdingRate(e.target.value)} placeholder="0" className="w-32 px-3 py-2 bg-white border border-gray-300 rounded-md font-mono text-sm text-gray-900 focus:outline-none focus:border-blue-500" />
+              <span className="font-mono text-[11px] text-gray-400">= {(Number(withholdingRate) * 100).toFixed(2)}%</span>
+            </div>
+          </Field>
+        </div>
+
+        <div className="border-t border-gray-200 pt-4">
+          <p className="font-mono text-[10px] tracking-wider2 text-gray-400 uppercase font-semibold mb-3">Individual Deductions</p>
           <div className="space-y-3">
             <label className="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" checked={applyTax} onChange={(e) => setApplyTax(e.target.checked)} className="mt-1 cursor-pointer" />

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Plus, Search, Pencil, Trash2, Download, Upload, ClipboardList } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Download, Upload, Landmark } from 'lucide-react'
 import EmployeeFormDrawer from '../EmployeeFormDrawer'
 import ConfirmDeleteModal from '../ConfirmDeleteModal'
 import { PartyIdModal } from '../wallet/PartyIdModal'
@@ -404,11 +404,11 @@ function RowActions({
       <button
         type='button'
         onClick={onObligations}
-        title='Obligations'
-        aria-label='Edit obligations'
+        title='Tax Obligations'
+        aria-label='Edit tax obligations'
         className={`inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border bg-white transition-colors hover:bg-gray-50 ${hasObligations ? 'border-blue-300 text-blue-600' : 'border-gray-200 text-gray-400'}`}
       >
-        <ClipboardList size={12} />
+        <Landmark size={12} />
       </button>
       <button
         type='button'

@@ -127,6 +127,7 @@ function resolveGrossPay(employee) {
 function applyDeductions(grossPay, template, employee) {
   if (!template) return { adjustedGross: grossPay, netPay: grossPay }
   let withholdingAmount = '0'
+  let taxAmount = '0'
   let ssAmount = '0'
   let net = Number(grossPay) || 0
 
@@ -144,7 +145,7 @@ function applyDeductions(grossPay, template, employee) {
   if (template.applyEmployeeTax && employee?.taxObligation) {
     const taxAmt = normalizeObligationAmount(employee.taxObligation, employee.payFrequency, employee.payCurrency)
     if (taxAmt > 0) {
-      withholdingAmount = (Number(withholdingAmount) + taxAmt).toFixed(2)
+      taxAmount = taxAmt.toFixed(2)
       net = net - taxAmt
     }
   }
@@ -162,6 +163,7 @@ function applyDeductions(grossPay, template, employee) {
     adjustedGross: Math.max(0, net).toFixed(2),
     netPay: Math.max(0, net).toFixed(2),
     ...(Number(withholdingAmount) > 0 && { withholdingAmount }),
+    ...(Number(taxAmount) > 0 && { taxAmount }),
     ...(Number(ssAmount) > 0 && { socialSecurityAmount: ssAmount })
   }
 }
@@ -243,10 +245,10 @@ function enumerateRoutes(input) {
     const gross = resolveGrossPay(employee)
     if ('error' in gross) { warnings.push({ payeePlacementId: payee.placementId, message: `${employee.displayName}: ${gross.error}` }); continue }
 
-    let adjustedGross, withholdingAmount, socialSecurityAmount, netPay
+    let adjustedGross, withholdingAmount, taxAmount, socialSecurityAmount, netPay
     try {
       const r = applyDeductions(gross.value, template, employee)
-      adjustedGross = r.adjustedGross; withholdingAmount = r.withholdingAmount; socialSecurityAmount = r.socialSecurityAmount; netPay = r.netPay
+      adjustedGross = r.adjustedGross; withholdingAmount = r.withholdingAmount; taxAmount = r.taxAmount; socialSecurityAmount = r.socialSecurityAmount; netPay = r.netPay
     } catch (e) { warnings.push({ payeePlacementId: payee.placementId, message: `${employee.displayName}: deduction error` }); continue }
 
     let fxRate
@@ -271,7 +273,8 @@ function enumerateRoutes(input) {
       createdAt: new Date().toISOString()
     }
     if (computed.fxRateApplied) route.fxRate = computed.fxRateApplied
-    if (withholdingAmount && Number(withholdingAmount) > 0) route.taxAmount = withholdingAmount
+    if (withholdingAmount && Number(withholdingAmount) > 0) route.withholdingAmount = withholdingAmount
+    if (taxAmount && Number(taxAmount) > 0) route.taxAmount = taxAmount
     if (socialSecurityAmount && Number(socialSecurityAmount) > 0) route.socialSecurityAmount = socialSecurityAmount
     routes.push(route)
   }

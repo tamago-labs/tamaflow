@@ -137,7 +137,8 @@ function applyDeductionsFromTemplate(
   grossPay: string,
   employee: Employee,
   template: PaymentTemplate | null
-): { adjustedGross: string; taxAmount?: string; socialSecurityAmount?: string; netPay: string } {
+): { adjustedGross: string; withholdingAmount?: string; taxAmount?: string; socialSecurityAmount?: string; netPay: string } {
+  let withholdingAmount = '0'
   let taxAmount = '0'
   let ssAmount = '0'
   let net = parseDecimal(grossPay) ?? 0
@@ -152,7 +153,7 @@ function applyDeductionsFromTemplate(
     const rate = parseDecimal(template.withholdingRate)
     if (rate !== null && rate > 0) {
       const deduction = net * rate
-      taxAmount = deduction.toFixed(2)
+      withholdingAmount = deduction.toFixed(2)
       net = net - deduction
     }
   }
@@ -162,7 +163,7 @@ function applyDeductionsFromTemplate(
     const { amount } = normalizeObligationAmount(employee.taxObligation, employee.payFrequency, employee.payCurrency)
     const taxAmt = parseDecimal(amount) ?? 0
     if (taxAmt > 0) {
-      taxAmount = (parseDecimal(taxAmount) ?? 0 + taxAmt).toFixed(2)
+      taxAmount = taxAmt.toFixed(2)
       net = net - taxAmt
     }
   }
@@ -179,6 +180,7 @@ function applyDeductionsFromTemplate(
 
   return {
     adjustedGross: Math.max(0, net).toFixed(2),
+    withholdingAmount: (parseDecimal(withholdingAmount) ?? 0) > 0 ? withholdingAmount : undefined,
     taxAmount: (parseDecimal(taxAmount) ?? 0) > 0 ? taxAmount : undefined,
     socialSecurityAmount: (parseDecimal(ssAmount) ?? 0) > 0 ? ssAmount : undefined,
     netPay: Math.max(0, net).toFixed(2)
@@ -253,13 +255,11 @@ export function enumerateRoutes(input: EnumerateInput): EnumerationResult {
 
     // Find the template for this payment card
     const templateId = paymentFields?.templateId
-    console.log('[flowPaths] templateId:', templateId, 'paymentTemplates:', companyProfile?.paymentTemplates?.map(t => ({ id: t.id, name: t.name, applyTax: t.applyEmployeeTax, applySS: t.applyEmployeeSocialSecurity })))
     let template: PaymentTemplate | null = null
     if (templateId && templateId !== 'direct') {
       template = companyProfile?.paymentTemplates?.find((t) => t.id === templateId) ?? null
-      console.log('[flowPaths] found template:', template)
+      console.log('[flowPaths] Found template:', template?.name, 'withholdingRate:', template?.withholdingRate)
     }
-    console.log('[flowPaths] employee taxObligation:', employee.taxObligation, 'socialSecurity:', employee.socialSecurity)
 
     const gross = resolveGrossPay(employee)
     if ('error' in gross) {
@@ -269,12 +269,14 @@ export function enumerateRoutes(input: EnumerateInput): EnumerationResult {
 
     // Apply deductions based on template settings
     let adjustedGross: string
+    let withholdingAmount: string | undefined
     let taxAmount: string | undefined
     let socialSecurityAmount: string | undefined
     let netPay: string
     try {
       const result = applyDeductionsFromTemplate(gross.value, employee, template)
       adjustedGross = result.adjustedGross
+      withholdingAmount = result.withholdingAmount
       taxAmount = result.taxAmount
       socialSecurityAmount = result.socialSecurityAmount
       netPay = result.netPay
@@ -324,6 +326,7 @@ export function enumerateRoutes(input: EnumerateInput): EnumerationResult {
       createdAt: new Date().toISOString(),
     }
     if (computed.fxRateApplied !== undefined) route.fxRate = computed.fxRateApplied
+    if (withholdingAmount) route.withholdingAmount = withholdingAmount
     if (taxAmount) route.taxAmount = taxAmount
     if (socialSecurityAmount) route.socialSecurityAmount = socialSecurityAmount
     void payeeFields
