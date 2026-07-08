@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Plus, Search, Pencil, Trash2, Download, Upload, Landmark } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, Download, Upload, Landmark, History } from 'lucide-react'
 import EmployeeFormDrawer from '../EmployeeFormDrawer'
 import ConfirmDeleteModal from '../ConfirmDeleteModal'
 import { PartyIdModal } from '../wallet/PartyIdModal'
 import { ObligationsDrawer } from '../employee/ObligationsDrawer'
+import { SettlementHistoryDrawer } from '../employee/SettlementHistoryDrawer'
 import { useEmployees } from '../../context/EmployeeContext'
 import {
   EMPLOYEE_TYPES,
@@ -24,6 +25,7 @@ export function EmployeesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Employee | null>(null)
   const [partyIdTarget, setPartyIdTarget] = useState<Employee | null>(null)
   const [obligationsTarget, setObligationsTarget] = useState<Employee | null>(null)
+  const [historyTarget, setHistoryTarget] = useState<Employee | null>(null)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<EmployeeType | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<EmployeeStatus | 'all'>('all')
@@ -213,6 +215,7 @@ export function EmployeesPage() {
                 onDelete={() => setDeleteTarget(e)}
                 onPartyIdClick={() => setPartyIdTarget(e)}
                 onObligations={() => setObligationsTarget(e)}
+                onHistory={() => setHistoryTarget(e)}
               />
             ))}
           </ul>
@@ -247,6 +250,11 @@ export function EmployeesPage() {
         onClose={() => setObligationsTarget(null)}
         employee={obligationsTarget}
       />
+      <SettlementHistoryDrawer
+        open={!!historyTarget}
+        onClose={() => setHistoryTarget(null)}
+        employee={historyTarget}
+      />
     </div>
   )
 }
@@ -260,13 +268,15 @@ function EmployeeRow({
   onEdit,
   onDelete,
   onPartyIdClick,
-  onObligations
+  onObligations,
+  onHistory
 }: {
   employee: Employee
   onEdit: () => void
   onDelete: () => void
   onPartyIdClick: () => void
   onObligations: () => void
+  onHistory: () => void
 }) {
   const countryDisplay = employee.country ? worldCountryLabel(employee.country) : '—'
   const currencyDisplay = employee.payCurrency ?? '—'
@@ -345,7 +355,7 @@ function EmployeeRow({
 
       {/* Actions */}
       <div className='flex items-center justify-end'>
-        <RowActions onEdit={onEdit} onDelete={onDelete} onObligations={onObligations} hasObligations={!!employee.taxObligation || !!employee.socialSecurity} />
+        <RowActions onEdit={onEdit} onDelete={onDelete} onObligations={onObligations} onHistory={onHistory} hasObligations={!!employee.taxObligation || !!employee.socialSecurity} />
       </div>
     </li>
   )
@@ -383,11 +393,13 @@ function RowActions({
   onEdit,
   onDelete,
   onObligations,
+  onHistory,
   hasObligations
 }: {
   onEdit: () => void
   onDelete: () => void
   onObligations: () => void
+  onHistory: () => void
   hasObligations: boolean
 }) {
   return (
@@ -409,6 +421,15 @@ function RowActions({
         className={`inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border bg-white transition-colors hover:bg-gray-50 ${hasObligations ? 'border-blue-300 text-blue-600' : 'border-gray-200 text-gray-400'}`}
       >
         <Landmark size={12} />
+      </button>
+      <button
+        type='button'
+        onClick={onHistory}
+        title='Settlement History'
+        aria-label='View settlement history'
+        className='inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-gray-200 bg-white text-gray-700 transition-colors hover:bg-gray-50'
+      >
+        <History size={12} />
       </button>
       <button
         type='button'
