@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Search } from 'lucide-react'
 import RouteStatusPill from '../RouteStatusPill'
 import { useFlows } from '../../context/FlowContext'
 import { useEmployees } from '../../context/EmployeeContext'
@@ -33,6 +34,7 @@ export default function SettlementsPage() {
 
   const [routes, setRoutes] = useState<RouteSummary[]>([])
   const [filter, setFilter] = useState<Filter>('all')
+  const [search, setSearch] = useState('')
   const [loadStatus, setLoadStatus] = useState<LoadStatus>('idle')
   const [error, setError] = useState<string | null>(null)
 
@@ -78,10 +80,24 @@ export default function SettlementsPage() {
   }, [terminalRoutes])
 
   const visible = useMemo(() => {
-    if (filter === 'all') return terminalRoutes
-    if (filter === 'settled') return terminalRoutes.filter((r) => r.status === 'settled')
-    return terminalRoutes.filter((r) => r.status === 'failed')
-  }, [terminalRoutes, filter])
+    let list = terminalRoutes
+    if (filter === 'settled') list = list.filter((r) => r.status === 'settled')
+    else if (filter === 'failed') list = list.filter((r) => r.status === 'failed')
+
+    const q = search.trim().toLowerCase()
+    if (q) {
+      list = list.filter((r) => {
+        const employee = employeeById.get(r.employeeId)
+        const flowName = flowNameById.get(r.flowId) ?? ''
+        return (
+          (employee?.displayName ?? '').toLowerCase().includes(q) ||
+          flowName.toLowerCase().includes(q) ||
+          r.payeePlacementId.toLowerCase().includes(q)
+        )
+      })
+    }
+    return list
+  }, [terminalRoutes, filter, search, employeeById, flowNameById])
 
   return (
     <div>
@@ -89,17 +105,23 @@ export default function SettlementsPage() {
         <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Settlements</h1>
       </div>
 
-      {/* Filter chips */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <button type="button" onClick={() => setFilter('all')} className={chipClass(filter === 'all')}>
-          <span>All</span><span className="opacity-80">{counts.all}</span>
-        </button>
-        <button type="button" onClick={() => setFilter('settled')} className={chipClass(filter === 'settled')}>
-          <span>Settled</span><span className="opacity-80">{counts.settled}</span>
-        </button>
-        <button type="button" onClick={() => setFilter('failed')} className={chipClass(filter === 'failed')}>
-          <span>Failed</span><span className="opacity-80">{counts.failed}</span>
-        </button>
+      {/* Filter chips + search */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setFilter('all')} className={chipClass(filter === 'all')}>
+            <span>All</span><span className="opacity-80">{counts.all}</span>
+          </button>
+          <button type="button" onClick={() => setFilter('settled')} className={chipClass(filter === 'settled')}>
+            <span>Settled</span><span className="opacity-80">{counts.settled}</span>
+          </button>
+          <button type="button" onClick={() => setFilter('failed')} className={chipClass(filter === 'failed')}>
+            <span>Failed</span><span className="opacity-80">{counts.failed}</span>
+          </button>
+        </div>
+        <div className="relative min-w-[200px] flex-1">
+          <Search size={12} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Filter by name…" className="w-full rounded-md border border-gray-200 bg-white py-1.5 pl-8 pr-3 font-sans text-xs text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none" />
+        </div>
       </div>
 
       {/* Table */}
