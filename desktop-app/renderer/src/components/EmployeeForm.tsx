@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Loader2, HelpCircle } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Loader2, HelpCircle, ChevronDown } from 'lucide-react'
 import type {
   Employee,
   EmployeeType,
@@ -8,6 +8,7 @@ import type {
   CurrencyCode
 } from '../../ai/types'
 import { CURRENCIES } from '../lib/countries'
+import { getFlagUrl } from '../lib/flags'
 import { WORLD_COUNTRIES, worldCountryLabel } from '../lib/worldCountries'
 import {
   EMPLOYEE_TYPES,
@@ -325,23 +326,14 @@ export default function EmployeeForm({
             >
               Compensation currency
             </label>
-            <select
-              id="emp-currency"
+            <CurrencyDropdown
               value={payCurrency}
-              onChange={(e) => {
-                setPayCurrency(e.target.value as CurrencyCode)
+              onChange={(v) => {
+                setPayCurrency(v)
                 setTouched((t) => ({ ...t, payCurrency: true }))
               }}
-              onBlur={() => setTouched((t) => ({ ...t, payCurrency: true }))}
               disabled={disabled}
-              className="w-full px-3 py-2 bg-white border border-brand-border rounded-md font-sans text-sm text-brand-navy focus:outline-none focus:border-brand-blue transition-colors disabled:opacity-60"
-            >
-              {CURRENCIES.map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              ))}
-            </select>
+            />
             {show('payCurrency') && !currencyValid && (
               <p className="font-sans text-xs text-brand-err mt-1 m-0">
                 Compensation currency is required.
@@ -617,6 +609,61 @@ export default function EmployeeForm({
         </button>
       </div>
     </form>
+  )
+}
+
+// ─── Currency Dropdown with flags ─────────────────────────
+
+const CURRENCY_TO_COUNTRY: Record<string, string> = {
+  USD: 'US', EUR: 'EU', JPY: 'JP', THB: 'TH', SGD: 'SG', CHF: 'CH', HKD: 'HK'
+}
+
+function CurrencyDropdown({ value, onChange, disabled }: { value: CurrencyCode; onChange: (v: CurrencyCode) => void; disabled?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const countryCode = CURRENCY_TO_COUNTRY[value] || ''
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => !disabled && setOpen((v) => !v)}
+        disabled={disabled}
+        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-sans text-sm text-gray-900 text-left focus:outline-none focus:border-blue-500 disabled:opacity-60 flex items-center gap-2"
+      >
+        <img src={getFlagUrl(countryCode)} alt="" className="w-5 h-auto rounded-sm flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+        <span className="flex-1 truncate">{value}</span>
+        <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+          {CURRENCIES.map((code) => {
+            const cc = CURRENCY_TO_COUNTRY[code] || ''
+            return (
+              <button
+                key={code}
+                type="button"
+                onClick={() => { onChange(code); setOpen(false) }}
+                className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-gray-50 transition-colors ${code === value ? 'bg-blue-50' : ''}`}
+              >
+                <img src={getFlagUrl(cc)} alt="" className="w-5 h-auto rounded-sm flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                <span className="font-mono text-xs text-gray-500 w-8">{code}</span>
+                <span className="font-sans text-sm text-gray-900">{code}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
 

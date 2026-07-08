@@ -32,7 +32,6 @@ export default function EmployeeFormDrawer({ open, onClose, initial }: EmployeeF
         open={open}
         onClose={onClose}
         title={isEdit ? 'Edit Employee' : 'Add Employee'}
-        subtitle={initial?.displayName ?? 'New roster entry'}
       >
         <EmployeeForm
           initial={initial}

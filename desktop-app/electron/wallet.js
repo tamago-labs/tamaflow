@@ -310,8 +310,6 @@ async function createWallet(opts = {}) {
   try {
     const token = await getToken()
 
-    console.log("token: ", token)
-
     const sdk = await buildBaseSdk(token)
 
 

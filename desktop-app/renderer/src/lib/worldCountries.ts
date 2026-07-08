@@ -1,5 +1,5 @@
-// Full ISO 3166-1 alpha-2 country list for the employee country picker.
-// Subset of the most common countries — not exhaustive.
+// Major countries for the employee country picker.
+// Focused on jurisdictions relevant for web3/crypto operations.
 
 export interface WorldCountry {
   code: string
@@ -8,77 +8,90 @@ export interface WorldCountry {
 }
 
 export const WORLD_COUNTRIES: ReadonlyArray<WorldCountry> = [
-  { code: 'AF', flag: '🇦🇫', label: 'Afghanistan' },
-  { code: 'AL', flag: '🇦🇱', label: 'Albania' },
-  { code: 'DZ', flag: '🇩🇿', label: 'Algeria' },
-  { code: 'AR', flag: '🇦🇷', label: 'Argentina' },
-  { code: 'AU', flag: '🇦🇺', label: 'Australia' },
-  { code: 'AT', flag: '🇦🇹', label: 'Austria' },
-  { code: 'BD', flag: '🇧🇩', label: 'Bangladesh' },
-  { code: 'BE', flag: '🇧🇪', label: 'Belgium' },
-  { code: 'BR', flag: '🇧🇷', label: 'Brazil' },
-  { code: 'BG', flag: '🇧🇬', label: 'Bulgaria' },
-  { code: 'KH', flag: '🇰🇭', label: 'Cambodia' },
-  { code: 'CA', flag: '🇨🇦', label: 'Canada' },
-  { code: 'CL', flag: '🇨🇱', label: 'Chile' },
-  { code: 'CN', flag: '🇨🇳', label: 'China' },
-  { code: 'CO', flag: '🇨🇴', label: 'Colombia' },
-  { code: 'HR', flag: '🇭🇷', label: 'Croatia' },
-  { code: 'CZ', flag: '🇨🇿', label: 'Czech Republic' },
-  { code: 'DK', flag: '🇩🇰', label: 'Denmark' },
-  { code: 'EG', flag: '🇪🇬', label: 'Egypt' },
-  { code: 'EE', flag: '🇪🇪', label: 'Estonia' },
-  { code: 'FI', flag: '🇫🇮', label: 'Finland' },
-  { code: 'FR', flag: '🇫🇷', label: 'France' },
-  { code: 'DE', flag: '🇩🇪', label: 'Germany' },
-  { code: 'GR', flag: '🇬🇷', label: 'Greece' },
-  { code: 'HK', flag: '🇭🇰', label: 'Hong Kong' },
-  { code: 'HU', flag: '🇭🇺', label: 'Hungary' },
-  { code: 'IN', flag: '🇮🇳', label: 'India' },
-  { code: 'ID', flag: '🇮🇩', label: 'Indonesia' },
-  { code: 'IE', flag: '🇮🇪', label: 'Ireland' },
-  { code: 'IL', flag: '🇮🇱', label: 'Israel' },
-  { code: 'IT', flag: '🇮🇹', label: 'Italy' },
+  // East Asia
   { code: 'JP', flag: '🇯🇵', label: 'Japan' },
-  { code: 'JO', flag: '🇯🇴', label: 'Jordan' },
-  { code: 'KZ', flag: '🇰🇿', label: 'Kazakhstan' },
-  { code: 'KE', flag: '🇰🇪', label: 'Kenya' },
   { code: 'KR', flag: '🇰🇷', label: 'South Korea' },
-  { code: 'LV', flag: '🇱🇻', label: 'Latvia' },
-  { code: 'LT', flag: '🇱🇹', label: 'Lithuania' },
-  { code: 'LU', flag: '🇱🇺', label: 'Luxembourg' },
-  { code: 'MY', flag: '🇲🇾', label: 'Malaysia' },
-  { code: 'MX', flag: '🇲🇽', label: 'Mexico' },
-  { code: 'MA', flag: '🇲🇦', label: 'Morocco' },
-  { code: 'NL', flag: '🇳🇱', label: 'Netherlands' },
-  { code: 'NZ', flag: '🇳🇿', label: 'New Zealand' },
-  { code: 'NG', flag: '🇳🇬', label: 'Nigeria' },
-  { code: 'NO', flag: '🇳🇴', label: 'Norway' },
-  { code: 'PK', flag: '🇵🇰', label: 'Pakistan' },
-  { code: 'PE', flag: '🇵🇪', label: 'Peru' },
-  { code: 'PH', flag: '🇵🇭', label: 'Philippines' },
-  { code: 'PL', flag: '🇵🇱', label: 'Poland' },
-  { code: 'PT', flag: '🇵🇹', label: 'Portugal' },
-  { code: 'QA', flag: '🇶🇦', label: 'Qatar' },
-  { code: 'RO', flag: '🇷🇴', label: 'Romania' },
-  { code: 'RU', flag: '🇷🇺', label: 'Russia' },
-  { code: 'SA', flag: '🇸🇦', label: 'Saudi Arabia' },
-  { code: 'SG', flag: '🇸🇬', label: 'Singapore' },
-  { code: 'SK', flag: '🇸🇰', label: 'Slovakia' },
-  { code: 'SI', flag: '🇸🇮', label: 'Slovenia' },
-  { code: 'ZA', flag: '🇿🇦', label: 'South Africa' },
-  { code: 'ES', flag: '🇪🇸', label: 'Spain' },
-  { code: 'SE', flag: '🇸🇪', label: 'Sweden' },
-  { code: 'CH', flag: '🇨🇭', label: 'Switzerland' },
+  { code: 'CN', flag: '🇨🇳', label: 'China' },
   { code: 'TW', flag: '🇹🇼', label: 'Taiwan' },
+  { code: 'HK', flag: '🇭🇰', label: 'Hong Kong' },
+  { code: 'MO', flag: '🇲🇴', label: 'Macau' },
+
+  // Southeast Asia (ASEAN minus Laos, Myanmar, Cambodia, Timor)
   { code: 'TH', flag: '🇹🇭', label: 'Thailand' },
-  { code: 'TR', flag: '🇹🇷', label: 'Turkey' },
-  { code: 'UA', flag: '🇺🇦', label: 'Ukraine' },
-  { code: 'AE', flag: '🇦🇪', label: 'United Arab Emirates' },
-  { code: 'GB', flag: '🇬🇧', label: 'United Kingdom' },
-  { code: 'US', flag: '🇺🇸', label: 'United States' },
+  { code: 'SG', flag: '🇸🇬', label: 'Singapore' },
+  { code: 'MY', flag: '🇲🇾', label: 'Malaysia' },
+  { code: 'PH', flag: '🇵🇭', label: 'Philippines' },
+  { code: 'ID', flag: '🇮🇩', label: 'Indonesia' },
   { code: 'VN', flag: '🇻🇳', label: 'Vietnam' },
-  { code: 'VG', flag: '🇻🇬', label: 'British Virgin Islands' }
+  { code: 'BN', flag: '🇧🇳', label: 'Brunei' },
+
+  // South Asia
+  { code: 'IN', flag: '🇮🇳', label: 'India' },
+  { code: 'PK', flag: '🇵🇰', label: 'Pakistan' },
+  { code: 'BD', flag: '🇧🇩', label: 'Bangladesh' },
+  { code: 'LK', flag: '🇱🇰', label: 'Sri Lanka' },
+
+  // Oceania
+  { code: 'AU', flag: '🇦🇺', label: 'Australia' },
+  { code: 'NZ', flag: '🇳🇿', label: 'New Zealand' },
+
+  // North America
+  { code: 'US', flag: '🇺🇸', label: 'United States' },
+  { code: 'CA', flag: '🇨🇦', label: 'Canada' },
+
+  // Latin America (major)
+  { code: 'MX', flag: '🇲🇽', label: 'Mexico' },
+  { code: 'BR', flag: '🇧🇷', label: 'Brazil' },
+  { code: 'AR', flag: '🇦🇷', label: 'Argentina' },
+  { code: 'CL', flag: '🇨🇱', label: 'Chile' },
+  { code: 'CO', flag: '🇨🇴', label: 'Colombia' },
+  { code: 'PE', flag: '🇵🇪', label: 'Peru' },
+
+  // Europe (major)
+  { code: 'GB', flag: '🇬🇧', label: 'United Kingdom' },
+  { code: 'DE', flag: '🇩🇪', label: 'Germany' },
+  { code: 'FR', flag: '🇫🇷', label: 'France' },
+  { code: 'IT', flag: '🇮🇹', label: 'Italy' },
+  { code: 'ES', flag: '🇪🇸', label: 'Spain' },
+  { code: 'NL', flag: '🇳🇱', label: 'Netherlands' },
+  { code: 'CH', flag: '🇨🇭', label: 'Switzerland' },
+  { code: 'SE', flag: '🇸🇪', label: 'Sweden' },
+  { code: 'NO', flag: '🇳🇴', label: 'Norway' },
+  { code: 'DK', flag: '🇩🇰', label: 'Denmark' },
+  { code: 'FI', flag: '🇫🇮', label: 'Finland' },
+  { code: 'IE', flag: '🇮🇪', label: 'Ireland' },
+  { code: 'PT', flag: '🇵🇹', label: 'Portugal' },
+  { code: 'PL', flag: '🇵🇱', label: 'Poland' },
+  { code: 'AT', flag: '🇦🇹', label: 'Austria' },
+  { code: 'BE', flag: '🇧🇪', label: 'Belgium' },
+  { code: 'CZ', flag: '🇨🇿', label: 'Czech Republic' },
+
+  // Middle East (major)
+  { code: 'AE', flag: '🇦🇪', label: 'United Arab Emirates' },
+  { code: 'SA', flag: '🇸🇦', label: 'Saudi Arabia' },
+  { code: 'QA', flag: '🇶🇦', label: 'Qatar' },
+  { code: 'IL', flag: '🇮🇱', label: 'Israel' },
+  { code: 'TR', flag: '🇹🇷', label: 'Turkey' },
+  { code: 'JO', flag: '🇯🇴', label: 'Jordan' },
+  { code: 'BH', flag: '🇧🇭', label: 'Bahrain' },
+  { code: 'KW', flag: '🇰🇼', label: 'Kuwait' },
+  { code: 'OM', flag: '🇴🇲', label: 'Oman' },
+
+  // Africa (major)
+  { code: 'ZA', flag: '🇿🇦', label: 'South Africa' },
+  { code: 'NG', flag: '🇳🇬', label: 'Nigeria' },
+  { code: 'KE', flag: '🇰🇪', label: 'Kenya' },
+  { code: 'EG', flag: '🇪🇬', label: 'Egypt' },
+  { code: 'MA', flag: '🇲🇦', label: 'Morocco' },
+  { code: 'GH', flag: '🇬🇭', label: 'Ghana' },
+  { code: 'TZ', flag: '🇹🇿', label: 'Tanzania' },
+
+  // Crypto-friendly jurisdictions
+  { code: 'VG', flag: '🇻🇬', label: 'British Virgin Islands' },
+  { code: 'KY', flag: '🇰🇾', label: 'Cayman Islands' },
+  { code: 'PA', flag: '🇵🇦', label: 'Panama' },
+  { code: 'EE', flag: '🇪🇪', label: 'Estonia' },
+  { code: 'MH', flag: '🇲🇭', label: 'Marshall Islands' },
 ]
 
 export function worldCountryLabel(code: string): string {
