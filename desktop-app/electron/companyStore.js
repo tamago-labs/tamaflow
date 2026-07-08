@@ -9,7 +9,7 @@ const { app } = require('electron')
 const REGISTRY_FILE = 'company.json'
 
 const VALID_COUNTRIES = new Set(['JP', 'TH', 'US', 'GB', 'SG', 'AE', 'EE', 'HK', 'CH', 'VG', 'PA', 'KY', 'MH'])
-const VALID_CURRENCIES = new Set(['JPY', 'THB', 'USD', 'EUR'])
+const VALID_CURRENCIES = new Set(['JPY', 'THB', 'USD', 'EUR', 'SGD', 'CHF', 'HKD'])
 const VALID_LEGAL_TYPES = new Set(['dev_lab', 'token_spv', 'dao_wrapper', 'other'])
 
 function validateProfile(input) {

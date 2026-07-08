@@ -309,19 +309,25 @@ async function createWallet(opts = {}) {
 
   try {
     const token = await getToken()
+
+    console.log("token: ", token)
+
     const sdk = await buildBaseSdk(token)
+
 
     // 1. Generate Ed25519 keypair via the SDK (base64-encoded).
     const keyPair = sdk.keys.generate()
 
+
     // 2. Derive the fingerprint.
     const fingerprint = await sdk.keys.fingerprint(keyPair.publicKey)
+
 
     // 3. Allocate the external party on the ledger.
     const created = await sdk.party.external
       .create(keyPair.publicKey, { partyHint })
       .sign(keyPair.privateKey)
-      .execute()
+      .execute({ grantUserRights: false })
 
     // 4. Persist (encrypted-at-rest).
     const wallet = {

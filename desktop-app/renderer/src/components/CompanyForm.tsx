@@ -40,7 +40,7 @@ export default function CompanyForm({
   )
   const [companyName, setCompanyName] = useState(initial?.companyName ?? '')
   const [legalEntityType, setLegalEntityType] = useState<LegalEntityType>(
-    initial?.legalEntityType ?? 'corporation'
+    initial?.legalEntityType ?? 'dev_lab'
   )
   const [fiscalYearStart, setFiscalYearStart] = useState(
     initial?.fiscalYearStart ?? '01'
@@ -294,13 +294,14 @@ function CountryDropdown({ value, onChange, disabled }: { value: CountryCode; on
 
 // ─── Currency Dropdown with flags ─────────────────────────
 
-const CURRENCY_FLAGS: Record<string, string> = {
-  USD: '🇺🇸', EUR: '🇪🇺', JPY: '🇯🇵', THB: '🇹🇭', SGD: '🇸🇬', CHF: '🇨🇭', HKD: '🇭🇰'
+const CURRENCY_TO_COUNTRY: Record<string, string> = {
+  USD: 'US', EUR: 'EU', JPY: 'JP', THB: 'TH', SGD: 'SG', CHF: 'CH', HKD: 'HK'
 }
 
 function CurrencyDropdown({ value, onChange, disabled }: { value: CurrencyCode; onChange: (v: CurrencyCode) => void; disabled?: boolean }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const countryCode = CURRENCY_TO_COUNTRY[value] || ''
 
   useEffect(() => {
     if (!open) return
@@ -319,24 +320,27 @@ function CurrencyDropdown({ value, onChange, disabled }: { value: CurrencyCode; 
         disabled={disabled}
         className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-sans text-sm text-gray-900 text-left focus:outline-none focus:border-blue-500 disabled:opacity-60 flex items-center gap-2"
       >
-        <span className="text-base">{CURRENCY_FLAGS[value] || '💱'}</span>
+        <img src={getFlagUrl(countryCode)} alt="" className="w-5 h-auto rounded-sm flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
         <span className="flex-1 truncate">{value}</span>
         <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />
       </button>
       {open && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-          {CURRENCIES.map((code) => (
-            <button
-              key={code}
-              type="button"
-              onClick={() => { onChange(code); setOpen(false) }}
-              className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-gray-50 transition-colors ${code === value ? 'bg-blue-50' : ''}`}
-            >
-              <span className="text-base">{CURRENCY_FLAGS[code] || '💱'}</span>
-              <span className="font-mono text-xs text-gray-500 w-8">{code}</span>
-              <span className="font-sans text-sm text-gray-900">{code}</span>
-            </button>
-          ))}
+          {CURRENCIES.map((code) => {
+            const cc = CURRENCY_TO_COUNTRY[code] || ''
+            return (
+              <button
+                key={code}
+                type="button"
+                onClick={() => { onChange(code); setOpen(false) }}
+                className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-gray-50 transition-colors ${code === value ? 'bg-blue-50' : ''}`}
+              >
+                <img src={getFlagUrl(cc)} alt="" className="w-5 h-auto rounded-sm flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                <span className="font-mono text-xs text-gray-500 w-8">{code}</span>
+                <span className="font-sans text-sm text-gray-900">{code}</span>
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
