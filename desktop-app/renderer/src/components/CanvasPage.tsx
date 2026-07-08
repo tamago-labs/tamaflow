@@ -25,7 +25,7 @@ function errMsg(err: unknown): string {
 }
 
 export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'canvas') => void }) {
-  const { flows, get, save, remove, start, stop, listRoutes, onProgress, exportJson, importJson } = useFlows()
+  const { flows, get, save, remove, start, stop, listRoutes, onProgress, importJson } = useFlows()
   const { employees } = useEmployees()
   const { profile: companyProfile } = useCompany()
   const { setView: setFlowView } = useFlowView()
@@ -302,7 +302,7 @@ function RoutesPanel({ status, routes, employees, canvas }: { status: FlowStatus
 // ─── Flows List ─────────────────────────────────────────────────
 
 function FlowsList({ flows, loadStatus, onSelect, onCreate, onImport }: { flows: FlowSummary[]; loadStatus: string; onSelect: (id: string) => void; onCreate: () => void; onImport: () => void }) {
-  const { remove } = useFlows()
+  const { remove, exportJson } = useFlows()
   const [deleteTarget, setDeleteTarget] = useState<FlowSummary | null>(null)
   const [search, setSearch] = useState('')
 

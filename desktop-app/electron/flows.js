@@ -169,8 +169,11 @@ function registerFlowIpcHandlers() {
       const data = require('fs').readFileSync(result.filePaths[0], 'utf-8')
       const parsed = JSON.parse(data)
       if (!parsed || !parsed.flow) throw new Error('Invalid flow file')
-      // Save as new flow (generate new id)
-      const file = flowStore.save({ ...parsed.flow, id: undefined })
+      // Check if flow with same name exists — override it
+      const existing = flowStore.list().find(f => f.name === parsed.flow.name)
+      const file = existing
+        ? flowStore.save({ ...parsed.flow, id: existing.id })
+        : flowStore.save({ ...parsed.flow, id: undefined })
       notifyChange(flowStore.listWithRoutes(routeStore))
       return { success: true, file }
     } catch (err) {
