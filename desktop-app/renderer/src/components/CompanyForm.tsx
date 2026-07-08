@@ -116,30 +116,21 @@ export default function CompanyForm({
         </div>
 
         {/* Base currency */}
-        <div>
+        <div className="relative">
           <label
-            htmlFor="co-currency"
             className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5"
           >
             Base currency
           </label>
-          <select
-            id="co-currency"
+          <CurrencyDropdown
             value={baseCurrency}
-            onChange={(e) => {
-              setBaseCurrency(e.target.value as CurrencyCode)
+            onChange={(v) => {
+              setBaseCurrency(v)
               setCurrencyTouched(true)
               setTouched((t) => ({ ...t, baseCurrency: true }))
             }}
             disabled={disabled}
-            className="w-full px-3 py-2 bg-white border border-brand-border rounded-md font-sans text-sm text-brand-navy focus:outline-none focus:border-brand-blue transition-colors disabled:opacity-60"
-          >
-            {CURRENCIES.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         {/* Company name */}
@@ -293,6 +284,57 @@ function CountryDropdown({ value, onChange, disabled }: { value: CountryCode; on
               <img src={getFlagUrl(c.code)} alt="" className="w-5 h-auto rounded-sm flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
               <span className="font-mono text-xs text-gray-500 w-6">{c.code}</span>
               <span className="font-sans text-sm text-gray-900">{c.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Currency Dropdown with flags ─────────────────────────
+
+const CURRENCY_FLAGS: Record<string, string> = {
+  USD: '🇺🇸', EUR: '🇪🇺', JPY: '🇯🇵', THB: '🇹🇭', SGD: '🇸🇬', CHF: '🇨🇭', HKD: '🇭🇰'
+}
+
+function CurrencyDropdown({ value, onChange, disabled }: { value: CurrencyCode; onChange: (v: CurrencyCode) => void; disabled?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => !disabled && setOpen((v) => !v)}
+        disabled={disabled}
+        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-sans text-sm text-gray-900 text-left focus:outline-none focus:border-blue-500 disabled:opacity-60 flex items-center gap-2"
+      >
+        <span className="text-base">{CURRENCY_FLAGS[value] || '💱'}</span>
+        <span className="flex-1 truncate">{value}</span>
+        <ChevronDown size={14} className="text-gray-400 flex-shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+          {CURRENCIES.map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => { onChange(code); setOpen(false) }}
+              className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-gray-50 transition-colors ${code === value ? 'bg-blue-50' : ''}`}
+            >
+              <span className="text-base">{CURRENCY_FLAGS[code] || '💱'}</span>
+              <span className="font-mono text-xs text-gray-500 w-8">{code}</span>
+              <span className="font-sans text-sm text-gray-900">{code}</span>
             </button>
           ))}
         </div>
