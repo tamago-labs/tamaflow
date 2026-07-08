@@ -107,8 +107,8 @@ export default function PaymentSettingsPage() {
         {filtered.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-400"><Plus size={20} /></div>
-            <p className="m-0 font-sans text-sm font-medium text-gray-900">No templates yet</p>
-            <p className="m-0 max-w-sm font-sans text-xs text-gray-400">Create your first payment template to get started.</p>
+            <p className="m-0 font-sans text-sm font-medium text-gray-900">No custom templates yet</p>
+            <p className="m-0 max-w-sm font-sans text-xs text-gray-400">Create payment templates with withholding tax and social security deductions for your payroll flows.</p>
           </div>
         )}
 

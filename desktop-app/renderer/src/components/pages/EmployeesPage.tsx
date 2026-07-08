@@ -160,19 +160,19 @@ export function EmployeesPage() {
         {/* Empty state (no roster at all) */}
         {!hasAny && (
           <div className='flex flex-col items-center gap-3 py-16 text-center'>
-            <div className='flex h-10 w-10 items-center justify-center rounded-full border border-brand-border bg-brand-light text-brand-muted'>
+            <div className='flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-400'>
               <Plus size={20} />
             </div>
-            <p className='m-0 font-sans text-sm font-medium text-brand-navy'>
+            <p className='m-0 font-sans text-sm font-medium text-gray-900'>
               No employees yet
             </p>
-            <p className='m-0 max-w-sm font-sans text-xs text-brand-muted'>
+            <p className='m-0 max-w-sm font-sans text-xs text-gray-400'>
               Add your first employee to get started, or import an existing roster from a JSON file.
             </p>
             <button
               type='button'
               onClick={() => setAddOpen(true)}
-              className='mt-2 cursor-pointer rounded-md border-0 bg-brand-blue px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-white hover:opacity-90'
+              className='mt-2 cursor-pointer rounded-md border-0 bg-[#1A1AE8] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-white hover:opacity-90 flex items-center gap-1.5'
             >
               <Plus size={11} />
               Add Employee

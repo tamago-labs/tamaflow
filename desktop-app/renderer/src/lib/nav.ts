@@ -5,6 +5,7 @@ import {
   FileText,
   CalendarCheck,
   LayoutDashboard,
+  Percent,
   Users,
   Wallet,
   Workflow
@@ -51,7 +52,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { id: 'employees', label: 'Employees', icon: Users },
       { id: 'flow-builder', label: 'Flow Builder', icon: Workflow },
-      { id: 'payment-settings', label: 'Payment Settings', icon: Wallet },
+      { id: 'payment-settings', label: 'Payment Settings', icon: Percent },
       // { id: 'settlements', label: 'Settlements', icon: Boxes },
       { id: 'assets', label: 'Assets', icon: CircleDollarSign }
     ]
