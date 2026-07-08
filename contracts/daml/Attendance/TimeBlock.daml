@@ -1,0 +1,77 @@
+module TamaFlow.Attendance.TimeBlock where
+
+import DA.Time (DiffTime(..), addDiffTime)
+
+import TamaFlow.Attendance.Types (BlockStatus(..))
+
+-- | One 1-hour attendance block. Employee checks in, employer reviews later.
+template TimeBlock
+  with
+    employee : Party
+    employer : Party
+    blockStart : Time
+    blockEnd : Time
+    status : BlockStatus
+    note : Optional Text
+  where
+    signatory employee
+    observer employer
+
+    -- Block must be exactly 1 hour
+    ensure addDiffTime blockStart (hours 1) == blockEnd
+
+    -- Only employee can create (via create), only employer can confirm/reject
+    choice ConfirmBlock : ()
+      with
+        recordedAt : Time
+      controller employer
+      do
+        assertMsg "Only open blocks can be confirmed" (status == Open)
+        create
+          TamaFlow.Attendance.AttendanceRecord.AttendanceRecord with
+            employee
+            employer
+            blockStart
+            blockEnd
+            status = Confirmed
+            recordedAt
+        archive self
+
+    choice RejectBlock : ()
+      with
+        recordedAt : Time
+        reason : Text
+      controller employer
+      do
+        assertMsg "Only open blocks can be rejected" (status == Open)
+        create
+          TamaFlow.Attendance.AttendanceRecord.AttendanceRecord with
+            employee
+            employer
+            blockStart
+            blockEnd
+            status = Rejected
+            recordedAt
+        archive self
+
+    -- Employee can close an open block if the block time has passed
+    choice CloseBlock : ()
+      with
+        recordedAt : Time
+      controller employee
+      do
+        assertMsg "Only open blocks can be closed" (status == Open)
+        assertMsg "Block has not ended yet" (recordedAt >= blockEnd)
+        create
+          TamaFlow.Attendance.AttendanceRecord.AttendanceRecord with
+            employee
+            employer
+            blockStart
+            blockEnd
+            status = Confirmed
+            recordedAt
+        archive self
+
+-- Helper to convert hours to DiffTime
+hours : Int -> DiffTime
+hours h = DiffTime with seconds = 3600 * h

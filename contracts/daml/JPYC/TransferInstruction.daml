@@ -1,0 +1,57 @@
+module TamaFlow.JPYC.TransferInstruction where
+
+import TamaFlow.CIP0056.Holdings (Holding(..), InstrumentId(..))
+import TamaFlow.CIP0056.TokenMetadata (Metadata(..), emptyMetadata)
+import TamaFlow.CIP0056.TransferInstruction
+import TamaFlow.JPYC.Asset (JPYCAsset(..), mintAsset)
+
+-- | Pending JPYC transfer awaiting receiver acceptance.
+template JPYCTransferInstruction
+  with
+    issuer : Party
+    transfer : Transfer
+    escrowedAmount : Decimal
+    status : TransferInstructionStatus
+    meta : Metadata
+  where
+    signatory issuer, transfer.sender
+    observer transfer.receiver
+
+    ensure escrowedAmount > 0.0
+
+    interface instance TransferInstruction for JPYCTransferInstruction where
+      view =
+        TransferInstructionView with
+          originalInstructionCid = None
+          transfer
+          status
+          meta
+
+      transferInstruction_AcceptImpl _ arg = do
+        let extraArgs = arg.extraArgs
+        assertMsg "Transfer is not pending acceptance" (status == TransferPendingReceiverAcceptance)
+        receiverCid <- mintAsset issuer transfer.receiver escrowedAmount meta []
+        return
+          TransferInstructionResult with
+            output = TICompleted [toInterfaceContractId receiverCid]
+            senderChangeCids = []
+            meta = extraArgs.meta
+
+      transferInstruction_RejectImpl _ arg = do
+        let extraArgs = arg.extraArgs
+        assertMsg "Transfer is not pending acceptance" (status == TransferPendingReceiverAcceptance)
+        return
+          TransferInstructionResult with
+            output = TIFailed
+            senderChangeCids = []
+            meta = extraArgs.meta
+
+      transferInstruction_WithdrawImpl _ arg = do
+        let extraArgs = arg.extraArgs
+        assertMsg "Transfer is not pending acceptance" (status == TransferPendingReceiverAcceptance)
+        changeCid <- mintAsset issuer transfer.sender escrowedAmount meta []
+        return
+          TransferInstructionResult with
+            output = TIFailed
+            senderChangeCids = [toInterfaceContractId changeCid]
+            meta = extraArgs.meta

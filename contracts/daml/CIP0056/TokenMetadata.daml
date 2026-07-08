@@ -1,0 +1,34 @@
+module TamaFlow.CIP0056.TokenMetadata where
+
+import DA.TextMap as TM
+
+data Metadata = Metadata
+  with
+    values : TM.TextMap Text
+  deriving (Eq, Show)
+
+emptyMetadata : Metadata
+emptyMetadata = Metadata with values = TM.empty
+
+metadataValue : Text -> Metadata -> Optional Text
+metadataValue key meta = TM.lookup key meta.values
+
+setMetadataValue : Text -> Text -> Metadata -> Metadata
+setMetadataValue key value meta =
+  Metadata with values = TM.insert key value meta.values
+
+data TokenMetadataView = TokenMetadataView
+  with
+    instrumentAdmin : Party
+    instrumentId : Text
+    name : Text
+    symbol : Text
+    decimals : Int
+    totalSupply : Optional Decimal
+    registryUrl : Optional Text
+    logoUrl : Optional Text
+    meta : Metadata
+  deriving (Eq, Show)
+
+interface TokenMetadata where
+  viewtype TokenMetadataView

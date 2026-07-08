@@ -1,0 +1,76 @@
+module TamaFlow.JPYC.Issuer where
+
+import DA.TextMap as TM
+
+import TamaFlow.CIP0056.Holdings (InstrumentId(..))
+import TamaFlow.CIP0056.TokenMetadata
+import TamaFlow.JPYC.Asset (JPYCAsset(..), mintAsset)
+import TamaFlow.JPYC.Types (makeInstrumentId, tokenSymbol, tokenName, tokenDecimals, instrumentIdText)
+import TamaFlow.JPYC.TransferFactory (JPYCTransferFactory(..))
+
+-- | JPYC Issuer. Anyone can mint — no admin restriction.
+template JPYCIssuer
+  with
+    admin : Party
+    instrumentId : InstrumentId
+    totalSupply : Decimal
+    meta : Metadata
+  where
+    signatory admin
+
+    ensure totalSupply >= 0.0
+
+    interface instance TokenMetadata for JPYCIssuer where
+      view =
+        TokenMetadataView with
+          instrumentAdmin = admin
+          instrumentId = instrumentIdText
+          name = tokenName
+          symbol = tokenSymbol
+          decimals = tokenDecimals
+          totalSupply = Some totalSupply
+          registryUrl = None
+          logoUrl = None
+          meta
+
+    -- | Mint JPYC tokens. Anyone can call this (no admin restriction).
+    choice Mint : ContractId JPYCAsset
+      with
+        owner : Party
+        amount : Decimal
+        observers : [Party]
+      controller owner
+      do
+        assertMsg "Mint amount must be positive" (amount > 0.0)
+        holdingCid <- mintAsset admin owner amount meta observers
+        _ <- create this with totalSupply = totalSupply + amount
+        return holdingCid
+
+    -- | Bootstrap the CIP-0056 transfer factory.
+    nonconsuming choice JPYCIssuer_BootstrapFactories : ContractId JPYCTransferFactory
+      controller admin
+      do
+        transferFactoryCid <- create
+          JPYCTransferFactory with
+            admin = admin
+            instrumentId = instrumentId
+            meta = meta
+        return transferFactoryCid
+
+    -- | Public metadata fetch.
+    nonconsuming choice PublicFetch : TokenMetadataView
+      with
+        actor : Party
+      controller actor
+      do
+        return
+          TokenMetadataView with
+            instrumentAdmin = admin
+            instrumentId = instrumentIdText
+            name = tokenName
+            symbol = tokenSymbol
+            decimals = tokenDecimals
+            totalSupply = Some totalSupply
+            registryUrl = None
+            logoUrl = None
+            meta

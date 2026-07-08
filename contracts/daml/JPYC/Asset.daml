@@ -1,0 +1,158 @@
+module TamaFlow.JPYC.Asset where
+
+import DA.Optional (isNone)
+import DA.TextMap as TM
+
+import TamaFlow.CIP0056.Holdings
+import TamaFlow.CIP0056.TokenMetadata
+import TamaFlow.JPYC.Types (makeInstrumentId, tokenSymbol, tokenName, tokenDecimals)
+
+-- | Sum and validate sender-owned, unlocked holdings for JPYC.
+validateInputHoldings : Party -> [ContractId Holding] -> Update ([ContractId JPYCAsset], Decimal)
+validateInputHoldings expectedOwner cids = do
+  assertMsg "At least one input holding is required" (cids /= [])
+  validateInputHoldingsLoop expectedOwner cids 0.0 []
+
+validateInputHoldingsLoop : Party -> [ContractId Holding] -> Decimal -> [ContractId JPYCAsset] -> Update ([ContractId JPYCAsset], Decimal)
+validateInputHoldingsLoop _ [] total acc = return (reverse acc, total)
+validateInputHoldingsLoop expectedOwner (cid :: rest) total acc = do
+  let assetCid : ContractId JPYCAsset = coerceContractId cid
+  asset <- fetch assetCid
+  assertMsg "Holding owner mismatch" (asset.owner == expectedOwner)
+  assertMsg "Holding amount must be positive" (asset.amount > 0.0)
+  assertMsg "Locked holdings cannot be transferred" (isNone asset.lock)
+  validateInputHoldingsLoop expectedOwner rest (total + asset.amount) (assetCid :: acc)
+
+archiveAssets : [ContractId JPYCAsset] -> Update ()
+archiveAssets [] = return ()
+archiveAssets (cid :: rest) = do
+  archive cid
+  archiveAssets rest
+
+mintAsset : Party -> Party -> Decimal -> Metadata -> [Party] -> Update (ContractId JPYCAsset)
+mintAsset issuer owner amount meta observers = do
+  assertMsg "Mint amount must be positive" (amount > 0.0)
+  create
+    JPYCAsset with
+      issuer = issuer
+      owner = owner
+      amount = amount
+      instrumentId = makeInstrumentId issuer
+      lock = None
+      meta = meta
+      observers = observers
+
+-- | Primary CIP-0056 holding template for JPYC.
+template JPYCAsset
+  with
+    issuer : Party
+    owner : Party
+    amount : Decimal
+    instrumentId : InstrumentId
+    lock : Optional Lock
+    meta : Metadata
+    observers : [Party]
+  where
+    signatory issuer, owner
+    observer observers
+
+    ensure amount > 0.0
+
+    interface instance Holding for JPYCAsset where
+      view =
+        HoldingView with
+          owner
+          instrumentId
+          amount
+          lock
+          meta
+
+    -- | Split: isolate an exact payment amount (CIP-0056 UTXO split).
+    choice Split : (ContractId JPYCAsset, Optional (ContractId JPYCAsset))
+      with
+        paymentAmount : Decimal
+      controller owner
+      do
+        assertMsg "Payment amount must be positive" (paymentAmount > 0.0)
+        assertMsg "Insufficient holding balance for split" (amount >= paymentAmount)
+        assertMsg "Locked holdings cannot be split" (isNone lock)
+
+        archive self
+
+        paymentCid <-
+          create
+            JPYCAsset with
+              issuer
+              owner
+              amount = paymentAmount
+              instrumentId
+              lock
+              meta
+              observers
+
+        changeCid <-
+          if amount > paymentAmount
+            then do
+              cid <-
+                create
+                  JPYCAsset with
+                    issuer
+                    owner
+                    amount = amount - paymentAmount
+                    instrumentId
+                    lock
+                    meta
+                    observers
+              return (Some cid)
+            else return None
+
+        return (paymentCid, changeCid)
+
+    -- | TransferAsset: transfer holding to a new party (free-of-payment).
+    choice TransferAsset : ContractId JPYCAsset
+      with
+        newOwner : Party
+      controller owner
+      do
+        assertMsg "Cannot transfer to the current owner" (newOwner /= owner)
+        assertMsg "Locked holdings cannot be transferred" (isNone lock)
+
+        archive self
+
+        create
+          JPYCAsset with
+            issuer
+            owner = newOwner
+            amount
+            instrumentId
+            lock
+            meta
+            observers
+
+    -- | MergeWith: consolidate two same-owner UTXOs into one.
+    choice MergeWith : ContractId JPYCAsset
+      with
+        otherCid : ContractId JPYCAsset
+      controller owner
+      do
+        otherAsset <- fetch otherCid
+        assertMsg "Cannot merge with self" (otherCid /= self)
+        assertMsg "Merge requires same owner" (otherAsset.owner == owner)
+        assertMsg "Merge requires same issuer" (otherAsset.issuer == issuer)
+        assertMsg "Merge requires same instrument" (instrumentMatches assetInstrumentId otherAsset.instrumentId)
+        assertMsg "Locked holdings cannot be merged" (isNone lock && isNone otherAsset.lock)
+
+        archive self
+        archive otherCid
+
+        create
+          JPYCAsset with
+            issuer
+            owner
+            amount = amount + otherAsset.amount
+            instrumentId
+            lock = None
+            meta
+            observers
+      where
+        assetInstrumentId = instrumentId

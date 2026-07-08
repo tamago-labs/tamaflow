@@ -1,0 +1,113 @@
+module TamaFlow.CIP0056.TransferInstruction where
+
+import DA.Map as M
+import TamaFlow.CIP0056.Holdings
+import TamaFlow.CIP0056.TokenMetadata
+
+data ChoiceContext = ChoiceContext
+  with
+    values : M.Map Text Text
+  deriving (Eq, Show)
+
+emptyChoiceContext : ChoiceContext
+emptyChoiceContext = ChoiceContext with values = M.empty
+
+data ExtraArgs = ExtraArgs
+  with
+    context : ChoiceContext
+    meta : Metadata
+  deriving (Eq, Show)
+
+emptyExtraArgs : ExtraArgs
+emptyExtraArgs = ExtraArgs with context = emptyChoiceContext, meta = emptyMetadata
+
+data Transfer = Transfer
+  with
+    sender : Party
+    receiver : Party
+    amount : Decimal
+    instrumentId : InstrumentId
+    requestedAt : Time
+    executeBefore : Time
+    inputHoldingCids : [ContractId Holding]
+    meta : Metadata
+  deriving (Eq, Show)
+
+data TransferInstructionResult_Output
+  = TIPending (ContractId TransferInstruction)
+  | TICompleted [ContractId Holding]
+  | TIFailed
+  deriving (Eq, Show)
+
+data TransferInstructionResult = TransferInstructionResult
+  with
+    output : TransferInstructionResult_Output
+    senderChangeCids : [ContractId Holding]
+    meta : Metadata
+  deriving (Eq, Show)
+
+data TransferInstructionStatus
+  = TransferPendingReceiverAcceptance
+  | TransferPendingInternalWorkflow (M.Map Party Text)
+  deriving (Eq, Show)
+
+data TransferInstructionView = TransferInstructionView
+  with
+    originalInstructionCid : Optional (ContractId TransferInstruction)
+    transfer : Transfer
+    status : TransferInstructionStatus
+    meta : Metadata
+  deriving (Eq, Show)
+
+data TransferFactoryView = TransferFactoryView
+  with
+    admin : Party
+    instrumentId : InstrumentId
+    meta : Metadata
+  deriving (Eq, Show)
+
+interface TransferFactory where
+  viewtype TransferFactoryView
+
+  transferFactory_TransferImpl : ContractId TransferFactory -> TransferFactory_Transfer -> Update TransferInstructionResult
+  transferFactory_PublicFetchImpl : ContractId TransferFactory -> TransferFactory_PublicFetch -> Update TransferFactoryView
+
+  nonconsuming choice TransferFactory_Transfer : TransferInstructionResult
+    with
+      expectedAdmin : Party
+      transfer : Transfer
+      extraArgs : ExtraArgs
+    controller transfer.sender
+    do transferFactory_TransferImpl this self arg
+
+  nonconsuming choice TransferFactory_PublicFetch : TransferFactoryView
+    with
+      expectedAdmin : Party
+      actor : Party
+    controller actor
+    do transferFactory_PublicFetchImpl this self arg
+
+interface TransferInstruction where
+  viewtype TransferInstructionView
+
+  transferInstruction_AcceptImpl : ContractId TransferInstruction -> TransferInstruction_Accept -> Update TransferInstructionResult
+  transferInstruction_RejectImpl : ContractId TransferInstruction -> TransferInstruction_Reject -> Update TransferInstructionResult
+  transferInstruction_WithdrawImpl : ContractId TransferInstruction -> TransferInstruction_Withdraw -> Update TransferInstructionResult
+
+  choice TransferInstruction_Accept : TransferInstructionResult
+    with
+      extraArgs : ExtraArgs
+    controller (view this).transfer.receiver
+    do transferInstruction_AcceptImpl this self arg
+
+  choice TransferInstruction_Reject : TransferInstructionResult
+    with
+      extraArgs : ExtraArgs
+    controller (view this).transfer.receiver
+    do transferInstruction_RejectImpl this self arg
+
+  choice TransferInstruction_Withdraw : TransferInstructionResult
+    with
+      extraArgs : ExtraArgs
+    controller (view this).transfer.sender
+    do transferInstruction_WithdrawImpl this self arg

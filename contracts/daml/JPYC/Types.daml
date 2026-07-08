@@ -1,0 +1,21 @@
+module TamaFlow.JPYC.Types where
+
+import TamaFlow.CIP0056.Holdings (InstrumentId(..))
+
+tokenDecimals : Int
+tokenDecimals = 0
+
+tokenName : Text
+tokenName = "JPYC Token"
+
+tokenSymbol : Text
+tokenSymbol = "JPYC"
+
+instrumentIdText : Text
+instrumentIdText = "JPYC"
+
+makeInstrumentId : Party -> InstrumentId
+makeInstrumentId admin =
+  InstrumentId with
+    admin = admin
+    id = instrumentIdText

@@ -1,0 +1,175 @@
+module TamaFlow.Tests.JPYCTest where
+
+import DA.Time (Time(..), addDiffTime, DiffTime(..))
+import Daml.Script
+
+import TamaFlow.CIP0056.Holdings (Holding(..), InstrumentId(..))
+import TamaFlow.CIP0056.TokenMetadata (TokenMetadataView(..))
+import TamaFlow.CIP0056.TransferInstruction (Transfer(..), ExtraArgs(..), emptyExtraArgs)
+import TamaFlow.JPYC.Asset (JPYCAsset(..))
+import TamaFlow.JPYC.Issuer (JPYCIssuer(..))
+import TamaFlow.JPYC.TransferFactory (JPYCTransferFactory(..))
+import TamaFlow.JPYC.Types (makeInstrumentId)
+
+testMint : Script ()
+testMint = script do
+  admin <- allocateParty "Admin"
+  alice <- allocateParty "Alice"
+
+  -- Create issuer
+  issuerCid <- submit admin do
+    createCmd JPYCIssuer with
+      admin
+      instrumentId = makeInstrumentId admin
+      totalSupply = 0.0
+      meta = TamaFlow.CIP0056.TokenMetadata.emptyMetadata
+
+  -- Mint 1000 JPYC to Alice
+  assetCid <- submit admin do
+    exerciseCmd issuerCid Mint with
+      owner = alice
+      amount = 1000.0
+      observers = []
+
+  -- Verify
+  asset <- fetch assetCid
+  assertMsg "Amount should be 1000" (asset.amount == 1000.0)
+  assertMsg "Owner should be Alice" (asset.owner == alice)
+  return ()
+
+testSplitAndMerge : Script ()
+testSplitAndMerge = script do
+  admin <- allocateParty "Admin"
+  alice <- allocateParty "Alice"
+
+  issuerCid <- submit admin do
+    createCmd JPYCIssuer with
+      admin
+      instrumentId = makeInstrumentId admin
+      totalSupply = 0.0
+      meta = TamaFlow.CIP0056.TokenMetadata.emptyMetadata
+
+  -- Mint 1000 JPYC
+  assetCid <- submit admin do
+    exerciseCmd issuerCid Mint with
+      owner = alice
+      amount = 1000.0
+      observers = []
+
+  -- Split: 300 for payment, rest as change
+  (paymentCid, changeCid) <- submit alice do
+    exerciseCmd assetCid Split with
+      paymentAmount = 300.0
+
+  payment <- fetch paymentCid
+  assertMsg "Payment should be 300" (payment.amount == 300.0)
+
+  case changeCid of
+    Nothing -> assertMsg "Should have change" False
+    Just cid -> do
+      change <- fetch cid
+      assertMsg "Change should be 700" (change.amount == 700.0)
+
+      -- Merge back
+      mergedCid <- submit alice do
+        exerciseCmd paymentCid MergeWith with
+          otherCid = cid
+      merged <- fetch mergedCid
+      assertMsg "Merged should be 1000" (merged.amount == 1000.0)
+  return ()
+
+testTransfer : Script ()
+testTransfer = script do
+  admin <- allocateParty "Admin"
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+
+  issuerCid <- submit admin do
+    createCmd JPYCIssuer with
+      admin
+      instrumentId = makeInstrumentId admin
+      totalSupply = 0.0
+      meta = TamaFlow.CIP0056.TokenMetadata.emptyMetadata
+
+  -- Mint 500 JPYC to Alice
+  assetCid <- submit admin do
+    exerciseCmd issuerCid Mint with
+      owner = alice
+      amount = 500.0
+      observers = []
+
+  -- Transfer 200 to Bob
+  bobAssetCid <- submit alice do
+    exerciseCmd assetCid TransferAsset with
+      newOwner = bob
+
+  bobAsset <- fetch bobAssetCid
+  assertMsg "Bob should have 200" (bobAsset.amount == 200.0)
+  assertMsg "Bob should be owner" (bobAsset.owner == bob)
+  return ()
+
+testMintRequiresPositiveAmount : Script ()
+testMintRequiresPositiveAmount = script do
+  admin <- allocateParty "Admin"
+  alice <- allocateParty "Alice"
+
+  issuerCid <- submit admin do
+    createCmd JPYCIssuer with
+      admin
+      instrumentId = makeInstrumentId admin
+      totalSupply = 0.0
+      meta = TamaFlow.CIP0056.TokenMetadata.emptyMetadata
+
+  -- Try to mint 0 — should fail
+  result <- scriptExercise issuerCid Mint with
+    owner = alice
+    amount = 0.0
+    observers = []
+  case result of
+    Left _ -> return () -- Expected failure
+    Right _ -> assertMsg "Should have failed" False
+
+testAnyoneCanMint : Script ()
+testAnyoneCanMint = script do
+  admin <- allocateParty "Admin"
+  bob <- allocateParty "Bob"
+  alice <- allocateParty "Alice"
+
+  issuerCid <- submit admin do
+    createCmd JPYCIssuer with
+      admin
+      instrumentId = makeInstrumentId admin
+      totalSupply = 0.0
+      meta = TamaFlow.CIP0056.TokenMetadata.emptyMetadata
+
+  -- Bob (not admin) can mint
+  assetCid <- submit bob do
+    exerciseCmd issuerCid Mint with
+      owner = alice
+      amount = 100.0
+      observers = []
+
+  asset <- fetch assetCid
+  assertMsg "Alice should have 100" (asset.amount == 100.0)
+  return ()
+
+testPublicFetch : Script ()
+testPublicFetch = script do
+  admin <- allocateParty "Admin"
+  bob <- allocateParty "Bob"
+
+  issuerCid <- submit admin do
+    createCmd JPYCIssuer with
+      admin
+      instrumentId = makeInstrumentId admin
+      totalSupply = 0.0
+      meta = TamaFlow.CIP0056.TokenMetadata.emptyMetadata
+
+  -- Anyone can fetch metadata
+  view <- submit bob do
+    exerciseCmd issuerCid PublicFetch with
+      actor = bob
+
+  assertMsg "Symbol should be JPYC" (view.symbol == "JPYC")
+  assertMsg "Decimals should be 0" (view.decimals == 0)
+  return ()

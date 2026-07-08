@@ -1,0 +1,7 @@
+module TamaFlow.Attendance.Types where
+
+data BlockStatus
+  = Open
+  | Confirmed
+  | Rejected
+  deriving (Eq, Show)
