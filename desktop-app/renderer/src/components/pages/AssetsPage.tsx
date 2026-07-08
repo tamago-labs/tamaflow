@@ -102,14 +102,19 @@ export function AssetsPage() {
         <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Assets</h1>
       </div>
       {!walletPresent && (
-        <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-          <span className="text-amber-600 text-sm">⚠</span>
-          <span className="text-sm text-amber-800">
-            Wallet not set up.{' '}
-            <button onClick={openSetup} className="font-medium underline hover:text-amber-900 bg-transparent border-0 p-0 cursor-pointer text-sm text-amber-800">
-              Set up in Assets
-            </button>
-          </span>
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <div className="flex items-start gap-2">
+            <span className="text-amber-600 text-sm mt-0.5">⚠</span>
+            <div>
+              <span className="text-sm text-amber-800 font-medium">Wallet not set up.</span>
+              <p className="text-sm text-amber-700 m-0 mt-1">
+                Set up a Canton wallet to enable settlement. The wallet is generated locally and stored encrypted on this machine.
+              </p>
+              <button onClick={openSetup} className="mt-2 font-medium underline hover:text-amber-900 bg-transparent border-0 p-0 cursor-pointer text-sm text-amber-800">
+                Set up wallet
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

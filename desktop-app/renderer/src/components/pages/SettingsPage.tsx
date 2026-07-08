@@ -9,14 +9,15 @@
 // reduced to the lifecycle (status + create + export + destroy).
 
 import { useState, useEffect } from 'react'
-import { Wallet, Power, KeyRound, Trash2, Building2 } from 'lucide-react'
+import { Wallet, Power, KeyRound, Trash2, Building2, Users } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useWallet } from '../../context/WalletContext'
+import { useRoom } from '../../hooks/useRoom'
 import { bridge } from '../../lib/bridge'
 import type { CompanyProfile, CompanyFile } from '../../ai/types'
 import CompanyForm from '../CompanyForm'
 
-type Tab = 'company' | 'wallet'
+type Tab = 'company' | 'p2p' | 'wallet'
 
 interface TabDef {
   key: Tab
@@ -26,6 +27,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { key: 'company', label: 'Company', icon: <Building2 size={12} /> },
+  { key: 'p2p', label: 'P2P Hyperswarm', icon: <Users size={12} /> },
   { key: 'wallet', label: 'Wallet', icon: <Wallet size={12} /> }
 ]
 
@@ -33,9 +35,12 @@ export function SettingsPage() {
   const [tab, setTab] = useState<Tab>('company')
   const { status, openSetup, openAccountInfo, openExportKey, openDestroy } =
     useWallet()
+  const { me, renameSelf, writable } = useRoom()
 
   const [companyFile, setCompanyFile] = useState<CompanyFile | null>(null)
   const [companySaving, setCompanySaving] = useState(false)
+  const [username, setUsername] = useState('')
+  const [usernameSaving, setUsernameSaving] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -50,6 +55,11 @@ export function SettingsPage() {
       unsub()
     }
   }, [])
+
+  // Sync username with room.me
+  useEffect(() => {
+    if (me?.name) setUsername(me.name)
+  }, [me?.name])
 
   const handleCompanySave = async (profile: CompanyProfile) => {
     setCompanySaving(true)
@@ -85,53 +95,62 @@ export function SettingsPage() {
         ))}
       </div>
 
-      {tab === 'ai' && (
-        <div className='max-w-2xl rounded-md border border-brand-border bg-white p-6'>
-          <p className='m-0 mb-3 font-mono text-[10px] uppercase tracking-wider2 text-brand-muted'>
-            {activeModel ? 'Active Model' : 'AI Model'}
+      {tab === 'p2p' && (
+        <div className='max-w-2xl rounded-md border border-gray-200 bg-white p-6'>
+          <p className='m-0 mb-3 font-mono text-[10px] uppercase tracking-wider2 text-gray-400 font-semibold'>
+            P2P Hyperswarm
           </p>
-          {activeModel ? (
-            <>
-              <p className='m-0 mb-3 font-sans text-base font-medium text-brand-navy'>
-                {activeModel.name}
-              </p>
-              <div className='mb-4 flex flex-wrap items-center gap-2'>
-                {activeModel.params && <Pill>{activeModel.params}</Pill>}
-                {activeModel.quantization && <Pill>{activeModel.quantization}</Pill>}
-              </div>
-              <div className='flex flex-wrap items-center gap-2'>
+          <p className='m-0 mb-4 font-sans text-sm text-gray-500'>
+            Your display name is used in team chat and P2P sync.
+          </p>
+
+          <div className='space-y-4'>
+            <div>
+              <label className='mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400'>
+                Display Name
+              </label>
+              <div className='flex items-center gap-2'>
+                <input
+                  type='text'
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder='Your name'
+                  disabled={!writable || usernameSaving}
+                  className='flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 font-sans text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none disabled:opacity-60'
+                />
                 <button
                   type='button'
-                  onClick={() => void unload()}
-                  className='flex cursor-pointer items-center gap-1.5 rounded-md border border-brand-border bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wider2 text-brand-navy hover:bg-brand-light'
-                  title='Unload the model and free memory'
+                  onClick={async () => {
+                    if (!username.trim() || username === me?.name) return
+                    setUsernameSaving(true)
+                    try {
+                      renameSelf(username.trim())
+                    } finally {
+                      setUsernameSaving(false)
+                    }
+                  }}
+                  disabled={!writable || !username.trim() || username === me?.name || usernameSaving}
+                  className='rounded-md border-0 bg-blue-600 px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:bg-blue-700 disabled:opacity-50'
                 >
-                  <Power size={12} />
-                  Unload
+                  {usernameSaving ? 'Saving…' : 'Save'}
                 </button>
-                {activeModel.sourceKind !== 'registry' && (
-                  <button
-                    type='button'
-                    onClick={async () => {
-                      const r = await resetCache(activeModel.id)
-                      if (!r.success) {
-                        setError({
-                          code: 'RESET_CACHE_FAILED',
-                          message: r.error ?? 'Failed to clear cache',
-                          retryable: true
-                        })
-                      }
-                    }}
-                    className='cursor-pointer rounded-md border border-brand-blue bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wider2 text-brand-blue hover:bg-brand-light'
-                  >
-                    Delete Cache
-                  </button>
-                )}
               </div>
-            </>
-          ) : (
-            <p className='m-0 font-sans text-sm text-brand-muted'>No model loaded.</p>
-          )}
+              <p className='m-0 mt-1.5 font-mono text-[10px] uppercase tracking-wider2 text-gray-400'>
+                This name appears in team chat messages.
+              </p>
+            </div>
+
+            {me && (
+              <div className='pt-4 border-t border-gray-200'>
+                <p className='m-0 font-mono text-[10px] uppercase tracking-wider2 text-gray-400'>
+                  Peer ID
+                </p>
+                <p className='m-0 mt-1 font-mono text-xs text-gray-600 break-all'>
+                  {me.key}
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -166,26 +185,16 @@ export function SettingsPage() {
                     {status.partyId}
                   </p>
                 </div>
-                <div className='flex items-center gap-4'>
+                {status.createdAt && (
                   <div>
-                    <p className='m-0 font-mono text-[10px] uppercase tracking-wider2 text-brand-muted'>
-                      Fingerprint
+                    <p className='m-0 font-mono text-[10px] uppercase tracking-wider2 text-gray-400'>
+                      Created
                     </p>
-                    <p className='m-0 break-all font-mono text-xs text-brand-navy'>
-                      {status.fingerprint}
+                    <p className='m-0 font-sans text-xs text-gray-900'>
+                      {new Date(status.createdAt).toLocaleString()}
                     </p>
                   </div>
-                  {status.createdAt && (
-                    <div>
-                      <p className='m-0 font-mono text-[10px] uppercase tracking-wider2 text-brand-muted'>
-                        Created
-                      </p>
-                      <p className='m-0 font-sans text-xs text-brand-navy'>
-                        {new Date(status.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
 
               <div className='flex flex-wrap items-center gap-2'>
@@ -233,14 +242,6 @@ export function SettingsPage() {
         </div>
       )}
     </div>
-  )
-}
-
-function Pill({ children }: { children: ReactNode }) {
-  return (
-    <span className='inline-flex items-center rounded-full border border-brand-border bg-brand-light px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-navy'>
-      {children}
-    </span>
   )
 }
 

@@ -167,7 +167,7 @@ export default function CompanyForm({
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
             onBlur={() => setTouched((t) => ({ ...t, companyName: true }))}
-            placeholder="Acme Corp"
+            placeholder="Demo Co., Ltd."
             disabled={disabled}
             maxLength={200}
             autoFocus

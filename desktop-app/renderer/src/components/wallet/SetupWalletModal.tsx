@@ -1,18 +1,15 @@
-// First-run modal: lets the user pick an organization name that we
+// Setup wallet modal: lets the user pick a party name that we
 // slug-ify into a Canton party hint, or fall back to a default if they
 // leave it blank. Generates a new keypair, allocates the party on
-// Canton DevNet, and encrypts the wallet with the OS keychain via
-// Electron's safeStorage.
+// Canton DevNet, and encrypts the wallet with the OS keychain.
 
 import { useEffect, useMemo, useState } from 'react'
 import { useWallet } from '../../context/WalletContext'
 import { WalletModal } from './WalletModal'
-import { KeyRound, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
 const DEFAULT_PARTY_HINT = 'tamaflow'
 
-/** Pure / deterministic — mirrors `slugifyPartyHint` in
- *  electron/wallet.js. The two implementations must stay in sync. */
 function slugifyPartyHint(input: string): string {
   return input
     .toLowerCase()
@@ -57,46 +54,39 @@ export function SetupWalletModal() {
       open={modal.setupOpen}
       onClose={closeSetup}
       title='Setup Wallet'
-      subtitle='First-time setup'
       maxWidth='max-w-md'
     >
       <div className='space-y-4'>
         <div>
           <label
             htmlFor='setup-wallet-org'
-            className='mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-wider2 text-brand-muted'
+            className='mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400'
           >
-            Organization name
+            Party Name
           </label>
           <input
             id='setup-wallet-org'
             type='text'
             value={orgName}
             onChange={(e) => setOrgName(e.target.value)}
-            placeholder='Acme Corp'
+            placeholder='Tamaflow'
             disabled={isBusy}
             autoFocus
-            className='w-full rounded-md border border-brand-border bg-white px-3 py-2 font-sans text-sm text-brand-navy placeholder:text-brand-muted transition-colors focus:border-brand-blue focus:outline-none disabled:opacity-60'
+            className='w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-sans text-sm text-gray-900 placeholder:text-gray-400 transition-colors focus:border-blue-500 focus:outline-none disabled:opacity-60'
           />
-          <p className='m-0 mt-1.5 font-mono text-[10px] uppercase tracking-wider2 text-brand-muted'>
+          <p className='m-0 mt-1.5 font-mono text-[10px] uppercase tracking-wider2 text-gray-400'>
             Party hint:{' '}
-            <span className='font-semibold normal-case tracking-normal text-brand-navy'>
+            <span className='font-semibold normal-case tracking-normal text-gray-900'>
               {partyHint}
             </span>
             {usingDefault && (
-              <span className='normal-case tracking-normal text-brand-muted'>
+              <span className='normal-case tracking-normal text-gray-400'>
                 {' '}
-                (default — leave blank or type your org name)
+                (default — leave blank or type your name)
               </span>
             )}
           </p>
         </div>
-
-        <p className='m-0 font-sans text-xs leading-relaxed text-brand-muted'>
-          Your keypair is generated locally and encrypted with your OS
-          keychain. This wallet is bound to this device — destroying it
-          removes access to the funds it controls.
-        </p>
 
         <label className='flex cursor-pointer select-none items-start gap-2'>
           <input
@@ -106,57 +96,53 @@ export function SetupWalletModal() {
             disabled={isBusy}
             className='mt-0.5 cursor-pointer'
           />
-          <span className='font-sans text-xs text-brand-navy'>
+          <span className='font-sans text-xs text-gray-700'>
             I understand this wallet is bound to this machine.
           </span>
         </label>
 
         {error && (
-          <div className='rounded-md border border-brand-errBorder bg-brand-errBg p-3'>
-            <p className='m-0 mb-1 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-err'>
+          <div className='rounded-md border border-red-200 bg-red-50 p-3'>
+            <p className='m-0 mb-1 font-mono text-[10px] font-bold uppercase tracking-wider2 text-red-600'>
               Error
             </p>
-            <p className='m-0 whitespace-pre-wrap font-sans text-xs text-brand-errDark'>
+            <p className='m-0 whitespace-pre-wrap font-sans text-xs text-red-700'>
               {error}
             </p>
           </div>
         )}
 
-        <div className='flex items-center justify-end gap-2 pt-2'>
-          <button
-            type='button'
-            onClick={closeSetup}
-            disabled={isBusy}
-            className='cursor-pointer rounded-md border border-brand-border bg-white px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-brand-navy hover:bg-brand-light disabled:opacity-50'
-          >
-            Cancel
-          </button>
+        <div className='flex items-center justify-between pt-2'>
           <button
             type='button'
             onClick={handleGenerate}
             disabled={!acknowledged || isBusy}
-            className='flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-brand-blue px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90 disabled:opacity-50'
+            className='flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-blue-600 px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:bg-blue-700 disabled:opacity-50'
           >
             {isBusy && <Loader2 size={12} className='animate-spin' />}
             {isBusy ? 'Generating…' : 'Generate Wallet'}
           </button>
-        </div>
-
-        {/* Restore-from-key entry point. Sits below the primary
-           actions so the "generate a new wallet" path stays the
-           dominant affordance. */}
-        <div className='border-t border-brand-border pt-3'>
-          <button
-            type='button'
-            onClick={() => {
-              closeSetup()
-              openRestore()
-            }}
-            className='flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-brand-border bg-white px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider2 text-brand-navy transition hover:bg-brand-light'
-          >
-            <KeyRound size={12} className='text-brand-muted' />
-            Already have a wallet? Restore from key
-          </button>
+          <div className='flex items-center gap-2'>
+            <button
+              type='button'
+              onClick={() => {
+                closeSetup()
+                openRestore()
+              }}
+              disabled={isBusy}
+              className='cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-gray-700 hover:bg-gray-50 disabled:opacity-50'
+            >
+              Restore
+            </button>
+            <button
+              type='button'
+              onClick={closeSetup}
+              disabled={isBusy}
+              className='cursor-pointer rounded-md border border-gray-200 bg-white px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-gray-700 hover:bg-gray-50 disabled:opacity-50'
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
     </WalletModal>

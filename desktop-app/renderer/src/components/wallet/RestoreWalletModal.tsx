@@ -54,21 +54,9 @@ export function RestoreWalletModal() {
       open={modal.restoreOpen}
       onClose={closeRestore}
       title='Restore Wallet'
-      subtitle='Import a previously-exported private key'
       maxWidth='max-w-md'
     >
       <div className='space-y-4'>
-        <div className='flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3'>
-          <ShieldAlert
-            size={14}
-            className='mt-0.5 flex-shrink-0 text-amber-700'
-          />
-          <p className='m-0 font-sans text-xs text-amber-900'>
-            Anyone with this private key can spend the funds controlled
-            by this wallet. Paste it only on a device you trust.
-          </p>
-        </div>
-
         <div>
           <label
             htmlFor='restore-wallet-org'
