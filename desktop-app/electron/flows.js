@@ -135,6 +135,18 @@ function registerFlowIpcHandlers() {
     return routeStore.get(flowId, routeId)
   })
 
+  ipcMain.handle('flows:routes:retryFailed', (_e, flowId) => {
+    const routes = routeStore.list(flowId)
+    const failed = routes.filter(r => r.status === 'failed')
+    for (const r of failed) {
+      routeStore.upsert({ ...routeStore.get(flowId, r.id), status: 'pending', error: undefined, completedAt: undefined })
+    }
+    flowStore.setStatus(flowId, 'active')
+    notifyChange(flowStore.listWithRoutes(routeStore))
+    notifyProgress(flowId, routeStore.list(flowId))
+    return { retried: failed.length }
+  })
+
   ipcMain.handle('flows:exportJson', async (_e, id) => {
     const cur = BrowserWindow.getFocusedWindow()
     if (!cur) return { success: false, error: 'No focused window' }

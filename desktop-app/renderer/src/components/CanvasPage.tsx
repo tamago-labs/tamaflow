@@ -25,7 +25,7 @@ function errMsg(err: unknown): string {
 }
 
 export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'canvas') => void }) {
-  const { flows, get, save, remove, start, stop, listRoutes, onProgress, importJson } = useFlows()
+  const { flows, get, save, remove, start, stop, listRoutes, onProgress, importJson, retryFailed } = useFlows()
   const { employees } = useEmployees()
   const { profile: companyProfile } = useCompany()
   const { setView: setFlowView } = useFlowView()
@@ -149,6 +149,17 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
     if (result.file) alert(`Imported "${result.file.flow.name}" as draft`)
   }, [importJson])
 
+  const handleRetryFailed = useCallback(async () => {
+    if (!flowId) return
+    const result = await retryFailed(flowId)
+    if (result.retried > 0) {
+      setFlowStatus('active')
+      setRoutes([])
+    }
+  }, [flowId, retryFailed])
+
+  const failedCount = routes.filter(r => r.status === 'failed').length
+
   // Zoom handlers
   const handleZoomIn = useCallback(() => { setZoom((z) => Math.min(3, z + 0.1)) }, [])
   const handleZoomOut = useCallback(() => { setZoom((z) => Math.max(0.25, z - 0.1)) }, [])
@@ -210,7 +221,12 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
             </>
           )}
           {flowStatus === 'completed' && (
-            <button onClick={handleDelete} disabled={deleting} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition" title="Delete flow"><Trash2 size={14} /></button>
+            <>
+              {failedCount > 0 && (
+                <button onClick={handleRetryFailed} className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded hover:bg-amber-100 transition"><RotateCcw size={12} />Retry {failedCount} failed</button>
+              )}
+              <button onClick={handleDelete} disabled={deleting} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition" title="Delete flow"><Trash2 size={14} /></button>
+            </>
           )}
         </div>
       </div>

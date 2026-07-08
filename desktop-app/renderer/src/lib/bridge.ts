@@ -206,6 +206,7 @@ export interface BridgeAPI {
     routes: {
       list(flowId: string): Promise<RouteSummary[]>
       listAll(): Promise<RouteSummary[]>
+      retryFailed(flowId: string): Promise<{ retried: number }>
     }
     exportJson(id: string): Promise<{ success: boolean; canceled?: boolean; path?: string; error?: string }>
     importJson(): Promise<{ success: boolean; canceled?: boolean; file?: FlowFile; error?: string }>
@@ -417,7 +418,8 @@ const noopBridge: BridgeAPI = {
     stop: () => Promise.resolve({ ok: false, error: 'bridge not available' }),
     routes: {
       list: () => Promise.resolve([]),
-      listAll: () => Promise.resolve([])
+      listAll: () => Promise.resolve([]),
+      retryFailed: () => Promise.resolve({ retried: 0 })
     },
     exportJson: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     importJson: () => Promise.resolve({ success: false, error: 'bridge not available' }),

@@ -85,6 +85,7 @@ interface FlowContextValue {
   onChange: (cb: (list: FlowSummary[]) => void) => () => void
   exportJson: (id: string) => Promise<{ success: boolean; canceled?: boolean; path?: string; error?: string }>
   importJson: () => Promise<{ success: boolean; canceled?: boolean; file?: FlowFile; error?: string }>
+  retryFailed: (flowId: string) => Promise<{ retried: number }>
   clearError: () => void
 }
 
@@ -251,6 +252,18 @@ export function FlowProvider({ children }: { children: ReactNode }) {
     }
   }, [refresh])
 
+  const retryFailed = useCallback(async (flowId: string) => {
+    try {
+      const result = await bridge.flows.routes.retryFailed(flowId)
+      await refresh()
+      return result
+    } catch (e) {
+      const msg = errMsg(e)
+      setError(msg)
+      return { retried: 0 }
+    }
+  }, [refresh])
+
   const clearError = useCallback(() => setError(null), [])
 
   // Subscribe to push channel + initial fetch on mount.
@@ -285,6 +298,7 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       onChange,
       exportJson,
       importJson,
+      retryFailed,
       clearError,
     }),
     [
@@ -303,6 +317,7 @@ export function FlowProvider({ children }: { children: ReactNode }) {
       onChange,
       exportJson,
       importJson,
+      retryFailed,
       clearError,
     ],
   )
