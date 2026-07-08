@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import type { CompanyProfile, CountryCode, CurrencyCode, LegalEntityType } from '../ai/types'
 import { COUNTRIES, CURRENCIES, LEGAL_ENTITY_TYPES } from '../lib/countries'
+import { getFlagUrl } from '../lib/flags'
 
 interface CompanyFormProps {
   initial?: CompanyProfile
@@ -101,7 +102,7 @@ export default function CompanyForm({
     <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       <fieldset className="space-y-4 m-0 p-0 border-0">
         {/* Country (jurisdiction) */}
-        <div>
+        <div className="relative">
           <label
             htmlFor="co-country"
             className="block font-mono text-[10px] uppercase tracking-wider2 text-brand-muted font-semibold mb-1.5"
@@ -117,10 +118,18 @@ export default function CompanyForm({
           >
             {COUNTRIES.map((c) => (
               <option key={c.code} value={c.code}>
-                {c.flag} {c.label}
+                {c.label}
               </option>
             ))}
           </select>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+            <img
+              src={getFlagUrl(country)}
+              alt=""
+              className="w-5 h-auto rounded-sm"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+            />
+          </div>
         </div>
 
         {/* Base currency */}
