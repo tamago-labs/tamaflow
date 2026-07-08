@@ -8,15 +8,9 @@ const { app } = require('electron')
 
 const REGISTRY_FILE = 'company.json'
 
-const VALID_COUNTRIES = new Set(['JP', 'TH', 'US-DE', 'VG'])
+const VALID_COUNTRIES = new Set(['JP', 'TH', 'US', 'GB', 'SG', 'AE', 'EE', 'HK', 'CH', 'VG', 'PA', 'KY', 'MH'])
 const VALID_CURRENCIES = new Set(['JPY', 'THB', 'USD', 'EUR'])
-const VALID_LEGAL_TYPES = new Set([
-  'corporation',
-  'limited_company',
-  'partnership',
-  'non_profit',
-  'other'
-])
+const VALID_LEGAL_TYPES = new Set(['dev_lab', 'token_spv', 'dao_wrapper', 'other'])
 
 function validateProfile(input) {
   if (!input || typeof input !== 'object') {

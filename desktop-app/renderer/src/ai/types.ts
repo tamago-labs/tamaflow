@@ -186,14 +186,9 @@ export type EmployeeStatus = 'active' | 'paused' | 'terminated'
 
 export type CurrencyCode = 'JPY' | 'THB' | 'USD' | 'EUR'
 
-export type CountryCode = 'JP' | 'TH' | 'US-DE' | 'VG'
+export type CountryCode = 'JP' | 'TH' | 'US' | 'GB' | 'SG' | 'AE' | 'EE' | 'HK' | 'CH' | 'VG' | 'PA' | 'KY' | 'MH'
 
-export type LegalEntityType =
-  | 'corporation'
-  | 'limited_company'
-  | 'partnership'
-  | 'non_profit'
-  | 'other'
+export type LegalEntityType = 'dev_lab' | 'token_spv' | 'dao_wrapper' | 'other'
 
 export type SettlementCurrency = 'CC'
 
