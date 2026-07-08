@@ -104,7 +104,7 @@ export function SettlementHistoryDrawer({ open, onClose, employee }: SettlementH
                     </div>
                     <RouteStatusPill status={r.status} />
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-[11px]">
+                  <div className="grid grid-cols-5 gap-2 text-[11px]">
                     <div>
                       <span className="text-gray-400">Gross</span>
                       <div className="font-mono text-gray-900">{r.grossPay} {r.payCurrency}</div>
@@ -112,6 +112,14 @@ export function SettlementHistoryDrawer({ open, onClose, employee }: SettlementH
                     <div>
                       <span className="text-gray-400">Withholding</span>
                       <div className="font-mono" style={{ color: r.withholdingAmount ? '#b45309' : '#999' }}>{r.withholdingAmount || '—'}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">Tax</span>
+                      <div className="font-mono" style={{ color: r.taxAmount ? '#b45309' : '#999' }}>{r.taxAmount || '—'}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-400">SS</span>
+                      <div className="font-mono" style={{ color: r.socialSecurityAmount ? '#b45309' : '#999' }}>{r.socialSecurityAmount || '—'}</div>
                     </div>
                     <div>
                       <span className="text-gray-400">Net</span>
