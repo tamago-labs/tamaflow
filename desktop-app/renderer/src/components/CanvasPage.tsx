@@ -142,14 +142,21 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
 
   const goBack = useCallback(() => { setFlowId(null); setLoadStatus('present'); setCanvas({ cards: [], connections: [] }); setFlowName(''); setFlowStatus('draft'); setRoutes([]); onViewChange?.('list'); setFlowView('list') }, [onViewChange, setFlowView])
 
+  const handleImport = useCallback(async () => {
+    const result = await importJson()
+    if (result.canceled) return
+    if (result.error) { alert('Import failed: ' + result.error); return }
+    if (result.file) alert(`Imported "${result.file.flow.name}" as draft`)
+  }, [importJson])
+
   // Zoom handlers
   const handleZoomIn = useCallback(() => { setZoom((z) => Math.min(3, z + 0.1)) }, [])
   const handleZoomOut = useCallback(() => { setZoom((z) => Math.max(0.25, z - 0.1)) }, [])
   const handleZoomReset = useCallback(() => { setZoom(1) }, [])
 
-  if (!flowId) return <FlowsList flows={flows} loadStatus={loadStatus} onSelect={loadFlow} onCreate={createFlow} onImport={importJson} />
+  if (!flowId) return <FlowsList flows={flows} loadStatus={loadStatus} onSelect={loadFlow} onCreate={createFlow} onImport={handleImport} />
   if (loadStatus === 'loading') return <div className="flex items-center justify-center h-full text-gray-400">Loading flow…</div>
-  if (loadStatus === 'absent') return <FlowsList flows={flows} loadStatus="present" onSelect={loadFlow} onCreate={createFlow} onImport={importJson} />
+  if (loadStatus === 'absent') return <FlowsList flows={flows} loadStatus="present" onSelect={loadFlow} onCreate={createFlow} onImport={handleImport} />
   if (loadStatus === 'error') return <div className="flex items-center justify-center h-full"><div className="text-center"><p className="text-lg font-medium text-red-600 mb-2">Load failed</p><p className="text-sm text-gray-500 mb-4">{loadError ?? 'Unknown error'}</p><button onClick={goBack} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">Back to Flows</button></div></div>
 
   const badgeLabel = saveStatus === 'saving' ? 'Saving…' : saveStatus === 'saved' ? 'Saved' : saveStatus === 'error' ? 'Save failed' : ''

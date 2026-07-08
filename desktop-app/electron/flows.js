@@ -171,9 +171,10 @@ function registerFlowIpcHandlers() {
       if (!parsed || !parsed.flow) throw new Error('Invalid flow file')
       // Check if flow with same name exists — override it
       const existing = flowStore.list().find(f => f.name === parsed.flow.name)
+      const imported = { ...parsed.flow, status: 'draft' }
       const file = existing
-        ? flowStore.save({ ...parsed.flow, id: existing.id })
-        : flowStore.save({ ...parsed.flow, id: undefined })
+        ? flowStore.save({ ...imported, id: existing.id })
+        : flowStore.save({ ...imported, id: undefined })
       notifyChange(flowStore.listWithRoutes(routeStore))
       return { success: true, file }
     } catch (err) {
