@@ -27,7 +27,7 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { key: 'company', label: 'Company', icon: <Building2 size={12} /> },
-  { key: 'p2p', label: 'P2P Hyperswarm', icon: <Users size={12} /> },
+  { key: 'p2p', label: 'Hyperswarm', icon: <Users size={12} /> },
   { key: 'wallet', label: 'Wallet', icon: <Wallet size={12} /> }
 ]
 

@@ -82,7 +82,7 @@ export function TeamChatDrawer({ open, onClose }: TeamChatDrawerProps) {
   }
 
   return (
-    <Drawer open={open} onClose={onClose} title="Team Chat" subtitle="P2P encrypted messages" width="480px">
+    <Drawer open={open} onClose={onClose} title="Team Chat" subtitle="Sending encrypted messages through P2P Hyperswarm" width="480px">
       <div className="flex flex-col h-full">
         {/* Messages */}
         <div ref={listRef} className="flex-1 overflow-y-auto -mx-6 -my-5 px-6 py-4">
@@ -136,7 +136,7 @@ export function TeamChatDrawer({ open, onClose }: TeamChatDrawerProps) {
 
         {/* Input */}
         <div className="border-t border-gray-200 pt-3 -mx-6 px-6 -mb-5 pb-5">
-          {messages.length > 0 && room.writable && (
+          {/* {messages.length > 0 && room.writable && (
             <div className="mb-2">
               {confirmingClear ? (
                 <div className="flex items-center gap-2 text-xs">
@@ -148,7 +148,7 @@ export function TeamChatDrawer({ open, onClose }: TeamChatDrawerProps) {
                 <button onClick={() => setConfirmingClear(true)} className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-red-500"><Trash2 size={10} />Clear</button>
               )}
             </div>
-          )}
+          )} */}
           <form onSubmit={(e) => { e.preventDefault(); handleSend() }} className="flex items-end gap-2">
             <textarea
               value={draft}
