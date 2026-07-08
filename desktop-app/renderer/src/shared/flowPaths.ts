@@ -293,7 +293,8 @@ export function enumerateRoutes(input: EnumerateInput): EnumerationResult {
         warnings.push({ payeePlacementId: payee.placementId, message: `${employee.displayName}: no FX rate for ${gross.payCurrency} — update the price provider.` })
         continue
       }
-      fxRate = ccPerUnit.toFixed(18).replace(/0+$/, '').replace(/\.$/, '')
+      // Limit to 10 decimal places to avoid floating point precision issues
+      fxRate = ccPerUnit.toFixed(10).replace(/0+$/, '').replace(/\.$/, '')
     }
 
     const computeInput: ComputeInput = { grossPay: netPay, payCurrency: gross.payCurrency, fxRate }

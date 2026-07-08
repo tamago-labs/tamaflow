@@ -21,7 +21,7 @@ const { writeFile, readFile, unlink, rename } = require('fs/promises')
 const { SDK, getPublicKeyFromPrivate } = require('@canton-network/wallet-sdk')
 const { DEVNET, DEFAULT_PARTY_HINT, DEFAULT_AMULET_AMOUNT } = require('./devnet')
 const { buildTapCommand } = require('./tap')
-const { buildTransferCommand, getAmuletDsoParty } = require('./transfer')
+const { buildTransferCommand, getAmuletDsoParty, waitForLedgerUpdate, getLedgerEndOffset } = require('./transfer')
 const {
   listPendingTransferInstructions,
   buildAcceptCommand,
@@ -618,6 +618,10 @@ async function transferAmulet(params) {
     const amount = padCantonCoinAmount(params.amount)
     const token = await getToken()
     const dsoParty = await getCachedDsoParty(token)
+
+    // Get ledger offset BEFORE transfer for waiting later
+    const ledgerEndBefore = await getLedgerEndOffset(token)
+
     const [transferCommand, disclosedContracts] = await buildTransferCommand(
       token,
       {
@@ -640,7 +644,13 @@ async function transferAmulet(params) {
       .sign(w.privateKey)
       .execute({ partyId: w.partyId })
     const updateId = result.updateId ?? result.transactionHash
-    return { success: true, updateId, amount, recipient: params.recipient }
+    return {
+      success: true,
+      updateId,
+      amount,
+      recipient: params.recipient,
+      ledgerOffset: ledgerEndBefore
+    }
   } catch (err) {
     console.error('[wallet] transferAmulet failed:', err)
     return { success: false, error: errMsg(err) }
@@ -997,6 +1007,8 @@ module.exports = {
   runFaucet,
   getHoldings,
   transferAmulet,
+  // Wrapper that passes getToken function for fresh token on each poll
+  waitForLedgerUpdate: (afterOffset, maxWaitMs) => waitForLedgerUpdate(getToken, afterOffset, maxWaitMs),
   listPendingTransfers,
   acceptTransfer,
   rejectTransfer,

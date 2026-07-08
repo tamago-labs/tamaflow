@@ -178,10 +178,12 @@ async function fetchTransferFactoryChoiceContext(token, choiceArgs) {
 // ============================================
 
 /** Canton Coin UTXOs (Holdings) currently in the sender's active
- *  contract set, filtered to the requested instrument. */
+ *  contract set, filtered to the requested instrument.
+ *  Excludes LockedAmulet contracts (holdings locked by in-flight transfers). */
 async function fetchSenderCantonCoinHoldings(token, sender) {
   const ledgerEnd = await fetchLedgerApi(token, 'GET', '/v2/state/ledger-end')
 
+  // Query all Holding interface contracts (includes both Amulet and LockedAmulet)
   const filter = {
     filtersByParty: {
       [sender]: {
@@ -209,8 +211,15 @@ async function fetchSenderCantonCoinHoldings(token, sender) {
   })
 
   const contracts = flattenActiveContracts(raw)
+
+  // Filter to only unlocked Amulet holdings
+  // Exclude LockedAmulet contracts (check templateId for "LockedAmulet")
   const out = []
   for (const c of contracts) {
+    // Skip LockedAmulet contracts — these are holdings locked by in-flight transfers
+    const templateId = c.templateId || ''
+    if (templateId.toLowerCase().includes('lockedamulet')) continue
+
     const view = c.interfaceViews?.find((v) =>
       v.interfaceId.endsWith(HOLDING_INTERFACE_TAIL)
     )?.viewValue
@@ -249,6 +258,57 @@ function pickInputUtxos(holdings, targetAmount) {
 
 function isoNow(offsetMs = 0) {
   return new Date(Date.now() + offsetMs).toISOString()
+}
+
+// ============================================
+// Wait for ledger update
+// ============================================
+
+/** Get the current ledger end offset. */
+async function getLedgerEndOffset(token) {
+  const resp = await fetchLedgerApi(token, 'GET', '/v2/state/ledger-end')
+  return resp.offset
+}
+
+/**
+ * Wait for the ledger to advance past a given offset.
+ * Uses exponential backoff: 200ms → 400ms → 800ms → ... up to 30s.
+ *
+ * @param {() => Promise<string>} getTokenFn - async function that returns a fresh JWT
+ * @param {string} afterOffset - the offset to wait past
+ * @param {number} [maxWaitMs=30000] - max time to wait
+ * @returns {Promise<{success: boolean, finalOffset?: string, elapsedMs?: number, error?: string}>}
+ */
+async function waitForLedgerUpdate(getTokenFn, afterOffset, maxWaitMs = 30000) {
+  const start = Date.now()
+  let delay = 200
+
+  while (Date.now() - start < maxWaitMs) {
+    await new Promise((r) => setTimeout(r, delay))
+    try {
+      // Get a fresh token for each poll (tokens can expire)
+      const token = await getTokenFn()
+      const currentOffset = await getLedgerEndOffset(token)
+      // Compare offsets as bigints (they're numeric strings)
+      if (BigInt(currentOffset) > BigInt(afterOffset)) {
+        return {
+          success: true,
+          finalOffset: currentOffset,
+          elapsedMs: Date.now() - start
+        }
+      }
+    } catch (err) {
+      // Network error — keep retrying
+      console.log('[waitForLedgerUpdate] poll error, retrying:', err.message)
+    }
+    delay = Math.min(delay * 2, 5000)
+  }
+
+  return {
+    success: false,
+    error: `Ledger did not advance past offset ${afterOffset} within ${maxWaitMs}ms`,
+    elapsedMs: Date.now() - start
+  }
 }
 
 // ============================================
@@ -358,4 +418,4 @@ async function getAmuletDsoParty(token) {
   return fetchDsoParty(token)
 }
 
-module.exports = { buildTransferCommand, getAmuletDsoParty, toDisclosed }
+module.exports = { buildTransferCommand, getAmuletDsoParty, toDisclosed, waitForLedgerUpdate, getLedgerEndOffset }

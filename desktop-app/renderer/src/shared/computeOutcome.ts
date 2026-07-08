@@ -50,9 +50,7 @@ function padCC(value: string, decimals: number): string {
 }
 
 function isFiniteRate(rate: string): boolean {
-  if (!/^\d+(\.\d+)?$/.test(rate)) return false
-  const minor = decimalToMinor(rate, 18)
-  return minor <= BigInt(10) ** BigInt(18)
+  return /^\d+(\.\d+)?$/.test(rate)
 }
 
 export function computeOutcome(input: ComputeInput): ComputeResult {

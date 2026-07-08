@@ -255,7 +255,7 @@ function enumerateRoutes(input) {
     if (gross.payCurrency !== 'CC') {
       const ccPerUnit = convert(1, gross.payCurrency, 'CC')
       if (ccPerUnit === null) { warnings.push({ payeePlacementId: payee.placementId, message: `${employee.displayName}: no FX rate for ${gross.payCurrency}` }); continue }
-      fxRate = ccPerUnit.toFixed(18).replace(/0+$/, '').replace(/\.$/, '')
+      fxRate = ccPerUnit.toFixed(10).replace(/0+$/, '').replace(/\.$/, '')
     }
 
     let computed

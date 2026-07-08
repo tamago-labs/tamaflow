@@ -90,6 +90,17 @@ async function processOne(flow, route) {
     return
   }
 
+  // Wait for ledger to process the transfer before next one
+  // This prevents UTXO contention when settling multiple routes
+  if (result.ledgerOffset) {
+    const waitResult = await walletModule.waitForLedgerUpdate(result.ledgerOffset)
+    if (!waitResult.success) {
+      console.log('[flowWorker] ledger wait timeout:', waitResult.error)
+      // Still mark as settled — the transfer was submitted successfully
+      // The UTXOs will be available on next tick
+    }
+  }
+
   // settled
   const settled = { ...routeStore.get(flow.id, route.id), status: 'settled', completedAt: now() }
   if (result.updateId) settled.txHash = result.updateId
