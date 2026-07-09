@@ -86,12 +86,12 @@ CIP-0056 compliant token. No decimals (JPY has no cents).
 
 ### Constants
 
-| Name | Value |
-|------|-------|
-| tokenSymbol | JPYC |
-| tokenName | JPYC Token |
-| tokenDecimals | 0 |
-| instrumentIdText | JPYC |
+| Name | Value | Notes |
+|------|-------|-------|
+| tokenSymbol | JPYC | |
+| tokenName | JPYC Token | |
+| tokenDecimals | 10 | CIP-0056 requires always 10 (Daml Decimal type) |
+| instrumentIdText | JPYC | |
 
 ### JPYCAsset
 

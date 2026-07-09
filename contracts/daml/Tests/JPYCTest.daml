@@ -171,5 +171,5 @@ testPublicFetch = script do
       actor = bob
 
   assertMsg "Symbol should be JPYC" (view.symbol == "JPYC")
-  assertMsg "Decimals should be 0" (view.decimals == 0)
+  assertMsg "Decimals should be 10 (CIP-0056)" (view.decimals == 10)
   return ()
