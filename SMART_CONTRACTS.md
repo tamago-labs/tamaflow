@@ -1,88 +1,77 @@
 # TamaFlow Smart Contracts
 
-Canton/Daml smart contracts for JPYC token and attendance tracking.
+Canton/Daml smart contracts for the TamaFlow payroll platform.
 
 ## Setup
 
 ```bash
 cd contracts
-daml build
-daml test
+dpm build
+dpm test
 ```
 
-Requires Daml SDK 3.5.1.
+Requires Daml SDK 3.5.1 and Java 17+.
 
 ---
 
 ## Package Structure
 
 ```
-contracts/daml/
-├── CIP0056/                    # Token standard interfaces
-│   ├── TokenMetadata.daml
-│   ├── Holdings.daml
-│   └── TransferInstruction.daml
-├── JPYC/                       # JPYC token implementation
-│   ├── Types.daml
-│   ├── Asset.daml
-│   ├── Issuer.daml
-│   ├── TransferFactory.daml
-│   └── TransferInstruction.daml
-├── Attendance/                  # Time tracking
-│   ├── Types.daml
-│   ├── TimeBlock.daml
-│   └── AttendanceRecord.daml
+contracts/daml/TamaFlow/
+├── Company/
+│   ├── CompanyProfile.daml       # Company on-chain profile
+│   └── EmployeeRecord.daml       # Employee-company link
+├── JPYC/
+│   ├── Types.daml                # Token constants
+│   ├── Asset.daml                # Token holding (Split/Transfer/Merge)
+│   ├── Issuer.daml               # Admin mints tokens
+│   └── Faucet.daml               # Per-address claim limits
+├── Attendance/
+│   ├── Types.daml                # BlockStatus enum
+│   ├── TimeBlock.daml            # Employee check-in block
+│   └── AttendanceRecord.daml     # Immutable audit record
+├── Oracle/
+│   └── PriceFeed.daml            # Manual price updates
 └── Tests/
-    ├── JPYCTest.daml
-    └── AttendanceTest.daml
+    ├── JPYCTest.daml             # 7 tests
+    ├── CompanyTest.daml          # 3 tests
+    ├── AttendanceTest.daml       # 4 tests
+    ├── OracleTest.daml           # 3 tests
+    └── E2ETest.daml              # 1 test (full flow)
 ```
 
 ---
 
-## CIP-0056 Interfaces
+## Company
 
-Standard token interfaces adapted from RentyVast reference implementation.
+### CompanyProfile
 
-### TokenMetadata
-
-| Field | Type | Description |
-|-------|------|-------------|
-| instrumentAdmin | Party | Token admin party |
-| instrumentId | Text | Token identifier |
-| name | Text | Human-readable name |
-| symbol | Text | Token symbol |
-| decimals | Int | Decimal places |
-| totalSupply | Optional Decimal | Current supply |
-| meta | Metadata | Extensible metadata |
-
-### Holding
+Employer creates company on-chain.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| owner | Party | Current holder |
-| instrumentId | InstrumentId | Token identifier (admin + id) |
-| amount | Decimal | Balance |
-| lock | Optional Lock | Lock info (if locked) |
-| meta | Metadata | Extensible metadata |
+| employer | Party | Signatory (company admin) |
+| companyName | Text | Company name |
+| country | Text | Country code |
 
-### TransferFactory
+**Choices:** None (immutable — archive and recreate to update)
 
-Creates transfer instructions. Choices:
-- `TransferFactory_Transfer` — sender-initiated transfer
-- `TransferFactory_PublicFetch` — read factory metadata
+### EmployeeRecord
 
-### TransferInstruction
+Employer links employees to company. Employee observes.
 
-Pending transfer awaiting receiver action. Choices:
-- `Accept` — receiver accepts, mints holding to receiver
-- `Reject` — receiver rejects, refund to sender
-- `Withdraw` — sender cancels, refund to sender
+| Field | Type | Description |
+|-------|------|-------------|
+| employer | Party | Signatory |
+| employee | Party | Observer |
+| companyName | Text | Company name |
+| displayName | Text | Employee name |
+| role | Optional Text | Job role |
+| createdAt | Time | Creation time |
 
 ---
 
 ## JPYC Token
-
-CIP-0056 compliant token. No decimals (JPY has no cents).
 
 ### Constants
 
@@ -90,21 +79,19 @@ CIP-0056 compliant token. No decimals (JPY has no cents).
 |------|-------|-------|
 | tokenSymbol | JPYC | |
 | tokenName | JPYC Token | |
-| tokenDecimals | 10 | CIP-0056 requires always 10 (Daml Decimal type) |
+| tokenDecimals | 10 | CIP-0056 requires 10 (Daml Decimal type) |
 | instrumentIdText | JPYC | |
 
 ### JPYCAsset
 
-Primary holding contract. Implements `Holding` interface.
+Token holding with UTXO model.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| issuer | Party | Minted by |
-| owner | Party | Current holder |
+| issuer | Party | Signatory (minted by) |
+| owner | Party | Observer (current holder) |
 | amount | Decimal | Balance |
-| instrumentId | InstrumentId | Always JPYC |
-| lock | Optional Lock | Lock status |
-| meta | Metadata | Extensible metadata |
+| instrumentId | Text | Always "JPYC" |
 | observers | [Party] | Additional observers |
 
 **Choices:**
@@ -115,81 +102,47 @@ Primary holding contract. Implements `Holding` interface.
 | `TransferAsset` | owner | Transfer to new owner |
 | `MergeWith` | owner | Merge two same-owner UTXOs |
 
-**Constraints:**
-- `amount > 0` (ensure)
-- Both issuer and owner are signatories
-- Locked holdings cannot be split/transferred/merged
-
 ### JPYCIssuer
 
-Platform minter. Anyone can mint — no admin restriction.
+Admin mints unlimited JPYC tokens.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| admin | Party | Issuer signatory |
-| instrumentId | InstrumentId | JPYC instrument |
-| totalSupply | Decimal | Running total |
-| meta | Metadata | Extensible metadata |
+| admin | Party | Signatory |
+| instrumentId | Text | Token identifier |
 
 **Choices:**
 
 | Choice | Controller | Description |
 |--------|------------|-------------|
-| `Mint` | **anyone** | Mint JPYC to any owner |
-| `JPYCIssuer_BootstrapFactories` | admin | Create transfer factory |
-| `PublicFetch` | **anyone** | Read token metadata |
+| `Mint` | admin | Mint JPYC to any owner (nonconsuming) |
 
-**Note:** `Mint` has no admin restriction — anyone can mint unlimited JPYC for testing.
+### Faucet
 
-### JPYCTransferFactory
-
-CIP-0056 transfer factory. Creates `JPYCTransferInstruction` on transfer.
+Per-address claim limits. Admin creates, users claim.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| admin | Party | Factory admin |
-| instrumentId | InstrumentId | JPYC instrument |
-| meta | Metadata | Extensible metadata |
+| admin | Party | Signatory |
+| issuer | Party | Token issuer for minting |
+| publicObserver | Party | Public party for visibility |
+| instrumentId | Text | Token identifier |
+| perClaimLimit | Decimal | Max per address |
+| totalClaimed | Decimal | Running total |
+| claims | TextMap Decimal | Address → amount claimed |
 
 **Choices:**
 
 | Choice | Controller | Description |
 |--------|------------|-------------|
-| `TransferFactory_Transfer` | sender | Create transfer instruction |
-| `TransferFactory_PublicFetch` | **anyone** | Read factory metadata |
+| `Claim` | claimant | Claim JPYC from faucet (nonconsuming) |
+| `GetFaucetInfo` | admin | Get faucet stats |
 
-**Transfer flow:**
-1. Sender exercises `TransferFactory_Transfer`
-2. Factory validates sender's holdings, archives input UTXOs
-3. Creates `JPYCTransferInstruction` with escrowed amount
-4. Receiver exercises `Accept` to receive tokens
-5. Or `Reject`/`Withdraw` to refund sender
-
-### JPYCTransferInstruction
-
-Pending transfer awaiting receiver acceptance.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| issuer | Party | Factory admin |
-| transfer | Transfer | Transfer details |
-| escrowedAmount | Decimal | Amount in escrow |
-| status | TransferInstructionStatus | Current status |
-| meta | Metadata | Extensible metadata |
-
-**Choices:**
-
-| Choice | Controller | Description |
-|--------|------------|-------------|
-| `Accept` | receiver | Mint tokens to receiver |
-| `Reject` | receiver | Refund to sender |
-| `Withdraw` | sender | Cancel and refund |
+**Note:** In production, requires a public observer party so claimants can see the Faucet contract.
 
 ---
 
 ## Attendance
-
-Time tracking with 1-hour blocks.
 
 ### BlockStatus
 
@@ -199,7 +152,7 @@ data BlockStatus = Open | Confirmed | Rejected
 
 ### TimeBlock
 
-1-hour attendance block. Employee checks in, employer reviews later.
+Employee check-in block. Employee creates, employer confirms/rejects.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -207,22 +160,16 @@ data BlockStatus = Open | Confirmed | Rejected
 | employer | Party | Observer (reviews later) |
 | blockStart | Time | Block start time |
 | blockEnd | Time | Always blockStart + 1 hour |
-| status | BlockStatus | Open/Confirmed/Rejected |
+| status | BlockStatus | Current status |
 | note | Optional Text | Optional description |
 
 **Choices:**
 
 | Choice | Controller | Description |
 |--------|------------|-------------|
-| `ConfirmBlock` | employer | Confirm attendance, create record |
-| `RejectBlock` | employer | Reject with reason, create record |
-| `CloseBlock` | employee | Auto-confirm after block ends |
-
-**Constraints:**
-- `blockEnd == blockStart + 1 hour` (ensure)
-- Only employee signs at creation (employer is observer)
-- Employer confirms/reviews later (no real-time coordination needed)
-- Employee can self-close after block time passes
+| `ConfirmBlock` | employer | Confirm attendance |
+| `RejectBlock` | employer | Reject with reason |
+| `CloseBlock` | employee | Self-close after block ends |
 
 **Flow:**
 ```
@@ -230,7 +177,7 @@ Employee check-in → TimeBlock (Open)
                     ↓
 Employer reviews → ConfirmBlock/RejectBlock
                     ↓
-                 AttendanceRecord (immutable audit)
+                 Status updated (Open → Confirmed/Rejected)
 ```
 
 ### AttendanceRecord
@@ -239,42 +186,86 @@ Immutable audit record created on confirm/reject.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| employee | Party | Employee |
-| employer | Party | Employer |
+| employee | Party | Observer |
+| employer | Party | Signatory |
 | blockStart | Time | Block start |
 | blockEnd | Time | Block end |
 | status | BlockStatus | Confirmed or Rejected |
 | recordedAt | Time | When confirmed/rejected |
 
-**Signatories:** Both employee and employer
+---
+
+## Oracle
+
+### PriceFeed
+
+Manual price updates. Admin creates and updates.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| admin | Party | Signatory |
+| prices | TextMap Decimal | Currency → USD rate |
+| updatedAt | Time | Last update time |
+
+**Choices:**
+
+| Choice | Controller | Description |
+|--------|------------|-------------|
+| `UpdatePrices` | admin | Replace all prices (nonconsuming) |
+| `SetPrice` | admin | Add/update single price (nonconsuming) |
+| `GetPrices` | admin | Get all prices (nonconsuming) |
 
 ---
 
 ## Tests
 
-### JPYCTest (6 tests)
+### JPYCTest (7 tests)
 
 | Test | Description |
 |------|-------------|
 | testMint | Mint 1000 JPYC to Alice |
-| testSplitAndMerge | Split 1000 → 300 + 700, merge back |
-| testTransfer | Transfer 200 from Alice to Bob |
-| testMintRequiresPositiveAmount | Reject minting 0 |
-| testAnyoneCanMint | Non-admin can mint |
-| testPublicFetch | Anyone can read metadata |
+| testMintToMultiple | Mint to Alice and Bob |
+| testSplitAndTransfer | Split 10000, transfer 1000 |
+| testTransfer | Transfer 500 from Alice to Bob |
+| testFaucetClaim | Claim 500 from faucet |
+| testFaucetClaimLimit | Claim 800, verify tracking |
+| testFaucetMultipleUsers | Alice and Bob claim |
 
-### AttendanceTest (8 tests)
+### CompanyTest (3 tests)
 
 | Test | Description |
 |------|-------------|
-| testCheckIn | Employee creates 1hr block |
-| testConfirmBlock | Employer confirms, creates record |
-| testRejectBlock | Employer rejects, creates record |
-| testEmployeeCannotConfirm | Employee cannot confirm own block |
-| testCannotConfirmAlreadyConfirmed | Cannot double-confirm |
-| testCloseBlockByEmployee | Employee closes after block ends |
-| testCannotCloseBeforeBlockEnds | Cannot close early |
-| testMultipleBlocks | 3 blocks in sequence |
+| testCreateCompany | Employer creates company |
+| testAddEmployee | Employer adds employee |
+| testMultipleEmployees | Add Alice and Bob |
+
+### AttendanceTest (4 tests)
+
+| Test | Description |
+|------|-------------|
+| testCheckIn | Employee creates block |
+| testConfirmBlock | Employer confirms |
+| testRejectBlock | Employer rejects |
+| testMultipleBlocks | Create 3 blocks |
+
+### OracleTest (3 tests)
+
+| Test | Description |
+|------|-------------|
+| testCreatePriceFeed | Create with initial prices |
+| testUpdatePrices | Update all prices |
+| testSetSinglePrice | Set one currency price |
+
+### E2ETest (1 test)
+
+Full employee lifecycle:
+1. Employer creates company
+2. Employer adds employee
+3. Employee lists companies
+4. Employee does 4 time check-ins
+5. Employer mints 100,000 JPYC
+6. Employer sends 10,000 JPYC to employee
+7. Employee checks balance
 
 ---
 
@@ -282,28 +273,27 @@ Immutable audit record created on confirm/reject.
 
 ### Canton DevNet
 
-1. Build: `daml build`
+1. Build: `dpm build`
 2. Upload DAR to Canton DevNet
 3. Allocate parties: admin, employee, employer
 4. Create `JPYCIssuer` with admin party
-5. Bootstrap transfer factory: `JPYCIssuer_BootstrapFactories`
-6. Mint initial JPYC: `Mint`
+5. Mint initial JPYC: `Mint`
 
 ### Integration with Desktop App
 
 The existing FlowBuilder/Worker handles settlement. To use JPYC:
 
 1. Replace CC with JPYC in payment calculations
-2. Worker uses `JPYCTransferFactory.TransferFactory_Transfer` instead of CC transfers
+2. Worker uses JPYC Asset Split/Transfer for payments
 3. Attendance blocks feed into payroll calculations
+4. Oracle PriceFeed replaces hardcoded priceProvider.ts
 
 ---
 
 ## Future Improvements
 
-- [ ] Add expiration/timeout to TransferInstruction
-- [ ] Add compliance lock support to JPYCAsset
+- [ ] Add expiration/timeout to Faucet claims
 - [ ] Add attendance summary/aggregation contract
 - [ ] Add project/task tracking to TimeBlock
-- [ ] Limit minting per address (if needed for production)
-- [ ] Add multi-sig or threshold authorization
+- [ ] Connect Oracle to desktop app priceProvider
+- [ ] Add Company update choice (archive + recreate pattern)
