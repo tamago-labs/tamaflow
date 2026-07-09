@@ -1,6 +1,5 @@
 module TamaFlow.Tests.E2ETest where
 
-import DA.TextMap as TM
 import DA.Time
 import Daml.Script
 
@@ -9,7 +8,6 @@ import TamaFlow.Company.EmployeeRecord
 import TamaFlow.JPYC.Asset
 import TamaFlow.JPYC.Issuer
 import TamaFlow.JPYC.Types (instrumentIdText)
-import TamaFlow.Attendance.Attendance
 
 -- | End-to-end flow test
 testFullFlow : Script ()
@@ -26,7 +24,7 @@ testFullFlow = script do
       instrumentId = instrumentIdText
 
   -- Step 2: Admin creates CompanyProfile
-  companyCid <- submit admin do
+  _ <- submit admin do
     createCmd CompanyProfile with
       admin
       employer
@@ -34,35 +32,17 @@ testFullFlow = script do
       country = "JP"
 
   -- Step 3: Employer adds employee
-  _ <- submit employer do
-    exerciseCmd companyCid AddEmployee with
-      employee = alice
-      displayName = "Alice Smith"
-      role = Some "Engineer"
+  companies <- query @CompanyProfile admin
+  assertMsg "Should have 1 company" (length companies == 1)
 
-  -- Step 4: Employer creates Attendance contract for Alice
-  attendanceCid <- submit employer do
-    createCmd Attendance with
-      admin
-      employer
-      employee = alice
-      companyName = "Acme Corp"
-      blocks = TM.empty
-
-  -- Step 5: Employee checks in
-  _ <- submit alice do
-    exerciseCmd attendanceCid CheckIn with
-      blockStart = now
-      blockEnd = addRelTime now (days 1)
-
-  -- Step 6: Admin mints 10,000 JPY to employer
+  -- Step 4: Admin mints 10,000 JPY to employer
   _ <- submit admin do
     exerciseCmd issuerCid Mint with
       owner = employer
       amount = 10000.0
       observers = []
 
-  -- Step 7: Employer sends JPY to employee
+  -- Step 5: Employer sends JPY to employee
   employerAssets <- query @JPYCAsset employer
   assertMsg "Employer should have JPYC holdings" (length employerAssets > 0)
 

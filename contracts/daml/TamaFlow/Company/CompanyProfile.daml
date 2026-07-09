@@ -1,12 +1,15 @@
 module TamaFlow.Company.CompanyProfile where
 
-import TamaFlow.Company.EmployeeRecord (EmployeeRecord(..))
+import DA.TextMap as TM
 
--- | Company profile. Admin creates, employer manages employees.
+import TamaFlow.Company.EmployeeRecord (EmployeeRecord(..))
+import TamaFlow.Company.Types (BlockInfo(..))
+
+-- | Company profile. Admin creates, employer manages.
 template CompanyProfile
   with
-    admin : Party           -- Signatory (creates contract)
-    employer : Party        -- Observer (manages employees)
+    admin : Party
+    employer : Party
     companyName : Text
     country : Text
   where
@@ -22,9 +25,9 @@ template CompanyProfile
       controller employer
       do
         create EmployeeRecord with
-          admin
           employer
           employee
           companyName
           displayName
           role
+          blocks = TM.empty
