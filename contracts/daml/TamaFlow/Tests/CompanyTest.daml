@@ -1,0 +1,62 @@
+module TamaFlow.Tests.CompanyTest where
+
+import Daml.Script
+
+import TamaFlow.Company.CompanyProfile
+import TamaFlow.Company.EmployeeRecord
+
+testCreateCompany : Script ()
+testCreateCompany = script do
+  employer <- allocateParty "Employer"
+
+  _ <- submit employer do
+    createCmd CompanyProfile with
+      employer
+      companyName = "Acme Corp"
+      country = "JP"
+
+  return ()
+
+testAddEmployee : Script ()
+testAddEmployee = script do
+  employer <- allocateParty "Employer"
+  alice <- allocateParty "Alice"
+  now <- getTime
+
+  _ <- submit employer do
+    createCmd EmployeeRecord with
+      employer
+      employee = alice
+      companyName = "Acme Corp"
+      displayName = "Alice Smith"
+      role = Some "Engineer"
+      createdAt = now
+
+  return ()
+
+testMultipleEmployees : Script ()
+testMultipleEmployees = script do
+  employer <- allocateParty "Employer"
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+  now <- getTime
+
+  _ <- submit employer do
+    createCmd EmployeeRecord with
+      employer
+      employee = alice
+      companyName = "Acme Corp"
+      displayName = "Alice Smith"
+      role = Some "Engineer"
+      createdAt = now
+
+  _ <- submit employer do
+    createCmd EmployeeRecord with
+      employer
+      employee = bob
+      companyName = "Acme Corp"
+      displayName = "Bob Jones"
+      role = Some "Designer"
+      createdAt = now
+
+  return ()
