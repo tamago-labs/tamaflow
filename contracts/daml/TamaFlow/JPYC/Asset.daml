@@ -154,5 +154,5 @@ template JPYCAsset
             lock = None
             meta
             observers
-      where
-        assetInstrumentId = instrumentId
+    where
+      assetInstrumentId = instrumentId
