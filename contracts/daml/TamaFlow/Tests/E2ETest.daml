@@ -14,13 +14,15 @@ import TamaFlow.Attendance.Types (BlockStatus(..))
 -- | End-to-end flow test
 testFullFlow : Script ()
 testFullFlow = script do
+  admin <- allocateParty "Admin"
   employer <- allocateParty "Employer"
   alice <- allocateParty "Alice"
   now <- getTime
 
-  -- Step 1: Employer creates company
-  companyCid <- submit employer do
+  -- Step 1: Admin creates company
+  companyCid <- submit admin do
     createCmd CompanyProfile with
+      admin
       employer
       companyName = "Acme Corp"
       country = "JP"
