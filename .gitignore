@@ -9,3 +9,5 @@ example-*
 .env.*
 *-old
 tmp*
+.daml/
+*-backup
