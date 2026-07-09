@@ -1,6 +1,6 @@
 module TamaFlow.Company.EmployeeRecord where
 
--- | Employee record linking an employee to a company. Employer creates, employee observes.
+-- | Employee record linking an employee to a company.
 template EmployeeRecord
   with
     employer : Party
@@ -8,7 +8,6 @@ template EmployeeRecord
     companyName : Text
     displayName : Text
     role : Optional Text
-    createdAt : Time
   where
     signatory employer
     observer employee

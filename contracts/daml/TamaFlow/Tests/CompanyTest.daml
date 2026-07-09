@@ -1,17 +1,22 @@
 module TamaFlow.Tests.CompanyTest where
 
+import DA.Time
 import Daml.Script
 
 import TamaFlow.Company.CompanyProfile
+import TamaFlow.Company.CompanyRegistry
 import TamaFlow.Company.EmployeeRecord
 
 testCreateCompany : Script ()
 testCreateCompany = script do
-  employer <- allocateParty "Employer"
+  admin <- allocateParty "Admin"
 
-  _ <- submit employer do
-    createCmd CompanyProfile with
-      employer
+  registryCid <- submit admin do
+    createCmd CompanyRegistry with admin
+
+  _ <- submit admin do
+    exerciseCmd registryCid AddCompany with
+      employerName = "Alice Corp"
       companyName = "Acme Corp"
       country = "JP"
 
@@ -19,44 +24,72 @@ testCreateCompany = script do
 
 testAddEmployee : Script ()
 testAddEmployee = script do
-  employer <- allocateParty "Employer"
+  admin <- allocateParty "Admin"
   alice <- allocateParty "Alice"
-  now <- getTime
 
-  _ <- submit employer do
-    createCmd EmployeeRecord with
-      employer
-      employee = alice
+  registryCid <- submit admin do
+    createCmd CompanyRegistry with admin
+
+  _ <- submit admin do
+    exerciseCmd registryCid AddEmployee with
       companyName = "Acme Corp"
+      employee = alice
       displayName = "Alice Smith"
       role = Some "Engineer"
-      createdAt = now
+
+  return ()
+
+testListCompanies : Script ()
+testListCompanies = script do
+  admin <- allocateParty "Admin"
+
+  registryCid <- submit admin do
+    createCmd CompanyRegistry with admin
+
+  -- Add two companies
+  _ <- submit admin do
+    exerciseCmd registryCid AddCompany with
+      employerName = "Alice Corp"
+      companyName = "Acme Corp"
+      country = "JP"
+
+  _ <- submit admin do
+    exerciseCmd registryCid AddCompany with
+      employerName = "Bob Inc"
+      companyName = "Tech Corp"
+      country = "US"
+
+  -- Query all CompanyProfile contracts
+  companies <- query @CompanyProfile admin
+  assertMsg "Should have 2 companies" (length companies == 2)
 
   return ()
 
 testMultipleEmployees : Script ()
 testMultipleEmployees = script do
-  employer <- allocateParty "Employer"
+  admin <- allocateParty "Admin"
   alice <- allocateParty "Alice"
   bob <- allocateParty "Bob"
-  now <- getTime
 
-  _ <- submit employer do
-    createCmd EmployeeRecord with
-      employer
-      employee = alice
+  registryCid <- submit admin do
+    createCmd CompanyRegistry with admin
+
+  _ <- submit admin do
+    exerciseCmd registryCid AddEmployee with
       companyName = "Acme Corp"
+      employee = alice
       displayName = "Alice Smith"
       role = Some "Engineer"
-      createdAt = now
 
-  _ <- submit employer do
-    createCmd EmployeeRecord with
-      employer
-      employee = bob
+  _ <- submit admin do
+    exerciseCmd registryCid AddEmployee with
       companyName = "Acme Corp"
+      employee = bob
       displayName = "Bob Jones"
       role = Some "Designer"
-      createdAt = now
+
+  -- Query all EmployeeRecord contracts
+  employees <- query @EmployeeRecord admin
+  assertMsg "Should have 2 employees" (length employees == 2)
 
   return ()

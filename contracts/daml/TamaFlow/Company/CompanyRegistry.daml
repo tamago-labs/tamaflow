@@ -1,0 +1,41 @@
+module TamaFlow.Company.CompanyRegistry where
+
+import TamaFlow.Company.CompanyProfile (CompanyProfile(..))
+import TamaFlow.Company.EmployeeRecord (EmployeeRecord(..))
+
+-- | Company registry. Deployed once with allocated party. Anyone can add companies.
+template CompanyRegistry
+  with
+    admin : Party
+  where
+    signatory admin
+
+    -- | Add a company. Anyone can call this.
+    nonconsuming choice AddCompany : ContractId CompanyProfile
+      with
+        employerName : Text
+        companyName : Text
+        country : Text
+      controller admin
+      do
+        create CompanyProfile with
+          employer = admin
+          employerName
+          companyName
+          country
+
+    -- | Add employee to a company. Anyone can call this.
+    nonconsuming choice AddEmployee : ContractId EmployeeRecord
+      with
+        companyName : Text
+        employee : Party
+        displayName : Text
+        role : Optional Text
+      controller admin
+      do
+        create EmployeeRecord with
+          employer = admin
+          employee
+          companyName
+          displayName
+          role
