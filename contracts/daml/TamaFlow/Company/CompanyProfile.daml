@@ -2,14 +2,16 @@ module TamaFlow.Company.CompanyProfile where
 
 import TamaFlow.Company.EmployeeRecord (EmployeeRecord(..))
 
--- | Company profile. Employer creates and manages.
+-- | Company profile. Admin creates, employer manages employees.
 template CompanyProfile
   with
-    employer : Party           -- Signatory (creates contract)
+    admin : Party           -- Signatory (creates contract)
+    employer : Party        -- Observer (manages employees)
     companyName : Text
     country : Text
   where
-    signatory employer
+    signatory admin
+    observer employer
 
     -- | Add employee. Employer controls this.
     nonconsuming choice AddEmployee : ContractId EmployeeRecord
@@ -20,6 +22,7 @@ template CompanyProfile
       controller employer
       do
         create EmployeeRecord with
+          admin
           employer
           employee
           companyName

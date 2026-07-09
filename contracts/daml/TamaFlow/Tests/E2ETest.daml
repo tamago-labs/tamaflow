@@ -1,5 +1,6 @@
 module TamaFlow.Tests.E2ETest where
 
+import DA.TextMap as TM
 import DA.Time
 import Daml.Script
 
@@ -8,10 +9,9 @@ import TamaFlow.Company.EmployeeRecord
 import TamaFlow.JPYC.Asset
 import TamaFlow.JPYC.Issuer
 import TamaFlow.JPYC.Types (instrumentIdText)
-import TamaFlow.Attendance.TimeBlock
-import TamaFlow.Attendance.Types (BlockStatus(..))
+import TamaFlow.Attendance.Attendance
 
--- | End-to-end flow test with clear admin/employer separation
+-- | End-to-end flow test
 testFullFlow : Script ()
 testFullFlow = script do
   admin <- allocateParty "Admin"
@@ -25,9 +25,10 @@ testFullFlow = script do
       admin
       instrumentId = instrumentIdText
 
-  -- Step 2: Employer creates CompanyProfile
-  companyCid <- submit employer do
+  -- Step 2: Admin creates CompanyProfile
+  companyCid <- submit admin do
     createCmd CompanyProfile with
+      admin
       employer
       companyName = "Acme Corp"
       country = "JP"
@@ -39,17 +40,20 @@ testFullFlow = script do
       displayName = "Alice Smith"
       role = Some "Engineer"
 
-  -- Step 4: Employee checks in (creates TimeBlock)
-  _ <- submit alice do
-    createCmd TimeBlock with
-      employee = alice
+  -- Step 4: Employer creates Attendance contract for Alice
+  attendanceCid <- submit employer do
+    createCmd Attendance with
+      admin
       employer
+      employee = alice
+      companyName = "Acme Corp"
+      blocks = TM.empty
+
+  -- Step 5: Employee checks in
+  _ <- submit alice do
+    exerciseCmd attendanceCid CheckIn with
       blockStart = now
       blockEnd = addRelTime now (days 1)
-      status = Open
-      note = None
-
-  -- Step 5: Employer confirms check-in (skip for now)
 
   -- Step 6: Admin mints 10,000 JPY to employer
   _ <- submit admin do
@@ -59,9 +63,7 @@ testFullFlow = script do
       observers = []
 
   -- Step 7: Employer sends JPY to employee
-  -- Query employer's JPYC holdings
   employerAssets <- query @JPYCAsset employer
   assertMsg "Employer should have JPYC holdings" (length employerAssets > 0)
 
-  -- Just verify the flow works - actual transfer tested in JPYCTest
   return ()

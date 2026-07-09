@@ -7,10 +7,12 @@ import TamaFlow.Company.EmployeeRecord
 
 testCreateCompany : Script ()
 testCreateCompany = script do
+  admin <- allocateParty "Admin"
   employer <- allocateParty "Employer"
 
-  _ <- submit employer do
+  _ <- submit admin do
     createCmd CompanyProfile with
+      admin
       employer
       companyName = "Acme Corp"
       country = "JP"
@@ -19,11 +21,13 @@ testCreateCompany = script do
 
 testAddEmployee : Script ()
 testAddEmployee = script do
+  admin <- allocateParty "Admin"
   employer <- allocateParty "Employer"
   alice <- allocateParty "Alice"
 
-  companyCid <- submit employer do
+  companyCid <- submit admin do
     createCmd CompanyProfile with
+      admin
       employer
       companyName = "Acme Corp"
       country = "JP"
@@ -38,35 +42,38 @@ testAddEmployee = script do
 
 testListCompanies : Script ()
 testListCompanies = script do
+  admin <- allocateParty "Admin"
   employer <- allocateParty "Employer"
 
-  -- Add two companies
-  _ <- submit employer do
+  _ <- submit admin do
     createCmd CompanyProfile with
+      admin
       employer
       companyName = "Acme Corp"
       country = "JP"
 
-  _ <- submit employer do
+  _ <- submit admin do
     createCmd CompanyProfile with
+      admin
       employer
       companyName = "Tech Corp"
       country = "US"
 
-  -- Query all CompanyProfile contracts
-  companies <- query @CompanyProfile employer
+  companies <- query @CompanyProfile admin
   assertMsg "Should have 2 companies" (length companies == 2)
 
   return ()
 
 testMultipleEmployees : Script ()
 testMultipleEmployees = script do
+  admin <- allocateParty "Admin"
   employer <- allocateParty "Employer"
   alice <- allocateParty "Alice"
   bob <- allocateParty "Bob"
 
-  companyCid <- submit employer do
+  companyCid <- submit admin do
     createCmd CompanyProfile with
+      admin
       employer
       companyName = "Acme Corp"
       country = "JP"
@@ -83,7 +90,6 @@ testMultipleEmployees = script do
       displayName = "Bob Jones"
       role = Some "Designer"
 
-  -- Query all EmployeeRecord contracts
   employees <- query @EmployeeRecord employer
   assertMsg "Should have 2 employees" (length employees == 2)
 
