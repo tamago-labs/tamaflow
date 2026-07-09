@@ -1,9 +1,9 @@
-module Attendance.TimeBlock where
+module TamaFlow.Attendance.TimeBlock where
 
 import DA.Time (DiffTime(..), addDiffTime)
 
-import Attendance.Types (BlockStatus(..))
-import Attendance.AttendanceRecord (AttendanceRecord(..))
+import TamaFlow.Attendance.Types (BlockStatus(..))
+import TamaFlow.Attendance.AttendanceRecord (AttendanceRecord(..))
 
 -- | One 1-hour attendance block. Employee checks in, employer reviews later.
 template TimeBlock

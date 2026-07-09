@@ -2,11 +2,11 @@ module TamaFlow.JPYC.Issuer where
 
 import DA.TextMap as TM
 
-import CIP0056.Holdings (InstrumentId(..))
-import CIP0056.TokenMetadata
-import JPYC.Asset (JPYCAsset(..), mintAsset)
-import JPYC.Types (makeInstrumentId, tokenSymbol, tokenName, tokenDecimals, instrumentIdText)
-import JPYC.TransferFactory (JPYCTransferFactory(..))
+import TamaFlow.CIP0056.Holdings (InstrumentId(..))
+import TamaFlow.CIP0056.TokenMetadata
+import TamaFlow.JPYC.Asset (JPYCAsset(..), mintAsset)
+import TamaFlow.JPYC.Types (makeInstrumentId, tokenSymbol, tokenName, tokenDecimals, instrumentIdText)
+import TamaFlow.JPYC.TransferFactory (JPYCTransferFactory(..))
 
 -- | JPYC Issuer. Anyone can mint — no admin restriction.
 template JPYCIssuer

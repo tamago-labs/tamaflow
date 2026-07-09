@@ -1,8 +1,8 @@
-module CIP0056.TransferInstruction where
+module TamaFlow.CIP0056.TransferInstruction where
 
 import DA.Map as M
-import CIP0056.Holdings
-import CIP0056.TokenMetadata
+import TamaFlow.CIP0056.Holdings
+import TamaFlow.CIP0056.TokenMetadata
 
 data ChoiceContext = ChoiceContext
   with

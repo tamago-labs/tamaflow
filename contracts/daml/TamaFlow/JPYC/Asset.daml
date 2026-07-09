@@ -3,9 +3,9 @@ module TamaFlow.JPYC.Asset where
 import DA.Optional (isNone)
 import DA.TextMap as TM
 
-import CIP0056.Holdings
-import CIP0056.TokenMetadata
-import JPYC.Types (makeInstrumentId, tokenSymbol, tokenName, tokenDecimals)
+import TamaFlow.CIP0056.Holdings
+import TamaFlow.CIP0056.TokenMetadata
+import TamaFlow.JPYC.Types (makeInstrumentId, tokenSymbol, tokenName, tokenDecimals)
 
 -- | Sum and validate sender-owned, unlocked holdings for JPYC.
 validateInputHoldings : Party -> [ContractId Holding] -> Update ([ContractId JPYCAsset], Decimal)

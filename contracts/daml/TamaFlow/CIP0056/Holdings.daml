@@ -1,8 +1,8 @@
-module CIP0056.Holdings where
+module TamaFlow.CIP0056.Holdings where
 
 import DA.Time (RelTime)
 
-import CIP0056.TokenMetadata
+import TamaFlow.CIP0056.TokenMetadata
 
 data InstrumentId = InstrumentId
   with

@@ -1,4 +1,4 @@
-module Attendance.Types where
+module TamaFlow.Attendance.Types where
 
 data BlockStatus
   = Open

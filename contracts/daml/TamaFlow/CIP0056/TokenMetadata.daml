@@ -1,4 +1,4 @@
-module CIP0056.TokenMetadata where
+module TamaFlow.CIP0056.TokenMetadata where
 
 import DA.TextMap as TM
 

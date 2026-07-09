@@ -1,10 +1,10 @@
 module TamaFlow.JPYC.TransferFactory where
 
-import CIP0056.Holdings (Holding(..), InstrumentId(..))
-import CIP0056.TokenMetadata (Metadata(..))
-import CIP0056.TransferInstruction
-import JPYC.Asset (JPYCAsset(..), validateInputHoldings, archiveAssets, mintAsset)
-import JPYC.TransferInstruction (JPYCTransferInstruction(..))
+import TamaFlow.CIP0056.Holdings (Holding(..), InstrumentId(..))
+import TamaFlow.CIP0056.TokenMetadata (Metadata(..))
+import TamaFlow.CIP0056.TransferInstruction
+import TamaFlow.JPYC.Asset (JPYCAsset(..), validateInputHoldings, archiveAssets, mintAsset)
+import TamaFlow.JPYC.TransferInstruction (JPYCTransferInstruction(..))
 
 -- | CIP-0056 transfer factory for JPYC — sender-initiated transfer workflow.
 template JPYCTransferFactory

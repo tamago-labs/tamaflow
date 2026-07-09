@@ -1,6 +1,6 @@
-module Attendance.AttendanceRecord where
+module TamaFlow.Attendance.AttendanceRecord where
 
-import Attendance.Types (BlockStatus(..))
+import TamaFlow.Attendance.Types (BlockStatus(..))
 
 -- | Immutable audit record created when a TimeBlock is confirmed or rejected.
 template AttendanceRecord
