@@ -1,11 +1,27 @@
 module TamaFlow.Company.CompanyProfile where
 
--- | Company profile stored on-chain. Created via CompanyRegistry.
+import TamaFlow.Company.EmployeeRecord (EmployeeRecord(..))
+
+-- | Company profile stored on-chain. Employer creates and manages.
 template CompanyProfile
   with
-    employer : Party          -- Registry admin (signatory)
-    employerName : Text       -- Real employer display name
+    employer : Party
     companyName : Text
     country : Text
   where
     signatory employer
+
+    -- | Add employee to this company. Employer controls this.
+    nonconsuming choice AddEmployee : ContractId EmployeeRecord
+      with
+        employee : Party
+        displayName : Text
+        role : Optional Text
+      controller employer
+      do
+        create EmployeeRecord with
+          employer
+          employee
+          companyName
+          displayName
+          role

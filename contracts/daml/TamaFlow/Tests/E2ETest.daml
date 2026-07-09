@@ -4,7 +4,6 @@ import DA.Time
 import Daml.Script
 
 import TamaFlow.Company.CompanyProfile
-import TamaFlow.Company.CompanyRegistry
 import TamaFlow.Company.EmployeeRecord
 import TamaFlow.JPYC.Asset
 import TamaFlow.JPYC.Issuer
@@ -12,27 +11,23 @@ import TamaFlow.JPYC.Types (instrumentIdText)
 import TamaFlow.Attendance.TimeBlock
 import TamaFlow.Attendance.Types (BlockStatus(..))
 
--- | End-to-end flow test using CompanyRegistry pattern
+-- | End-to-end flow test
 testFullFlow : Script ()
 testFullFlow = script do
-  admin <- allocateParty "Admin"
+  employer <- allocateParty "Employer"
   alice <- allocateParty "Alice"
   now <- getTime
 
-  -- Step 1: Deploy registry and add company
-  registryCid <- submit admin do
-    createCmd CompanyRegistry with admin
-
-  _ <- submit admin do
-    exerciseCmd registryCid AddCompany with
-      employerName = "Alice Corp"
+  -- Step 1: Employer creates company
+  companyCid <- submit employer do
+    createCmd CompanyProfile with
+      employer
       companyName = "Acme Corp"
       country = "JP"
 
-  -- Step 2: Add employee
-  _ <- submit admin do
-    exerciseCmd registryCid AddEmployee with
-      companyName = "Acme Corp"
+  -- Step 2: Employer adds employee (employer controls AddEmployee)
+  _ <- submit employer do
+    exerciseCmd companyCid AddEmployee with
       employee = alice
       displayName = "Alice Smith"
       role = Some "Engineer"
@@ -43,26 +38,26 @@ testFullFlow = script do
   -- Step 4: Employee does 4 time check-ins (1 hour each)
   let h = days 1
   _ <- submit alice do
-    createCmd TimeBlock with employee = alice; employer = admin; blockStart = now; blockEnd = addRelTime now h; status = Open; note = None
+    createCmd TimeBlock with employee = alice; employer; blockStart = now; blockEnd = addRelTime now h; status = Open; note = None
   _ <- submit alice do
-    createCmd TimeBlock with employee = alice; employer = admin; blockStart = addRelTime now h; blockEnd = addRelTime now (h + h); status = Open; note = None
+    createCmd TimeBlock with employee = alice; employer; blockStart = addRelTime now h; blockEnd = addRelTime now (h + h); status = Open; note = None
   _ <- submit alice do
-    createCmd TimeBlock with employee = alice; employer = admin; blockStart = addRelTime now (h + h); blockEnd = addRelTime now (h + h + h); status = Open; note = None
+    createCmd TimeBlock with employee = alice; employer; blockStart = addRelTime now (h + h); blockEnd = addRelTime now (h + h + h); status = Open; note = None
   _ <- submit alice do
-    createCmd TimeBlock with employee = alice; employer = admin; blockStart = addRelTime now (h + h + h); blockEnd = addRelTime now (h + h + h + h); status = Open; note = None
+    createCmd TimeBlock with employee = alice; employer; blockStart = addRelTime now (h + h + h); blockEnd = addRelTime now (h + h + h + h); status = Open; note = None
 
-  -- Step 5: Admin mints 100,000 JPYC
-  issuerCid <- submit admin do
-    createCmd JPYCIssuer with admin; instrumentId = instrumentIdText
+  -- Step 5: Employer mints 100,000 JPYC
+  issuerCid <- submit employer do
+    createCmd JPYCIssuer with admin = employer; instrumentId = instrumentIdText
 
-  assetCid <- submit admin do
-    exerciseCmd issuerCid Mint with owner = admin; amount = 100000.0; observers = []
+  assetCid <- submit employer do
+    exerciseCmd issuerCid Mint with owner = employer; amount = 100000.0; observers = []
 
-  -- Step 6: Admin sends 10,000 JPYC to employee
-  (paymentCid, _changeCid) <- submit admin do
+  -- Step 6: Employer sends 10,000 JPYC to employee
+  (paymentCid, _changeCid) <- submit employer do
     exerciseCmd assetCid Split with paymentAmount = 10000.0
 
-  _ <- submit admin do
+  _ <- submit employer do
     exerciseCmd paymentCid TransferAsset with newOwner = alice
 
   -- Step 7: Employee checks balance (just verify query works)
