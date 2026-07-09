@@ -1,9 +1,9 @@
-module TamaFlow.JPYC.TransferInstruction where
+module JPYC.TransferInstruction where
 
-import TamaFlow.CIP0056.Holdings (Holding(..), InstrumentId(..))
-import TamaFlow.CIP0056.TokenMetadata (Metadata(..), emptyMetadata)
-import TamaFlow.CIP0056.TransferInstruction
-import TamaFlow.JPYC.Asset (JPYCAsset(..), mintAsset)
+import CIP0056.Holdings (Holding(..), InstrumentId(..))
+import CIP0056.TokenMetadata (Metadata(..), emptyMetadata)
+import CIP0056.TransferInstruction
+import JPYC.Asset (JPYCAsset(..), mintAsset)
 
 -- | Pending JPYC transfer awaiting receiver acceptance.
 template JPYCTransferInstruction

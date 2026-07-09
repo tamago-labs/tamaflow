@@ -1,11 +1,11 @@
-module TamaFlow.Tests.AttendanceTest where
+module Tests.AttendanceTest where
 
 import DA.Time (Time(..), addDiffTime, DiffTime(..))
 import Daml.Script
 
-import TamaFlow.Attendance.Types (BlockStatus(..))
-import TamaFlow.Attendance.TimeBlock (TimeBlock(..))
-import TamaFlow.Attendance.AttendanceRecord (AttendanceRecord(..))
+import Attendance.Types (BlockStatus(..))
+import Attendance.TimeBlock (TimeBlock(..))
+import Attendance.AttendanceRecord (AttendanceRecord(..))
 
 -- Helper: create a TimeBlock
 createTimeBlock : Party -> Party -> Time -> Script (ContractId TimeBlock)

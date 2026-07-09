@@ -1,8 +1,9 @@
-module TamaFlow.Attendance.TimeBlock where
+module Attendance.TimeBlock where
 
 import DA.Time (DiffTime(..), addDiffTime)
 
-import TamaFlow.Attendance.Types (BlockStatus(..))
+import Attendance.Types (BlockStatus(..))
+import Attendance.AttendanceRecord (AttendanceRecord(..))
 
 -- | One 1-hour attendance block. Employee checks in, employer reviews later.
 template TimeBlock
@@ -28,7 +29,7 @@ template TimeBlock
       do
         assertMsg "Only open blocks can be confirmed" (status == Open)
         create
-          TamaFlow.Attendance.AttendanceRecord.AttendanceRecord with
+          AttendanceRecord with
             employee
             employer
             blockStart
@@ -45,7 +46,7 @@ template TimeBlock
       do
         assertMsg "Only open blocks can be rejected" (status == Open)
         create
-          TamaFlow.Attendance.AttendanceRecord.AttendanceRecord with
+          AttendanceRecord with
             employee
             employer
             blockStart
@@ -63,7 +64,7 @@ template TimeBlock
         assertMsg "Only open blocks can be closed" (status == Open)
         assertMsg "Block has not ended yet" (recordedAt >= blockEnd)
         create
-          TamaFlow.Attendance.AttendanceRecord.AttendanceRecord with
+          AttendanceRecord with
             employee
             employer
             blockStart

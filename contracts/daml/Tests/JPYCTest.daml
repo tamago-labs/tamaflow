@@ -1,15 +1,15 @@
-module TamaFlow.Tests.JPYCTest where
+module Tests.JPYCTest where
 
 import DA.Time (Time(..), addDiffTime, DiffTime(..))
 import Daml.Script
 
-import TamaFlow.CIP0056.Holdings (Holding(..), InstrumentId(..))
-import TamaFlow.CIP0056.TokenMetadata (TokenMetadataView(..))
-import TamaFlow.CIP0056.TransferInstruction (Transfer(..), ExtraArgs(..), emptyExtraArgs)
-import TamaFlow.JPYC.Asset (JPYCAsset(..))
-import TamaFlow.JPYC.Issuer (JPYCIssuer(..))
-import TamaFlow.JPYC.TransferFactory (JPYCTransferFactory(..))
-import TamaFlow.JPYC.Types (makeInstrumentId)
+import CIP0056.Holdings (Holding(..), InstrumentId(..))
+import CIP0056.TokenMetadata (TokenMetadataView(..))
+import CIP0056.TransferInstruction (Transfer(..), ExtraArgs(..), emptyExtraArgs)
+import JPYC.Asset (JPYCAsset(..))
+import JPYC.Issuer (JPYCIssuer(..))
+import JPYC.TransferFactory (JPYCTransferFactory(..))
+import JPYC.Types (makeInstrumentId)
 
 testMint : Script ()
 testMint = script do
@@ -22,7 +22,7 @@ testMint = script do
       admin
       instrumentId = makeInstrumentId admin
       totalSupply = 0.0
-      meta = TamaFlow.CIP0056.TokenMetadata.emptyMetadata
+      meta = CIP0056.TokenMetadata.emptyMetadata
 
   -- Mint 1000 JPYC to Alice
   assetCid <- submit admin do
@@ -47,7 +47,7 @@ testSplitAndMerge = script do
       admin
       instrumentId = makeInstrumentId admin
       totalSupply = 0.0
-      meta = TamaFlow.CIP0056.TokenMetadata.emptyMetadata
+      meta = CIP0056.TokenMetadata.emptyMetadata
 
   -- Mint 1000 JPYC
   assetCid <- submit admin do
@@ -89,7 +89,7 @@ testTransfer = script do
       admin
       instrumentId = makeInstrumentId admin
       totalSupply = 0.0
-      meta = TamaFlow.CIP0056.TokenMetadata.emptyMetadata
+      meta = CIP0056.TokenMetadata.emptyMetadata
 
   -- Mint 500 JPYC to Alice
   assetCid <- submit admin do
@@ -118,7 +118,7 @@ testMintRequiresPositiveAmount = script do
       admin
       instrumentId = makeInstrumentId admin
       totalSupply = 0.0
-      meta = TamaFlow.CIP0056.TokenMetadata.emptyMetadata
+      meta = CIP0056.TokenMetadata.emptyMetadata
 
   -- Try to mint 0 — should fail
   result <- scriptExercise issuerCid Mint with
@@ -140,7 +140,7 @@ testAnyoneCanMint = script do
       admin
       instrumentId = makeInstrumentId admin
       totalSupply = 0.0
-      meta = TamaFlow.CIP0056.TokenMetadata.emptyMetadata
+      meta = CIP0056.TokenMetadata.emptyMetadata
 
   -- Bob (not admin) can mint
   assetCid <- submit bob do
@@ -163,7 +163,7 @@ testPublicFetch = script do
       admin
       instrumentId = makeInstrumentId admin
       totalSupply = 0.0
-      meta = TamaFlow.CIP0056.TokenMetadata.emptyMetadata
+      meta = CIP0056.TokenMetadata.emptyMetadata
 
   -- Anyone can fetch metadata
   view <- submit bob do
