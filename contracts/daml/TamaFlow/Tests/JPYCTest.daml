@@ -25,6 +25,34 @@ testMint = script do
 
   return ()
 
+testSplitAndTransfer : Script ()
+testSplitAndTransfer = script do
+  admin <- allocateParty "Admin"
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+
+  issuerCid <- submit admin do
+    createCmd JPYCIssuer with
+      admin
+      instrumentId = instrumentIdText
+      totalSupply = 0.0
+
+  assetCid <- submit admin do
+    exerciseCmd issuerCid Mint with
+      owner = alice
+      amount = 10000.0
+      observers = []
+
+  (paymentCid, _changeCid) <- submit alice do
+    exerciseCmd assetCid Split with
+      paymentAmount = 1000.0
+
+  _ <- submit alice do
+    exerciseCmd paymentCid TransferAsset with
+      newOwner = bob
+
+  return ()
+
 testTransfer : Script ()
 testTransfer = script do
   admin <- allocateParty "Admin"

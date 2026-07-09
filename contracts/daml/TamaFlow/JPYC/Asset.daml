@@ -41,7 +41,41 @@ template JPYCAsset
 
     ensure amount > 0.0
 
-    -- | Transfer holding to a new party.
+    -- | Split: isolate an exact payment amount.
+    choice Split : (ContractId JPYCAsset, Optional (ContractId JPYCAsset))
+      with
+        paymentAmount : Decimal
+      controller owner
+      do
+        assertMsg "Payment amount must be positive" (paymentAmount > 0.0)
+        assertMsg "Insufficient balance for split" (amount >= paymentAmount)
+
+        paymentCid <-
+          create
+            JPYCAsset with
+              issuer
+              owner
+              amount = paymentAmount
+              instrumentId
+              observers
+
+        changeCid <-
+          if amount > paymentAmount
+            then do
+              cid <-
+                create
+                  JPYCAsset with
+                    issuer
+                    owner
+                    amount = amount - paymentAmount
+                    instrumentId
+                    observers
+              return (Some cid)
+            else return None
+
+        return (paymentCid, changeCid)
+
+    -- | TransferAsset: transfer holding to a new party.
     choice TransferAsset : ContractId JPYCAsset
       with
         newOwner : Party
@@ -54,5 +88,25 @@ template JPYCAsset
             issuer
             owner = newOwner
             amount
+            instrumentId
+            observers
+
+    -- | MergeWith: consolidate two same-owner UTXOs into one.
+    choice MergeWith : ContractId JPYCAsset
+      with
+        otherCid : ContractId JPYCAsset
+      controller owner
+      do
+        otherAsset <- fetch otherCid
+        assertMsg "Cannot merge with self" (otherCid /= self)
+        assertMsg "Merge requires same owner" (otherAsset.owner == owner)
+        assertMsg "Merge requires same issuer" (otherAsset.issuer == issuer)
+        assertMsg "Merge requires same instrument" (otherAsset.instrumentId == instrumentId)
+
+        create
+          JPYCAsset with
+            issuer
+            owner
+            amount = amount + otherAsset.amount
             instrumentId
             observers
