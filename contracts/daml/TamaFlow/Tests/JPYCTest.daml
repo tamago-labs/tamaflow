@@ -1,8 +1,10 @@
 module TamaFlow.Tests.JPYCTest where
 
+import DA.TextMap as TM
 import Daml.Script
 
 import TamaFlow.JPYC.Asset
+import TamaFlow.JPYC.Faucet
 import TamaFlow.JPYC.Issuer
 import TamaFlow.JPYC.Types (instrumentIdText)
 
@@ -96,5 +98,79 @@ testTransfer = script do
   _ <- submit alice do
     exerciseCmd assetCid TransferAsset with
       newOwner = bob
+
+  return ()
+
+testFaucetClaim : Script ()
+testFaucetClaim = script do
+  admin <- allocateParty "Admin"
+  alice <- allocateParty "Alice"
+
+  faucetCid <- submit admin do
+    createCmd Faucet with
+      admin
+      issuer = admin
+      instrumentId = instrumentIdText
+      perClaimLimit = 1000.0
+      totalClaimed = 0.0
+      claims = TM.empty
+
+  _ <- submit admin do
+    exerciseCmd faucetCid Claim with
+      claimant = alice
+      amount = 500.0
+
+  return ()
+
+testFaucetClaimLimit : Script ()
+testFaucetClaimLimit = script do
+  admin <- allocateParty "Admin"
+  alice <- allocateParty "Alice"
+
+  faucetCid <- submit admin do
+    createCmd Faucet with
+      admin
+      issuer = admin
+      instrumentId = instrumentIdText
+      perClaimLimit = 1000.0
+      totalClaimed = 0.0
+      claims = TM.empty
+
+  _ <- submit admin do
+    exerciseCmd faucetCid Claim with
+      claimant = alice
+      amount = 800.0
+
+  info <- submit admin do
+    exerciseCmd faucetCid GetFaucetInfo
+  let (_, claimed, _, _) = info
+  assertMsg "Claimed should be 800" (claimed == 800.0)
+
+  return ()
+
+testFaucetMultipleUsers : Script ()
+testFaucetMultipleUsers = script do
+  admin <- allocateParty "Admin"
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+
+  faucetCid <- submit admin do
+    createCmd Faucet with
+      admin
+      issuer = admin
+      instrumentId = instrumentIdText
+      perClaimLimit = 1000.0
+      totalClaimed = 0.0
+      claims = TM.empty
+
+  _ <- submit admin do
+    exerciseCmd faucetCid Claim with
+      claimant = alice
+      amount = 500.0
+
+  _ <- submit admin do
+    exerciseCmd faucetCid Claim with
+      claimant = bob
+      amount = 700.0
 
   return ()

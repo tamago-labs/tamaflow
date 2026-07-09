@@ -1,0 +1,52 @@
+module TamaFlow.JPYC.Faucet where
+
+import DA.TextMap as TM
+
+import TamaFlow.JPYC.Asset (JPYCAsset(..), mintAsset)
+
+-- | JPYC Faucet. Admin funds it, anyone can claim tokens.
+template Faucet
+  with
+    admin : Party
+    issuer : Party
+    instrumentId : Text
+    perClaimLimit : Decimal
+    totalClaimed : Decimal
+    claims : TM.TextMap Decimal
+  where
+    signatory admin
+    observer issuer
+
+    ensure perClaimLimit > 0.0 && totalClaimed >= 0.0
+
+    -- | Claim JPYC from the faucet. Anyone can call this.
+    nonconsuming choice Claim : ContractId JPYCAsset
+      with
+        claimant : Party
+        amount : Decimal
+      controller claimant
+      do
+        assertMsg "Claim amount must be positive" (amount > 0.0)
+        assertMsg "Claim exceeds per-address limit" (amount <= perClaimLimit)
+
+        let claimantId = show claimant
+            previouslyClaimed = case TM.lookup claimantId claims of
+              Some v -> v
+              None -> 0.0
+        assertMsg "Total claims exceed per-address limit" (previouslyClaimed + amount <= perClaimLimit)
+
+        assetCid <- mintAsset issuer claimant amount []
+
+        let newClaims = TM.insert claimantId (previouslyClaimed + amount) claims
+        _ <- create this with
+          totalClaimed = totalClaimed + amount
+          claims = newClaims
+
+        return assetCid
+
+    -- | Get faucet info.
+    nonconsuming choice GetFaucetInfo : (Text, Decimal, Decimal, Int)
+      controller admin
+      do
+        let claimCount = TM.size claims
+        return (instrumentId, perClaimLimit, totalClaimed, claimCount)
