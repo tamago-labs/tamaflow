@@ -15,12 +15,36 @@ testMint = script do
     createCmd JPYCIssuer with
       admin
       instrumentId = instrumentIdText
-      totalSupply = 0.0
 
   _ <- submit admin do
     exerciseCmd issuerCid Mint with
       owner = alice
       amount = 1000.0
+      observers = []
+
+  return ()
+
+testMintToMultiple : Script ()
+testMintToMultiple = script do
+  admin <- allocateParty "Admin"
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+
+  issuerCid <- submit admin do
+    createCmd JPYCIssuer with
+      admin
+      instrumentId = instrumentIdText
+
+  _ <- submit admin do
+    exerciseCmd issuerCid Mint with
+      owner = alice
+      amount = 500.0
+      observers = []
+
+  _ <- submit admin do
+    exerciseCmd issuerCid Mint with
+      owner = bob
+      amount = 300.0
       observers = []
 
   return ()
@@ -35,7 +59,6 @@ testSplitAndTransfer = script do
     createCmd JPYCIssuer with
       admin
       instrumentId = instrumentIdText
-      totalSupply = 0.0
 
   assetCid <- submit admin do
     exerciseCmd issuerCid Mint with
@@ -63,7 +86,6 @@ testTransfer = script do
     createCmd JPYCIssuer with
       admin
       instrumentId = instrumentIdText
-      totalSupply = 0.0
 
   assetCid <- submit admin do
     exerciseCmd issuerCid Mint with

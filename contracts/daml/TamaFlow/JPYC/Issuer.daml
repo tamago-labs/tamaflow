@@ -2,19 +2,16 @@ module TamaFlow.JPYC.Issuer where
 
 import TamaFlow.JPYC.Asset (JPYCAsset(..), mintAsset)
 
--- | JPYC Issuer. Anyone can mint — no admin restriction.
+-- | JPYC Issuer. Admin mints tokens to any owner.
 template JPYCIssuer
   with
     admin : Party
     instrumentId : Text
-    totalSupply : Decimal
   where
     signatory admin
 
-    ensure totalSupply >= 0.0
-
-    -- | Mint JPYC tokens to any owner. Controller is the issuer admin.
-    choice Mint : ContractId JPYCAsset
+    -- | Mint JPYC tokens to any owner. Admin is the minter.
+    nonconsuming choice Mint : ContractId JPYCAsset
       with
         owner : Party
         amount : Decimal
@@ -22,6 +19,4 @@ template JPYCIssuer
       controller admin
       do
         assertMsg "Mint amount must be positive" (amount > 0.0)
-        holdingCid <- mintAsset admin owner amount observers
-        _ <- create this with totalSupply = totalSupply + amount
-        return holdingCid
+        mintAsset admin owner amount observers
