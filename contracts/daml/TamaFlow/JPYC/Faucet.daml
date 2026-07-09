@@ -5,17 +5,19 @@ import DA.TextMap as TM
 import TamaFlow.JPYC.Asset (JPYCAsset(..), mintAsset)
 
 -- | JPYC Faucet. Admin funds it, anyone can claim tokens.
+-- Requires a public observer party so claimants can see the contract.
 template Faucet
   with
     admin : Party
     issuer : Party
+    publicObserver : Party
     instrumentId : Text
     perClaimLimit : Decimal
     totalClaimed : Decimal
     claims : TM.TextMap Decimal
   where
     signatory admin
-    observer issuer
+    observer issuer, publicObserver
 
     ensure perClaimLimit > 0.0 && totalClaimed >= 0.0
 

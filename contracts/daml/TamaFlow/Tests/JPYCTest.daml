@@ -1,8 +1,10 @@
 module TamaFlow.Tests.JPYCTest where
 
+import DA.TextMap as TM
 import Daml.Script
 
 import TamaFlow.JPYC.Asset
+import TamaFlow.JPYC.Faucet
 import TamaFlow.JPYC.Issuer
 import TamaFlow.JPYC.Types (instrumentIdText)
 
@@ -96,5 +98,88 @@ testTransfer = script do
   _ <- submit alice do
     exerciseCmd assetCid TransferAsset with
       newOwner = bob
+
+  return ()
+
+-- Faucet tests: admin exercises Claim on behalf of users
+-- (In production, a public party would observe the Faucet)
+
+testFaucetClaim : Script ()
+testFaucetClaim = script do
+  admin <- allocateParty "Admin"
+  public <- allocateParty "Public"
+  alice <- allocateParty "Alice"
+
+  faucetCid <- submit admin do
+    createCmd Faucet with
+      admin
+      issuer = admin
+      publicObserver = public
+      instrumentId = instrumentIdText
+      perClaimLimit = 1000.0
+      totalClaimed = 0.0
+      claims = TM.empty
+
+  -- Admin claims on behalf of Alice (both must authorize)
+  _ <- submitMulti [admin, alice] [] do
+    exerciseCmd faucetCid Claim with
+      claimant = alice
+      amount = 500.0
+
+  return ()
+
+testFaucetClaimLimit : Script ()
+testFaucetClaimLimit = script do
+  admin <- allocateParty "Admin"
+  public <- allocateParty "Public"
+  alice <- allocateParty "Alice"
+
+  faucetCid <- submit admin do
+    createCmd Faucet with
+      admin
+      issuer = admin
+      publicObserver = public
+      instrumentId = instrumentIdText
+      perClaimLimit = 1000.0
+      totalClaimed = 0.0
+      claims = TM.empty
+
+  _ <- submitMulti [admin, alice] [] do
+    exerciseCmd faucetCid Claim with
+      claimant = alice
+      amount = 800.0
+
+  -- After Claim, a new Faucet is created. Query for the current one.
+  faucets <- query @Faucet admin
+  assertMsg "Should have at least one Faucet" (length faucets > 0)
+
+  return ()
+
+testFaucetMultipleUsers : Script ()
+testFaucetMultipleUsers = script do
+  admin <- allocateParty "Admin"
+  public <- allocateParty "Public"
+  alice <- allocateParty "Alice"
+  bob <- allocateParty "Bob"
+
+  faucetCid <- submit admin do
+    createCmd Faucet with
+      admin
+      issuer = admin
+      publicObserver = public
+      instrumentId = instrumentIdText
+      perClaimLimit = 1000.0
+      totalClaimed = 0.0
+      claims = TM.empty
+
+  _ <- submitMulti [admin, alice] [] do
+    exerciseCmd faucetCid Claim with
+      claimant = alice
+      amount = 500.0
+
+  _ <- submitMulti [admin, bob] [] do
+    exerciseCmd faucetCid Claim with
+      claimant = bob
+      amount = 700.0
 
   return ()
