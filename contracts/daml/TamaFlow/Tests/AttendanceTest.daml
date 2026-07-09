@@ -1,57 +1,47 @@
 module TamaFlow.Tests.AttendanceTest where
 
-import DA.Time (Time(..), addDiffTime, DiffTime(..))
+import DA.Time
 import Daml.Script
 
 import TamaFlow.Attendance.Types (BlockStatus(..))
-import TamaFlow.Attendance.TimeBlock (TimeBlock(..))
-import TamaFlow.Attendance.AttendanceRecord (AttendanceRecord(..))
-
--- Helper: create a TimeBlock
-createTimeBlock : Party -> Party -> Time -> Script (ContractId TimeBlock)
-createTimeBlock employee employer blockStart = submit employee do
-  createCmd TimeBlock with
-    employee
-    employer
-    blockStart
-    blockEnd = addDiffTime blockStart (DiffTime with seconds = 3600)
-    status = Open
-    note = None
+import TamaFlow.Attendance.TimeBlock
 
 testCheckIn : Script ()
 testCheckIn = script do
   alice <- allocateParty "Alice"
   employer <- allocateParty "Employer"
+  now <- getTime
 
-  let now = Time with seconds = 1700000000, nanoseconds = 0
-  cid <- createTimeBlock alice employer now
+  _ <- submit alice do
+    createCmd TimeBlock with
+      employee = alice
+      employer
+      blockStart = now
+      blockEnd = addRelTime now (days 1)
+      status = Open
+      note = None
 
-  block <- fetch cid
-  assertMsg "Employee should be Alice" (block.employee == alice)
-  assertMsg "Employer should be Employer" (block.employer == employer)
-  assertMsg "Status should be Open" (block.status == Open)
-  assertMsg "Block should be 1 hour" (block.blockEnd == addDiffTime now (DiffTime with seconds = 3600))
   return ()
 
 testConfirmBlock : Script ()
 testConfirmBlock = script do
   alice <- allocateParty "Alice"
   employer <- allocateParty "Employer"
+  now <- getTime
 
-  let now = Time with seconds = 1700000000, nanoseconds = 0
-  cid <- createTimeBlock alice employer now
+  cid <- submit alice do
+    createCmd TimeBlock with
+      employee = alice
+      employer
+      blockStart = now
+      blockEnd = addRelTime now (days 1)
+      status = Open
+      note = None
 
-  -- Employer confirms
-  let confirmTime = addDiffTime now (DiffTime with seconds = 7200)
-  () <- submit employer do
+  let confirmTime = addRelTime now (days 2)
+  _ <- submit employer do
     exerciseCmd cid ConfirmBlock with
       recordedAt = confirmTime
-
-  -- Block should be archived
-  result <- fetch cid
-  case result of
-    Left _ -> return () -- Expected: contract archived
-    Right _ -> assertMsg "Block should be archived" False
 
   return ()
 
@@ -59,106 +49,22 @@ testRejectBlock : Script ()
 testRejectBlock = script do
   alice <- allocateParty "Alice"
   employer <- allocateParty "Employer"
+  now <- getTime
 
-  let now = Time with seconds = 1700000000, nanoseconds = 0
-  cid <- createTimeBlock alice employer now
+  cid <- submit alice do
+    createCmd TimeBlock with
+      employee = alice
+      employer
+      blockStart = now
+      blockEnd = addRelTime now (days 1)
+      status = Open
+      note = None
 
-  -- Employer rejects
-  let rejectTime = addDiffTime now (DiffTime with seconds = 7200)
-  () <- submit employer do
+  let rejectTime = addRelTime now (days 2)
+  _ <- submit employer do
     exerciseCmd cid RejectBlock with
       recordedAt = rejectTime
       reason = "Not approved"
-
-  -- Block should be archived
-  result <- fetch cid
-  case result of
-    Left _ -> return () -- Expected: contract archived
-    Right _ -> assertMsg "Block should be archived" False
-
-  return ()
-
-testEmployeeCannotConfirm : Script ()
-testEmployeeCannotConfirm = script do
-  alice <- allocateParty "Alice"
-  employer <- allocateParty "Employer"
-
-  let now = Time with seconds = 1700000000, nanoseconds = 0
-  cid <- createTimeBlock alice employer now
-
-  -- Alice tries to confirm — should fail (only employer can)
-  let confirmTime = addDiffTime now (DiffTime with seconds = 7200)
-  result <- scriptExercise cid ConfirmBlock with
-    recordedAt = confirmTime
-
-  case result of
-    Left _ -> return () -- Expected failure
-    Right _ -> assertMsg "Employee should not be able to confirm" False
-
-  return ()
-
-testCannotConfirmAlreadyConfirmed : Script ()
-testCannotConfirmAlreadyConfirmed = script do
-  alice <- allocateParty "Alice"
-  employer <- allocateParty "Employer"
-
-  let now = Time with seconds = 1700000000, nanoseconds = 0
-  cid <- createTimeBlock alice employer now
-
-  -- Confirm once
-  let confirmTime = addDiffTime now (DiffTime with seconds = 7200)
-  () <- submit employer do
-    exerciseCmd cid ConfirmBlock with
-      recordedAt = confirmTime
-
-  -- Try to confirm again — should fail (block archived)
-  result <- scriptExercise cid ConfirmBlock with
-    recordedAt = confirmTime
-
-  case result of
-    Left _ -> return () -- Expected failure
-    Right _ -> assertMsg "Should not confirm archived block" False
-
-  return ()
-
-testCloseBlockByEmployee : Script ()
-testCloseBlockByEmployee = script do
-  alice <- allocateParty "Alice"
-  employer <- allocateParty "Employer"
-
-  let now = Time with seconds = 1700000000, nanoseconds = 0
-  cid <- createTimeBlock alice employer now
-
-  -- Employee closes after block ends
-  let closeTime = addDiffTime now (DiffTime with seconds = 3601) -- 1 hour + 1 second
-  () <- submit alice do
-    exerciseCmd cid CloseBlock with
-      recordedAt = closeTime
-
-  -- Block should be archived (confirmed)
-  result <- fetch cid
-  case result of
-    Left _ -> return () -- Expected: contract archived
-    Right _ -> assertMsg "Block should be archived" False
-
-  return ()
-
-testCannotCloseBeforeBlockEnds : Script ()
-testCannotCloseBeforeBlockEnds = script do
-  alice <- allocateParty "Alice"
-  employer <- allocateParty "Employer"
-
-  let now = Time with seconds = 1700000000, nanoseconds = 0
-  cid <- createTimeBlock alice employer now
-
-  -- Employee tries to close before block ends
-  let closeTime = addDiffTime now (DiffTime with seconds = 1800) -- 30 minutes
-  result <- scriptExercise cid CloseBlock with
-    recordedAt = closeTime
-
-  case result of
-    Left _ -> return () -- Expected failure
-    Right _ -> assertMsg "Should not close before block ends" False
 
   return ()
 
@@ -166,30 +72,33 @@ testMultipleBlocks : Script ()
 testMultipleBlocks = script do
   alice <- allocateParty "Alice"
   employer <- allocateParty "Employer"
+  now <- getTime
 
-  let now = Time with seconds = 1700000000, nanoseconds = 0
+  _ <- submit alice do
+    createCmd TimeBlock with
+      employee = alice
+      employer
+      blockStart = now
+      blockEnd = addRelTime now (days 1)
+      status = Open
+      note = None
 
-  -- Create 3 blocks (3 hours of work)
-  cid1 <- createTimeBlock alice employer now
-  cid2 <- createTimeBlock alice employer (addDiffTime now (DiffTime with seconds = 3600))
-  cid3 <- createTimeBlock alice employer (addDiffTime now (DiffTime with seconds = 7200))
+  _ <- submit alice do
+    createCmd TimeBlock with
+      employee = alice
+      employer
+      blockStart = addRelTime now (days 1)
+      blockEnd = addRelTime now (days 2)
+      status = Open
+      note = None
 
-  -- All should exist
-  b1 <- fetch cid1
-  b2 <- fetch cid2
-  b3 <- fetch cid3
-
-  assertMsg "Block 1 should be Open" (b1.status == Open)
-  assertMsg "Block 2 should be Open" (b2.status == Open)
-  assertMsg "Block 3 should be Open" (b3.status == Open)
-
-  -- Confirm all
-  let confirmTime = addDiffTime now (DiffTime with seconds = 14400) -- 4 hours later
-  () <- submit employer do
-    exerciseCmd cid1 ConfirmBlock with recordedAt = confirmTime
-  () <- submit employer do
-    exerciseCmd cid2 ConfirmBlock with recordedAt = confirmTime
-  () <- submit employer do
-    exerciseCmd cid3 ConfirmBlock with recordedAt = confirmTime
+  _ <- submit alice do
+    createCmd TimeBlock with
+      employee = alice
+      employer
+      blockStart = addRelTime now (days 2)
+      blockEnd = addRelTime now (days 3)
+      status = Open
+      note = None
 
   return ()

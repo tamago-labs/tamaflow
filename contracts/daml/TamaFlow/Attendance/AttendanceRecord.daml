@@ -12,5 +12,5 @@ template AttendanceRecord
     status : BlockStatus
     recordedAt : Time
   where
-    signatory employee, employer
-    observer employee, employer
+    signatory employer
+    observer employee

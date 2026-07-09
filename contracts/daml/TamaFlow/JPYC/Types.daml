@@ -1,7 +1,5 @@
 module TamaFlow.JPYC.Types where
 
-import TamaFlow.CIP0056.Holdings (InstrumentId(..))
-
 -- CIP-0056 requires decimals to always be 10 (Daml Decimal type has 10 decimal places)
 tokenDecimals : Int
 tokenDecimals = 10
@@ -14,9 +12,3 @@ tokenSymbol = "JPYC"
 
 instrumentIdText : Text
 instrumentIdText = "JPYC"
-
-makeInstrumentId : Party -> InstrumentId
-makeInstrumentId admin =
-  InstrumentId with
-    admin = admin
-    id = instrumentIdText

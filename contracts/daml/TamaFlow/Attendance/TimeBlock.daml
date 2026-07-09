@@ -1,11 +1,10 @@
 module TamaFlow.Attendance.TimeBlock where
 
-import DA.Time (DiffTime(..), addDiffTime)
+import DA.Time
 
 import TamaFlow.Attendance.Types (BlockStatus(..))
-import TamaFlow.Attendance.AttendanceRecord (AttendanceRecord(..))
 
--- | One 1-hour attendance block. Employee checks in, employer reviews later.
+-- | One attendance block. Employee checks in, employer reviews later.
 template TimeBlock
   with
     employee : Party
@@ -18,25 +17,14 @@ template TimeBlock
     signatory employee
     observer employer
 
-    -- Block must be exactly 1 hour
-    ensure addDiffTime blockStart (hours 1) == blockEnd
-
-    -- Only employee can create (via create), only employer can confirm/reject
     choice ConfirmBlock : ()
       with
         recordedAt : Time
       controller employer
       do
         assertMsg "Only open blocks can be confirmed" (status == Open)
-        create
-          AttendanceRecord with
-            employee
-            employer
-            blockStart
-            blockEnd
-            status = Confirmed
-            recordedAt
-        archive self
+        _ <- create this with status = Confirmed
+        return ()
 
     choice RejectBlock : ()
       with
@@ -45,17 +33,9 @@ template TimeBlock
       controller employer
       do
         assertMsg "Only open blocks can be rejected" (status == Open)
-        create
-          AttendanceRecord with
-            employee
-            employer
-            blockStart
-            blockEnd
-            status = Rejected
-            recordedAt
-        archive self
+        _ <- create this with status = Rejected
+        return ()
 
-    -- Employee can close an open block if the block time has passed
     choice CloseBlock : ()
       with
         recordedAt : Time
@@ -63,16 +43,5 @@ template TimeBlock
       do
         assertMsg "Only open blocks can be closed" (status == Open)
         assertMsg "Block has not ended yet" (recordedAt >= blockEnd)
-        create
-          AttendanceRecord with
-            employee
-            employer
-            blockStart
-            blockEnd
-            status = Confirmed
-            recordedAt
-        archive self
-
--- Helper to convert hours to DiffTime
-hours : Int -> DiffTime
-hours h = DiffTime with seconds = 3600 * h
+        _ <- create this with status = Confirmed
+        return ()
