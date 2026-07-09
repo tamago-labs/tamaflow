@@ -1,0 +1,45 @@
+module TamaFlow.Oracle.PriceFeed where
+
+import DA.TextMap as TM
+
+-- | Price oracle storing currency rates relative to USD.
+-- Admin updates prices manually. Anyone can query.
+template PriceFeed
+  with
+    admin : Party
+    prices : TM.TextMap Decimal
+    updatedAt : Time
+  where
+    signatory admin
+
+    ensure TM.size prices > 0
+
+    -- | Update all prices at once.
+    nonconsuming choice UpdatePrices : ()
+      with
+        newPrices : TM.TextMap Decimal
+        newUpdatedAt : Time
+      controller admin
+      do
+        assertMsg "Must provide at least one price" (TM.size newPrices > 0)
+        _ <- create this with prices = newPrices; updatedAt = newUpdatedAt
+        return ()
+
+    -- | Add or update a single price.
+    nonconsuming choice SetPrice : ()
+      with
+        currency : Text
+        rate : Decimal
+        newUpdatedAt : Time
+      controller admin
+      do
+        assertMsg "Rate must be positive" (rate > 0.0)
+        let newPrices = TM.insert currency rate prices
+        _ <- create this with prices = newPrices; updatedAt = newUpdatedAt
+        return ()
+
+    -- | Get all prices.
+    nonconsuming choice GetPrices : (TM.TextMap Decimal, Time)
+      controller admin
+      do
+        return (prices, updatedAt)
