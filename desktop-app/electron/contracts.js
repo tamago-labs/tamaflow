@@ -229,6 +229,12 @@ async function getEmployees(partyId) {
 async function addEmployee(companyContractId, employeePartyId, displayName, role) {
   try {
     const token = await getToken()
+    const sdk = await buildBaseSdk(token)
+
+    // Get wallet info for signing
+    const { getWalletStatus } = require('./wallet')
+    const wallet = await getWalletStatus()
+    if (!wallet.exists) throw new Error('No wallet')
 
     // Build the exercise command
     const command = {
@@ -244,20 +250,21 @@ async function addEmployee(companyContractId, employeePartyId, displayName, role
       }
     }
 
-    // Get wallet info for signing
-    const { getWalletStatus } = require('./wallet')
-    const wallet = await getWalletStatus()
-    if (!wallet.exists) throw new Error('No wallet')
+    // Load wallet for signing
+    const { loadWallet } = require('./wallet')
+    const walletData = await loadWallet()
+    if (!walletData) throw new Error('No wallet data')
 
-    const result = await fetchLedgerApi(token, 'POST', '/v2/commands/submit', {
+    const preparedTx = sdk.ledger.prepare({
       commands: [command],
-      commandId: `add-employee-${Date.now()}`,
-      actAs: [wallet.partyId],
-      readAs: []
+      partyId: wallet.partyId
+    })
+    const result = await preparedTx.sign(walletData.privateKey).execute({
+      partyId: wallet.partyId
     })
 
     console.log('[contracts] AddEmployee result:', result)
-    return result
+    return { success: true, updateId: result.updateId }
   } catch (err) {
     console.error('[contracts] Failed to add employee:', err)
     throw err
