@@ -154,7 +154,6 @@ async function getJPYCBalance(partyId) {
         }
       }
     }
-    }
 
     return totalBalance
   } catch (err) {
