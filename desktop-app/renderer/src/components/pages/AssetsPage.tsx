@@ -400,12 +400,14 @@ function JPYCRow({ balance, loading }: { balance: number; loading: boolean }) {
           className='h-8 w-8 rounded-full'
         />
         <div className='min-w-0'>
-          <p className='m-0 truncate font-mono text-sm font-bold text-brand-navy'>
-            JPYC Token
-          </p>
-          <span className='inline-flex items-center rounded-sm border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider2 text-amber-700'>
-            Mint via Seaport
-          </span>
+          <div className='flex items-center gap-2'>
+            <p className='m-0 truncate font-mono text-sm font-bold text-brand-navy'>
+              JPYC
+            </p>
+            <span className='inline-flex items-center rounded-sm border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider2 text-amber-700'>
+              Mint via Seaport
+            </span>
+          </div>
         </div>
       </div>
 

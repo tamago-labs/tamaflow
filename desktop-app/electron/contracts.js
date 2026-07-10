@@ -145,7 +145,7 @@ async function getJPYCBalance(partyId) {
     for (const contract of contracts) {
       const entry = contract.contractEntry?.JsActiveContract?.createdEvent
       const templateId = entry?.templateId || ''
-      if (templateId.includes('JPYCAsset')) {
+      if (templateId.includes('a0408b35c53eb7449b5e8eff14d3f0dc4cce9f626c0da2b5f59ef37557cf4bf5:TamaFlow.JPYC.Asset:JPYCAsset')) {
         const payload = entry?.createArgument || {}
         const amount = parseFloat(payload?.amount || '0')
         totalBalance += amount
