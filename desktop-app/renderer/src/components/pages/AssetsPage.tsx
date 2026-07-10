@@ -437,7 +437,25 @@ function JPYCRow({ balance, loading }: { balance: number; loading: boolean }) {
       </div>
 
       <div className='text-right'>
-        {/* No action buttons for JPYC yet */}
+        <div className='inline-flex items-center justify-end gap-1.5'>
+          <button
+            type='button'
+            disabled
+            title='Send JPYC'
+            className='inline-flex cursor-not-allowed items-center gap-1 rounded-md border-0 bg-brand-blue px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wider2 text-white opacity-50'
+          >
+            <Send size={11} />
+            Send
+          </button>
+          <button
+            type='button'
+            disabled
+            title='More actions'
+            className='inline-flex h-6 w-6 cursor-not-allowed items-center justify-center rounded-md border border-brand-border bg-white text-brand-muted opacity-50'
+          >
+            <ChevronDown size={12} />
+          </button>
+        </div>
       </div>
     </li>
   )
