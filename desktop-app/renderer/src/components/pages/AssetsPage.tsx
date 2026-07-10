@@ -178,6 +178,13 @@ export function AssetsPage({ onNavigate }: { onNavigate?: (page: string) => void
                 ))}
               </ul>
             )}
+
+            {/* JPYC Row - Live balance from Canton Testnet */}
+            {walletPresent && (
+              <div className='border-t border-brand-border'>
+                <JPYCRow balance={jpycBalance} loading={contractsLoading} />
+              </div>
+            )}
           </div>
         </>
       )}
@@ -373,6 +380,62 @@ function MoreDropdown({ symbol }: { symbol: string }) {
           document.body
         )}
     </>
+  )
+}
+
+function JPYCRow({ balance, loading }: { balance: number; loading: boolean }) {
+  const { convert } = usePrice()
+  const usdValue = useMemo(() => {
+    if (!Number.isFinite(balance) || balance === 0) return null
+    const v = convert(balance, 'JPYC', 'USD')
+    return v !== null && Number.isFinite(v) ? v : null
+  }, [balance, convert])
+
+  return (
+    <li className='grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-center gap-4 px-4 py-3 transition-colors hover:bg-brand-light/40'>
+      <div className='flex min-w-0 items-center gap-3'>
+        <img
+          src='https://s2.coinmarketcap.com/static/img/coins/64x64/20648.png'
+          alt='JPYC'
+          className='h-8 w-8 rounded-full'
+        />
+        <div className='min-w-0'>
+          <p className='m-0 truncate font-mono text-sm font-bold text-brand-navy'>
+            JPYC Token
+          </p>
+          <span className='inline-flex items-center rounded-sm border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider2 text-amber-700'>
+            Mint via Seaport
+          </span>
+        </div>
+      </div>
+
+      <div className='text-right'>
+        {loading ? (
+          <p className='m-0 font-mono text-sm text-brand-muted'>Loading…</p>
+        ) : (
+          <p className='m-0 whitespace-nowrap font-mono text-sm text-brand-navy'>
+            {formatAmount(balance)}{' '}
+            <span className='text-brand-muted'>JPYC</span>
+          </p>
+        )}
+      </div>
+
+      <div className='text-right'>
+        {usdValue !== null ? (
+          <p className='m-0 font-mono text-sm text-brand-navy'>{formatUsd(usdValue)}</p>
+        ) : (
+          <p className='m-0 font-mono text-sm text-brand-muted'>—</p>
+        )}
+      </div>
+
+      <div className='text-right'>
+        <span className='font-mono text-sm text-brand-muted'>—</span>
+      </div>
+
+      <div className='text-right'>
+        {/* No action buttons for JPYC yet */}
+      </div>
+    </li>
   )
 }
 
