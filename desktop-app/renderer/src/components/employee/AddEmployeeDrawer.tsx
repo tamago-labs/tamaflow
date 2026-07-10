@@ -60,7 +60,7 @@ export function AddEmployeeDrawer({ open, onClose }: AddEmployeeDrawerProps) {
       onClose()
     } catch (e) {
       console.error('[AddEmployee] Failed:', e)
-      setError('Failed to add employee. The employee wallet may not be allocated on the DevNet. Please ensure the employee has a wallet created through the desktop app.')
+      setError('This employee wallet was created externally and is not registered on the Canton network. Please ask the employee to register their wallet through the desktop app to allocate a party on the validator.')
     } finally {
       setSaving(false)
     }
