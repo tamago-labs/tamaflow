@@ -9,10 +9,12 @@ import type { Employee } from '../../ai/types'
 interface AddEmployeeDrawerProps {
   open: boolean
   onClose: () => void
-  companyContractId: string | null
 }
 
-export function AddEmployeeDrawer({ open, onClose, companyContractId }: AddEmployeeDrawerProps) {
+// CompanyProfile contract ID from Testnet deployment
+const COMPANY_CONTRACT_ID = '00e15b031a7f4f2baf8fea8d7834add1fb975fbc7ac73b696ee516820c99032ae3ca121220718b4a6f61be1c215454a97352a659d3dcf3321f440511ef7b851e344b7d2839'
+
+export function AddEmployeeDrawer({ open, onClose }: AddEmployeeDrawerProps) {
   const { employees: localEmployees } = useEmployees()
   const { fetchEmployees } = useContracts()
   const { status } = useWallet()
@@ -42,11 +44,11 @@ export function AddEmployeeDrawer({ open, onClose, companyContractId }: AddEmplo
   }, [open])
 
   const handleSubmit = async () => {
-    if (!selectedEmployee || !status?.partyId || !companyContractId) return
+    if (!selectedEmployee || !status?.partyId) return
     setSaving(true)
     try {
       await bridge.contracts.addEmployee(
-        companyContractId,
+        COMPANY_CONTRACT_ID,
         selectedEmployee.cantonPartyId || '',
         displayName,
         role
