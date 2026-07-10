@@ -176,6 +176,53 @@ async function getCompanyProfile(contractId) {
   }
 }
 
+/**
+ * Fetch EmployeeRecord contracts for a party.
+ */
+async function getEmployees(partyId) {
+  try {
+    const token = await getToken()
+    const ledgerEnd = await fetchLedgerApi(token, 'GET', '/v2/state/ledger-end')
+
+    const requestBody = {
+      eventFormat: {
+        filtersByParty: {
+          [partyId]: {
+            cumulative: []
+          }
+        },
+        verbose: false
+      },
+      activeAtOffset: ledgerEnd.offset
+    }
+
+    const result = await fetchLedgerApi(token, 'POST', '/v2/state/active-contracts', requestBody)
+    const contracts = Array.isArray(result) ? result : (result?.activeContracts || [])
+
+    const employees = []
+    for (const contract of contracts) {
+      const entry = contract.contractEntry?.JsActiveContract?.createdEvent
+      const templateId = entry?.templateId || ''
+      if (templateId.includes('EmployeeRecord')) {
+        const payload = entry?.createArgument || {}
+        employees.push({
+          contractId: entry?.contractId,
+          employer: payload.employer,
+          employee: payload.employee,
+          companyName: payload.companyName,
+          displayName: payload.displayName,
+          role: payload.role || ''
+        })
+      }
+    }
+
+    return employees
+  } catch (err) {
+    console.error('[contracts] Failed to fetch employees:', err)
+    return []
+  }
+}
+
 // ============================================
 // IPC handler registration
 // ============================================
@@ -193,6 +240,10 @@ function registerContractIpcHandlers() {
     return await getCompanyProfile(contractId)
   })
 
+  ipcMain.handle('contracts:getEmployees', async (_e, partyId) => {
+    return await getEmployees(partyId)
+  })
+
   console.log('[contracts] IPC handlers registered')
 }
 
@@ -200,5 +251,6 @@ module.exports = {
   registerContractIpcHandlers,
   getContractById,
   getJPYCBalance,
-  getCompanyProfile
+  getCompanyProfile,
+  getEmployees
 }

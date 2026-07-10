@@ -1,11 +1,22 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from 'react'
 import { bridge } from '../lib/bridge'
 
+interface Employee {
+  contractId: string
+  employer: string
+  employee: string
+  companyName: string
+  displayName: string
+  role: string
+}
+
 interface ContractsContextValue {
   jpycBalance: number
+  employees: Employee[]
   loading: boolean
   error: string | null
   fetchBalance: (partyId: string) => Promise<void>
+  fetchEmployees: (partyId: string) => Promise<void>
   refresh: () => Promise<void>
 }
 
@@ -13,6 +24,7 @@ const ContractsContext = createContext<ContractsContextValue | null>(null)
 
 export function ContractsProvider({ children }: { children: ReactNode }) {
   const [jpycBalance, setJpycBalance] = useState(0)
+  const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [partyId, setPartyId] = useState<string | null>(null)
@@ -36,11 +48,30 @@ export function ContractsProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const fetchEmployees = useCallback(async (id: string) => {
+    if (!mounted.current) return
+    setLoading(true)
+    setError(null)
+    try {
+      const emps = await bridge.contracts.getEmployees(id)
+      if (!mounted.current) return
+      setEmployees(emps as Employee[])
+      setPartyId(id)
+    } catch (e) {
+      console.error('[Contracts] Failed to fetch employees:', e)
+      if (!mounted.current) return
+      setError(e instanceof Error ? e.message : 'Failed to fetch employees')
+    } finally {
+      if (mounted.current) setLoading(false)
+    }
+  }, [])
+
   const refresh = useCallback(async () => {
     if (partyId) {
       await fetchBalance(partyId)
+      await fetchEmployees(partyId)
     }
-  }, [partyId, fetchBalance])
+  }, [partyId, fetchBalance, fetchEmployees])
 
   useEffect(() => {
     mounted.current = true
@@ -48,7 +79,7 @@ export function ContractsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <ContractsContext.Provider value={{ jpycBalance, loading, error, fetchBalance, refresh }}>
+    <ContractsContext.Provider value={{ jpycBalance, employees, loading, error, fetchBalance, fetchEmployees, refresh }}>
       {children}
     </ContractsContext.Provider>
   )
