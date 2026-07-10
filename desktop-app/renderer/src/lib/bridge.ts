@@ -213,6 +213,11 @@ export interface BridgeAPI {
     onChange(cb: (list: FlowSummary[]) => void): () => void
     onProgress(cb: (flowId: string, routes: RouteSummary[]) => void): () => void
   }
+  contracts: {
+    getContract(contractId: string): Promise<unknown>
+    getJPYCBalance(partyId: string): Promise<number>
+    getCompanyProfile(contractId: string): Promise<unknown>
+  }
 }
 
 // Canton wallet types — mirror the JSDoc typedefs in
@@ -425,6 +430,11 @@ const noopBridge: BridgeAPI = {
     importJson: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     onChange: () => () => {},
     onProgress: () => () => {}
+  },
+  contracts: {
+    getContract: () => Promise.resolve(null),
+    getJPYCBalance: () => Promise.resolve(0),
+    getCompanyProfile: () => Promise.resolve(null),
   }
 }
 

@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useWallet } from '../../context/WalletContext'
 import { usePrice } from '../../context/PriceContext'
+import { useContracts } from '../../context/ContractsContext'
 import {
   ChevronDown,
   Repeat2,
@@ -83,7 +84,16 @@ export function AssetsPage({ onNavigate }: { onNavigate?: (page: string) => void
     openSend
   } = useWallet()
 
+  const { fetchBalance, jpycBalance, loading: contractsLoading } = useContracts()
+
   const walletPresent = !!status?.exists
+
+  // Phase 1: Fetch JPYC balance from live Canton contract
+  useEffect(() => {
+    if (walletPresent && status?.partyId) {
+      fetchBalance(status.partyId)
+    }
+  }, [walletPresent, status?.partyId, fetchBalance])
 
   // Sort: pinned first, then alphabetical by symbol.
   const sortedHoldings = useMemo(() => {

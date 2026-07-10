@@ -29,6 +29,7 @@ import { AssetsPage } from './pages/AssetsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { WalletProvider } from '../context/WalletContext'
 import { PriceProvider } from '../context/PriceContext'
+import { ContractsProvider } from '../context/ContractsContext'
 import { FlowViewProvider, useFlowView } from '../context/FlowViewContext'
 import { SetupWalletModal } from './wallet/SetupWalletModal'
 import { RestoreWalletModal } from './wallet/RestoreWalletModal'
@@ -87,56 +88,58 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
   return (
     <PriceProvider>
       <WalletProvider>
-        <div className='flex h-screen min-h-screen flex-col bg-brand-light'>
-          <div className='flex min-h-0 flex-1'>
-            <Sidebar
-              currentPage={currentPage}
-              onNavigate={setCurrentPage}
-            />
-            <div className='ml-[200px] flex flex min-h-screen flex-1 flex-col'>
-              {!isCanvasView && (
-                <TopBar
-                  currentPage={currentPage}
-                  onHome={() => setCurrentPage('employees')}
-                />
-              )}
-              <main
-                className={
-                  isCanvasView
-                    ? 'flex min-h-0 flex-1 overflow-hidden w-full'
-                    : 'flex-1 overflow-y-auto p-8'
-                }
-              >
-                {currentPage === 'dashboard' ? (
-                  <DashboardPage roomRole={roomRole} invite={invite} me={me} onNavigate={setCurrentPage} />
-                ) : currentPage === 'assets' ? (
-                  <AssetsPage onNavigate={setCurrentPage} />
-                ) : (
-                  <Page />
+        <ContractsProvider>
+          <div className='flex h-screen min-h-screen flex-col bg-brand-light'>
+            <div className='flex min-h-0 flex-1'>
+              <Sidebar
+                currentPage={currentPage}
+                onNavigate={setCurrentPage}
+              />
+              <div className='ml-[200px] flex flex min-h-screen flex-1 flex-col'>
+                {!isCanvasView && (
+                  <TopBar
+                    currentPage={currentPage}
+                    onHome={() => setCurrentPage('employees')}
+                  />
                 )}
-              </main>
-              {/* Global status footer — AI model pill (left) + worker
-                 status pill (right). Lives INSIDE the `ml-[200px]`
-                 offset wrapper so it lines up with the TopBar instead
-                 of sliding under the sidebar. Renders on every page so
-                 the employer always has a glance-able view of "is the
-                 local model ready + is the P2P worker online". */}
-              <CanvasFooter />
+                <main
+                  className={
+                    isCanvasView
+                      ? 'flex min-h-0 flex-1 overflow-hidden w-full'
+                      : 'flex-1 overflow-y-auto p-8'
+                  }
+                >
+                  {currentPage === 'dashboard' ? (
+                    <DashboardPage roomRole={roomRole} invite={invite} me={me} onNavigate={setCurrentPage} />
+                  ) : currentPage === 'assets' ? (
+                    <AssetsPage onNavigate={setCurrentPage} />
+                  ) : (
+                    <Page />
+                  )}
+                </main>
+                {/* Global status footer — AI model pill (left) + worker
+                   status pill (right). Lives INSIDE the `ml-[200px]`
+                   offset wrapper so it lines up with the TopBar instead
+                   of sliding under the sidebar. Renders on every page so
+                   the employer always has a glance-able view of "is the
+                   local model ready + is the P2P worker online". */}
+                <CanvasFooter />
+              </div>
             </div>
+            {/* Canton wallet modals — mounted at the AppShell level so
+               any page (TopBar chip, AccountMenu, Settings page) can
+               open them via the WalletContext. The modals render null
+               when their own `open` flag is false, so there's no DOM
+               cost when closed. */}
+            <SetupWalletModal />
+            <RestoreWalletModal />
+            <AccountInfoModal />
+            <ExportKeyModal />
+            <ConfirmDestroyModal />
+            <FaucetModal />
+            <SendModal />
           </div>
-          {/* Canton wallet modals — mounted at the AppShell level so
-             any page (TopBar chip, AccountMenu, Settings page) can
-             open them via the WalletContext. The modals render null
-             when their own `open` flag is false, so there's no DOM
-             cost when closed. */}
-          <SetupWalletModal />
-          <RestoreWalletModal />
-          <AccountInfoModal />
-          <ExportKeyModal />
-          <ConfirmDestroyModal />
-          <FaucetModal />
-          <SendModal />
-        </div>
+        </ContractsProvider>
       </WalletProvider>
     </PriceProvider>
   )
