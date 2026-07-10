@@ -4,6 +4,7 @@
 // Uses the same REST API pattern as transfer.js for ledger queries.
 
 const { ipcMain } = require('electron')
+const { SDK } = require('@canton-network/wallet-sdk')
 const { DEVNET } = require('./devnet')
 
 // ============================================
@@ -73,6 +74,13 @@ async function getToken() {
     expiresAt: Date.now() + expiresInSec * 1000
   }
   return token
+}
+
+async function buildBaseSdk(token) {
+  return await SDK.create({
+    auth: { method: 'static', token },
+    ledgerClientUrl: DEVNET.ledgerClientUrl
+  })
 }
 
 // ============================================
