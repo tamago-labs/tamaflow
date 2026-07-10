@@ -20,6 +20,7 @@ const { modelStore } = require('./modelStore')
 const aiChat = require('./aiChat')
 const sessions = require('./sessions')
 const { registerWalletIpcHandlers } = require('./wallet')
+const { registerContractIpcHandlers } = require('./contracts')
 const { EmployeeStore } = require('./employeeStore')
 const { CompanyStore } = require('./companyStore')
 const { registerFlowIpcHandlers, getFlowStore, getRouteStore } = require('./flows')
@@ -992,6 +993,7 @@ if (!lock) {
     registerEmployeeIpc()
     registerCompanyIpc()
     registerFlowIpcHandlers()
+    registerContractIpcHandlers()
     flowWorker.start(
       { flowStore: getFlowStore(), routeStore: getRouteStore() },
       require('./wallet')

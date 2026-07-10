@@ -11,3 +11,4 @@ example-*
 tmp*
 .daml/
 *-backup
+*-quickstart

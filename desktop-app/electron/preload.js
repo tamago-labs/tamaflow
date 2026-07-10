@@ -188,5 +188,10 @@ contextBridge.exposeInMainWorld('bridge', {
       ipcRenderer.on('flows:onProgress', handler)
       return () => ipcRenderer.removeListener('flows:onProgress', handler)
     }
+  },
+  contracts: {
+    getContract: (contractId) => ipcRenderer.invoke('contracts:getContract', contractId),
+    getJPYCBalance: (partyId) => ipcRenderer.invoke('contracts:getJPYCBalance', partyId),
+    getCompanyProfile: (contractId) => ipcRenderer.invoke('contracts:getCompanyProfile', contractId),
   }
 })
