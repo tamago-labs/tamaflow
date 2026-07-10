@@ -1007,6 +1007,7 @@ module.exports = {
   runFaucet,
   getHoldings,
   transferAmulet,
+  loadWallet,
   // Wrapper that passes getToken function for fresh token on each poll
   waitForLedgerUpdate: (afterOffset, maxWaitMs) => waitForLedgerUpdate(getToken, afterOffset, maxWaitMs),
   listPendingTransfers,
