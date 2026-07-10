@@ -22,6 +22,7 @@ export function AddEmployeeDrawer({ open, onClose }: AddEmployeeDrawerProps) {
   const [displayName, setDisplayName] = useState('')
   const [role, setRole] = useState('')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Get the selected employee from local storage
   const selectedEmployee = localEmployees.find((e) => e.id === selectedEmployeeId)
@@ -40,12 +41,14 @@ export function AddEmployeeDrawer({ open, onClose }: AddEmployeeDrawerProps) {
       setSelectedEmployeeId('')
       setDisplayName('')
       setRole('')
+      setError(null)
     }
   }, [open])
 
   const handleSubmit = async () => {
     if (!selectedEmployee || !status?.partyId) return
     setSaving(true)
+    setError(null)
     try {
       await bridge.contracts.addEmployee(
         COMPANY_CONTRACT_ID,
@@ -57,6 +60,7 @@ export function AddEmployeeDrawer({ open, onClose }: AddEmployeeDrawerProps) {
       onClose()
     } catch (e) {
       console.error('[AddEmployee] Failed:', e)
+      setError('Failed to add employee. The employee wallet may not be allocated on the DevNet. Please ensure the employee has a wallet created through the desktop app.')
     } finally {
       setSaving(false)
     }
@@ -88,6 +92,13 @@ export function AddEmployeeDrawer({ open, onClose }: AddEmployeeDrawerProps) {
       }
     >
       <div className="space-y-4">
+        {/* Error message */}
+        {error && (
+          <div className="rounded-md bg-red-50 border border-red-200 p-3">
+            <p className="m-0 text-sm text-red-700">{error}</p>
+          </div>
+        )}
+
         {/* Employee Dropdown */}
         <div>
           <label className="block font-mono text-[10px] uppercase tracking-wider2 text-gray-400 mb-1">Employee</label>
