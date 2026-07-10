@@ -46,6 +46,7 @@ export function AddEmployeeDrawer({ open, onClose }: AddEmployeeDrawerProps) {
       // TODO: Exercise AddEmployee choice on CompanyProfile contract
       console.log('[AddEmployee] Creating employee record:', {
         employee: selectedEmployee.cantonPartyId,
+        employer: status.partyId,
         displayName,
         role
       })
@@ -101,6 +102,19 @@ export function AddEmployeeDrawer({ open, onClose }: AddEmployeeDrawerProps) {
             ))}
           </select>
         </div>
+
+        {/* Party ID (auto-filled) */}
+        {selectedEmployee && (
+          <div>
+            <label className="block font-mono text-[10px] uppercase tracking-wider2 text-gray-400 mb-1">Party ID</label>
+            <input
+              type="text"
+              value={selectedEmployee.cantonPartyId || ''}
+              readOnly
+              className="w-full rounded border border-gray-200 bg-gray-50 px-3 py-2 font-mono text-xs text-gray-500"
+            />
+          </div>
+        )}
 
         {/* Display Name */}
         <div>
