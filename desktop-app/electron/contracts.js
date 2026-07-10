@@ -147,9 +147,13 @@ async function getJPYCBalance(partyId) {
       const templateId = entry?.templateId || ''
       if (templateId.includes('a0408b35c53eb7449b5e8eff14d3f0dc4cce9f626c0da2b5f59ef37557cf4bf5:TamaFlow.JPYC.Asset:JPYCAsset')) {
         const payload = entry?.createArgument || {}
-        const amount = parseFloat(payload?.amount || '0')
-        totalBalance += amount
+        // Only count contracts where THIS party is the owner
+        if (payload.owner === partyId) {
+          const amount = parseFloat(payload.amount || '0')
+          totalBalance += amount
+        }
       }
+    }
     }
 
     return totalBalance

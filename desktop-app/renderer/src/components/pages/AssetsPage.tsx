@@ -431,7 +431,9 @@ function JPYCRow({ balance, loading }: { balance: number; loading: boolean }) {
       </div>
 
       <div className='text-right'>
-        <span className='font-mono text-sm text-brand-muted'>—</span>
+        <span className='font-mono text-sm font-medium text-brand-ok'>
+          +0.01%
+        </span>
       </div>
 
       <div className='text-right'>
