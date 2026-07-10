@@ -3,14 +3,16 @@ import Drawer from '../Drawer'
 import { useEmployees } from '../../context/EmployeeContext'
 import { useContracts } from '../../context/ContractsContext'
 import { useWallet } from '../../context/WalletContext'
+import { bridge } from '../../lib/bridge'
 import type { Employee } from '../../ai/types'
 
 interface AddEmployeeDrawerProps {
   open: boolean
   onClose: () => void
+  companyContractId: string | null
 }
 
-export function AddEmployeeDrawer({ open, onClose }: AddEmployeeDrawerProps) {
+export function AddEmployeeDrawer({ open, onClose, companyContractId }: AddEmployeeDrawerProps) {
   const { employees: localEmployees } = useEmployees()
   const { fetchEmployees } = useContracts()
   const { status } = useWallet()
@@ -40,17 +42,15 @@ export function AddEmployeeDrawer({ open, onClose }: AddEmployeeDrawerProps) {
   }, [open])
 
   const handleSubmit = async () => {
-    if (!selectedEmployee || !status?.partyId) return
+    if (!selectedEmployee || !status?.partyId || !companyContractId) return
     setSaving(true)
     try {
-      // TODO: Exercise AddEmployee choice on CompanyProfile contract
-      console.log('[AddEmployee] Creating employee record:', {
-        employee: selectedEmployee.cantonPartyId,
-        employer: status.partyId,
+      await bridge.contracts.addEmployee(
+        companyContractId,
+        selectedEmployee.cantonPartyId || '',
         displayName,
         role
-      })
-      // After success, refresh employees list
+      )
       await fetchEmployees(status.partyId)
       onClose()
     } catch (e) {

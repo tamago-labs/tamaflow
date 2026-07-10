@@ -223,6 +223,47 @@ async function getEmployees(partyId) {
   }
 }
 
+/**
+ * Exercise AddEmployee choice on a CompanyProfile contract.
+ */
+async function addEmployee(companyContractId, employeePartyId, displayName, role) {
+  try {
+    const token = await getToken()
+
+    // Build the exercise command
+    const command = {
+      ExerciseCommand: {
+        templateId: 'a0408b35c53eb7449b5e8eff14d3f0dc4cce9f626c0da2b5f59ef37557cf4bf5:TamaFlow.Company.CompanyProfile:CompanyProfile',
+        contractId: companyContractId,
+        choice: 'AddEmployee',
+        choiceArgument: {
+          employee: employeePartyId,
+          displayName: displayName,
+          role: role || ''
+        }
+      }
+    }
+
+    // Get wallet info for signing
+    const { getWalletStatus } = require('./wallet')
+    const wallet = await getWalletStatus()
+    if (!wallet.exists) throw new Error('No wallet')
+
+    const result = await fetchLedgerApi(token, 'POST', '/v2/commands/submit', {
+      commands: [command],
+      commandId: `add-employee-${Date.now()}`,
+      actAs: [wallet.partyId],
+      readAs: []
+    })
+
+    console.log('[contracts] AddEmployee result:', result)
+    return result
+  } catch (err) {
+    console.error('[contracts] Failed to add employee:', err)
+    throw err
+  }
+}
+
 // ============================================
 // IPC handler registration
 // ============================================
@@ -244,6 +285,10 @@ function registerContractIpcHandlers() {
     return await getEmployees(partyId)
   })
 
+  ipcMain.handle('contracts:addEmployee', async (_e, companyContractId, employeePartyId, displayName, role) => {
+    return await addEmployee(companyContractId, employeePartyId, displayName, role)
+  })
+
   console.log('[contracts] IPC handlers registered')
 }
 
@@ -252,5 +297,6 @@ module.exports = {
   getContractById,
   getJPYCBalance,
   getCompanyProfile,
-  getEmployees
+  getEmployees,
+  addEmployee
 }

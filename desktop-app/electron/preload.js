@@ -194,5 +194,6 @@ contextBridge.exposeInMainWorld('bridge', {
     getJPYCBalance: (partyId) => ipcRenderer.invoke('contracts:getJPYCBalance', partyId),
     getCompanyProfile: (contractId) => ipcRenderer.invoke('contracts:getCompanyProfile', contractId),
     getEmployees: (partyId) => ipcRenderer.invoke('contracts:getEmployees', partyId),
+    addEmployee: (companyContractId, employeePartyId, displayName, role) => ipcRenderer.invoke('contracts:addEmployee', companyContractId, employeePartyId, displayName, role),
   }
 })

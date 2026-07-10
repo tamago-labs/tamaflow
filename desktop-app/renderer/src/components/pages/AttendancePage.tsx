@@ -9,6 +9,7 @@ export function AttendancePage() {
   const { status } = useWallet()
   const [search, setSearch] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [companyContractId, setCompanyContractId] = useState<string | null>(null)
   const partyId = status?.partyId
 
   // Fetch employees from Canton Testnet on mount
@@ -17,6 +18,15 @@ export function AttendancePage() {
       fetchEmployees(partyId)
     }
   }, [partyId, fetchEmployees])
+
+  // Find CompanyProfile contract for this employer
+  useEffect(() => {
+    if (partyId) {
+      // Query for CompanyProfile where employer matches
+      // For now, we'll need to get this from the contracts
+      // This will be implemented when we add company profile fetching
+    }
+  }, [partyId])
 
   const filteredEmployees = employees.filter((e) => {
     const q = search.trim().toLowerCase()
@@ -145,7 +155,7 @@ export function AttendancePage() {
       </div>
 
       {/* Add Employee Drawer */}
-      <AddEmployeeDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <AddEmployeeDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} companyContractId={companyContractId} />
     </div>
   )
 }

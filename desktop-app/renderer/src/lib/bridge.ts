@@ -218,6 +218,7 @@ export interface BridgeAPI {
     getJPYCBalance(partyId: string): Promise<number>
     getCompanyProfile(contractId: string): Promise<unknown>
     getEmployees(partyId: string): Promise<unknown[]>
+    addEmployee(companyContractId: string, employeePartyId: string, displayName: string, role: string): Promise<unknown>
   }
 }
 
@@ -437,6 +438,7 @@ const noopBridge: BridgeAPI = {
     getJPYCBalance: () => Promise.resolve(0),
     getCompanyProfile: () => Promise.resolve(null),
     getEmployees: () => Promise.resolve([]),
+    addEmployee: () => Promise.resolve(null),
   }
 }
 
