@@ -86,18 +86,6 @@ export default function TopBar({ onChatToggle }: TopBarProps) {
 
       {/* Right-side actions */}
       <div className="flex items-center gap-3">
-        {/* Chat button */}
-        {onChatToggle && (
-          <button
-            type="button"
-            onClick={onChatToggle}
-            className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
-            title="Team Chat"
-          >
-            <MessageCircle size={14} />
-          </button>
-        )}
-
         {/* Network badge */}
         <NetworkBadge />
 

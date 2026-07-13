@@ -11,7 +11,6 @@ import {
   Calendar,
 } from "lucide-react";
 import { motion, type Variants } from "framer-motion";
-import WelcomeModal from "@/components/app/WelcomeModal";
 
 /**
  * Dashboard — the Employee Portal's home.
@@ -354,8 +353,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Welcome modal — auto-opens on every dashboard visit. */}
-      <WelcomeModal />
     </div>
   );
 }

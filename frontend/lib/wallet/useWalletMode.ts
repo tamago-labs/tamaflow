@@ -40,10 +40,28 @@ export function useWalletMode(): WalletModeValue {
       .catch(() => setCliAvailable(false));
   }, []);
 
-  const setMode = useCallback((newMode: WalletMode) => {
+  const setMode = useCallback(async (newMode: WalletMode) => {
     setModeState(newMode);
     localStorage.setItem("walletMode", newMode);
-  }, []);
+
+    // Auto-create CLI wallet when switching to CLI mode
+    if (newMode === "cli" && cliAvailable) {
+      try {
+        const status = await cli.wallet.status();
+        if (!status.exists) {
+          const result = await cli.wallet.create();
+          if (result.success) {
+            setCliPartyId(result.partyId);
+            console.log("[useWalletMode] CLI wallet created:", result.partyId);
+          }
+        } else {
+          setCliPartyId(status.partyId);
+        }
+      } catch (err) {
+        console.error("[useWalletMode] Failed to create CLI wallet:", err);
+      }
+    }
+  }, [cliAvailable]);
 
   const ensureCliWallet = useCallback(async (): Promise<string | null> => {
     try {
