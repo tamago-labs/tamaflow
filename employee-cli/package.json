@@ -1,0 +1,18 @@
+{
+  "name": "@tamaflow/employee-cli",
+  "version": "0.1.0",
+  "description": "TamaFlow Employee CLI - Canton interactions for employees",
+  "private": true,
+  "bin": "bin.mjs",
+  "scripts": {
+    "start": "node src/index.js --port 3001",
+    "connect": "node src/index.js --port 3001 --invite",
+    "dev": "node src/index.js --port 3001 --dev"
+  },
+  "dependencies": {
+    "@canton-network/wallet-sdk": "^1.3.1",
+    "express": "^4.18.2",
+    "pear-runtime": "^1.2.0",
+    "framed-stream": "^1.0.1"
+  }
+}
