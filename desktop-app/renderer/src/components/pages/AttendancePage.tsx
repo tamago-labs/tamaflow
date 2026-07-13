@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Plus, Search, Eye } from 'lucide-react'
+import { Plus, Search, Eye, Clock } from 'lucide-react'
 import { useContracts } from '../../context/ContractsContext'
 import { useWallet } from '../../context/WalletContext'
+import { cli } from '../../lib/cli'
 import { AddEmployeeDrawer } from '../employee/AddEmployeeDrawer'
 
 export function AttendancePage() {
   const { employees, fetchEmployees, loading } = useContracts()
-  const { status } = useWallet()
+  const { status, mode } = useWallet()
   const [search, setSearch] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [checkingIn, setCheckingIn] = useState(false)
   const partyId = status?.partyId
 
   // Fetch employees from Canton Testnet on mount
@@ -30,11 +32,46 @@ export function AttendancePage() {
 
   const hasAny = employees.length > 0
 
+  const handleCheckIn = useCallback(async () => {
+    if (mode !== 'cli' || !partyId) return
+    setCheckingIn(true)
+    try {
+      const now = new Date()
+      const blockStart = now.toISOString()
+      const blockEnd = new Date(now.getTime() + 3600000).toISOString() // +1 hour
+
+      await cli.contracts.exercise(
+        'TamaFlow.Attendance.TimeBlock:TimeBlock',
+        'check-in',
+        'CheckIn',
+        { blockStart, blockEnd }
+      )
+
+      // Refresh employees after check-in
+      fetchEmployees(partyId)
+    } catch (e) {
+      console.error('[Attendance] Check-in failed:', e)
+    } finally {
+      setCheckingIn(false)
+    }
+  }, [mode, partyId, fetchEmployees])
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Attendance Report</h1>
         <div className="flex items-center gap-2">
+          {mode === 'cli' && (
+            <button
+              type="button"
+              onClick={handleCheckIn}
+              disabled={checkingIn}
+              className="flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-green-600 px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90 disabled:opacity-50"
+            >
+              <Clock size={12} />
+              {checkingIn ? 'Checking In…' : 'Check In'}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
