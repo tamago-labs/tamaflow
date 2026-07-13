@@ -38,7 +38,6 @@ import { ExportKeyModal } from './wallet/ExportKeyModal'
 import { ConfirmDestroyModal } from './wallet/ConfirmDestroyModal'
 import { FaucetModal } from './wallet/FaucetModal'
 import { SendModal } from './wallet/SendModal'
-import { ChatPanel } from './ChatPanel'
 import type { PageId } from '../lib/nav'
 
 // Page → component map. `null` entries (none right now) would render
@@ -85,7 +84,6 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
   const Page = PAGES[currentPage]
   const isFlowBuilder = currentPage === 'flow-builder'
   const isCanvasView = isFlowBuilder && view === 'canvas'
-  const [chatOpen, setChatOpen] = useState(false)
 
   return (
     <PriceProvider>
@@ -102,7 +100,6 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
                   <TopBar
                     currentPage={currentPage}
                     onHome={() => setCurrentPage('employees')}
-                    onChatToggle={() => setChatOpen((v) => !v)}
                   />
                 )}
                 <main
@@ -141,7 +138,6 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
             <ConfirmDestroyModal />
             <FaucetModal />
             <SendModal />
-            <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
           </div>
         </ContractsProvider>
       </WalletProvider>
