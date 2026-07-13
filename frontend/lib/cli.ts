@@ -16,6 +16,15 @@ export const cli = {
   wallet: {
     status: () => fetchJson(`${CLI_URL}/api/wallet/status`),
     create: () => fetchJson(`${CLI_URL}/api/wallet/create`, { method: 'POST' }),
+    faucet: (amount?: string) => fetchJson(`${CLI_URL}/api/wallet/faucet`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount })
+    }),
+  },
+
+  account: {
+    info: () => fetchJson(`${CLI_URL}/api/account`),
   },
 
   holdings: {

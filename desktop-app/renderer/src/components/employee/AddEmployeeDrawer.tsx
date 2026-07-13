@@ -60,7 +60,7 @@ export function AddEmployeeDrawer({ open, onClose }: AddEmployeeDrawerProps) {
       onClose()
     } catch (e) {
       console.error('[AddEmployee] Failed:', e)
-      setError('This employee wallet was created externally and is not registered on the Canton network. Please ask the employee to register their wallet through the desktop app to allocate a party on the validator.')
+      setError('This employee wallet was created externally. Please ask the employee to register their wallet through the website to allocate a party on the validator.')
     } finally {
       setSaving(false)
     }

@@ -9,7 +9,7 @@ import { useState } from "react";
 import { MessageCircle } from "lucide-react";
 import Sidebar from "@/components/app/Sidebar";
 import TopBar from "@/components/app/TopBar";
-import ChatPanel from "@/components/ChatPanel";
+import ChatPanel from "@/components/app/ChatPanel";
 
 export default function AppShellClient({
   children,
