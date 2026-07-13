@@ -51,12 +51,29 @@ export default function AssetsPage() {
     try {
       const result = await cli.holdings.list();
       if (Array.isArray(result)) {
-        const mapped: Holding[] = result.map((h: Record<string, unknown>) => ({
-          symbol: (h.symbol as string) || (h.instrumentId as string) || "Unknown",
-          amount: parseFloat(String(h.amount || "0")),
-          usdValue: 0,
-          change24h: 0,
-        }));
+        // Parse raw Canton Ledger contract objects
+        // Amulet contracts: templateId contains "Amulet" (skip LockedAmulet)
+        // Amount is nested: createArgument.amount.initialAmount
+        const ccUtxos = result.filter((c: Record<string, unknown>) => {
+          const tid = (c.contractEntry as Record<string, unknown>)?.JsActiveContract as Record<string, unknown> | undefined;
+          const createdEvent = tid?.createdEvent as Record<string, unknown> | undefined;
+          const templateId = (createdEvent?.templateId as string) || "";
+          return templateId.includes(":Splice.Amulet:Amulet");
+        });
+
+        let totalCc = 0;
+        for (const c of ccUtxos) {
+          const entry = (c.contractEntry as Record<string, unknown>)?.JsActiveContract as Record<string, unknown> | undefined;
+          const createdEvent = entry?.createdEvent as Record<string, unknown> | undefined;
+          const arg = (createdEvent?.createArgument as Record<string, unknown>) || {};
+          const amountObj = arg.amount as Record<string, unknown> | undefined;
+          const initialAmount = parseFloat(String(amountObj?.initialAmount || "0"));
+          totalCc += initialAmount;
+        }
+
+        const mapped: Holding[] = totalCc > 0
+          ? [{ symbol: "CC", amount: totalCc, usdValue: 0, change24h: 0 }]
+          : [];
         setHoldings(mapped);
       }
     } catch (e) {
