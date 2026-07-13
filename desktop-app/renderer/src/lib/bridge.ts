@@ -219,6 +219,7 @@ export interface BridgeAPI {
     getCompanyProfile(contractId: string): Promise<unknown>
     getEmployees(partyId: string): Promise<unknown[]>
     addEmployee(companyContractId: string, employeePartyId: string, displayName: string, role: string): Promise<unknown>
+    exerciseBlockChoice(contractId: string, choice: string, blockId: string): Promise<unknown>
   }
 }
 
@@ -439,6 +440,7 @@ const noopBridge: BridgeAPI = {
     getCompanyProfile: () => Promise.resolve(null),
     getEmployees: () => Promise.resolve([]),
     addEmployee: () => Promise.resolve(null),
+    exerciseBlockChoice: () => Promise.resolve(null),
   }
 }
 

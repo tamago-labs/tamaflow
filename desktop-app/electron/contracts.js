@@ -199,7 +199,7 @@ async function getEmployees(partyId) {
             cumulative: []
           }
         },
-        verbose: false
+        verbose: true
       },
       activeAtOffset: ledgerEnd.offset
     }
@@ -219,7 +219,9 @@ async function getEmployees(partyId) {
           employee: payload.employee,
           companyName: payload.companyName,
           displayName: payload.displayName,
-          role: payload.role || ''
+          role: payload.role || '',
+          blocks: payload.blocks || {},
+          offset: entry?.offset || 0
         })
       }
     }
@@ -279,6 +281,47 @@ async function addEmployee(companyContractId, employeePartyId, displayName, role
   }
 }
 
+/**
+ * Exercise ConfirmBlock or RejectBlock on an EmployeeRecord contract.
+ */
+async function exerciseBlockChoice(contractId, choice, blockId) {
+  try {
+    const token = await getToken()
+    const sdk = await buildBaseSdk(token)
+
+    const { getWalletStatus } = require('./wallet')
+    const wallet = await getWalletStatus()
+    if (!wallet.exists) throw new Error('No wallet')
+
+    const command = {
+      ExerciseCommand: {
+        templateId: 'a0408b35c53eb7449b5e8eff14d3f0dc4cce9f626c0da2b5f59ef37557cf4bf5:TamaFlow.Company.EmployeeRecord:EmployeeRecord',
+        contractId,
+        choice,
+        choiceArgument: { blockId }
+      }
+    }
+
+    const { loadWallet } = require('./wallet')
+    const walletData = await loadWallet()
+    if (!walletData) throw new Error('No wallet data')
+
+    const preparedTx = sdk.ledger.prepare({
+      commands: [command],
+      partyId: wallet.partyId
+    })
+    const result = await preparedTx.sign(walletData.privateKey).execute({
+      partyId: wallet.partyId
+    })
+
+    console.log('[contracts]', choice, 'result:', result.updateId)
+    return { success: true, updateId: result.updateId }
+  } catch (err) {
+    console.error('[contracts] Failed to', choice, ':', err)
+    throw err
+  }
+}
+
 // ============================================
 // IPC handler registration
 // ============================================
@@ -304,6 +347,10 @@ function registerContractIpcHandlers() {
     return await addEmployee(companyContractId, employeePartyId, displayName, role)
   })
 
+  ipcMain.handle('contracts:exerciseBlockChoice', async (_e, contractId, choice, blockId) => {
+    return await exerciseBlockChoice(contractId, choice, blockId)
+  })
+
   console.log('[contracts] IPC handlers registered')
 }
 
@@ -313,5 +360,6 @@ module.exports = {
   getJPYCBalance,
   getCompanyProfile,
   getEmployees,
-  addEmployee
+  addEmployee,
+  exerciseBlockChoice
 }

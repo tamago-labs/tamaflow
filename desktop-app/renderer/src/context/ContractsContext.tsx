@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from 'react'
 import { bridge } from '../lib/bridge'
 
+interface BlockInfo {
+  blockStart: string
+  blockEnd: string
+  status: string
+}
+
 interface Employee {
   contractId: string
   employer: string
@@ -8,6 +14,8 @@ interface Employee {
   companyName: string
   displayName: string
   role: string
+  blocks: Record<string, BlockInfo>
+  offset: number
 }
 
 interface ContractsContextValue {

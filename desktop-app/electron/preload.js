@@ -195,5 +195,6 @@ contextBridge.exposeInMainWorld('bridge', {
     getCompanyProfile: (contractId) => ipcRenderer.invoke('contracts:getCompanyProfile', contractId),
     getEmployees: (partyId) => ipcRenderer.invoke('contracts:getEmployees', partyId),
     addEmployee: (companyContractId, employeePartyId, displayName, role) => ipcRenderer.invoke('contracts:addEmployee', companyContractId, employeePartyId, displayName, role),
+    exerciseBlockChoice: (contractId, choice, blockId) => ipcRenderer.invoke('contracts:exerciseBlockChoice', contractId, choice, blockId),
   }
 })
