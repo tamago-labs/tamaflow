@@ -6,6 +6,7 @@ import {
   IdCard, 
   FileText,
   Settings as SettingsIcon,
+  Clock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -46,6 +47,7 @@ export const topItems: NavItem[] = [
   { path: "/app/assets", label: "Assets", icon: Wallet },
   { path: "/app/payments", label: "Payments", icon: ArrowRightLeft },
   { path: "/app/rewards", label: "Rewards Hub", icon: Gift },
+  { path: "/app/attendance", label: "Attendance", icon: Clock },
 ];
 
 /** Categorized items, rendered with a mono label. */
@@ -78,6 +80,7 @@ export const routeLabels: Record<string, string> = {
   assets: "Assets",
   payments: "Payments",
   rewards: "Rewards Hub",
+  attendance: "Attendance",
   identification: "Identification",
   security: "Security",
   statement: "Statements",

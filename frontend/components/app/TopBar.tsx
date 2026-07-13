@@ -2,44 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, ChevronRight, MessageCircle } from "lucide-react";
 import { routeLabels } from "@/lib/nav";
 import ConnectButton from "@/components/wallet/ConnectButton";
 import NetworkBadge from "@/components/wallet/NetworkBadge";
-
-/**
- * Sticky 56px top bar for the in-app shell.
- *
- *   Left  — clickable breadcrumb derived from the matched route.
- *   Right — Network badge + Connect Wallet button.
- *
- * The breadcrumb is built from `routeLabels` (a static route→label
- * map in `lib/nav.ts`) so we don't need a router config to
- * introspect. The first crumb is always the Dashboard root, with
- * deeper segments appended.
- */
+import { useWalletMode, type WalletMode } from "@/lib/wallet/useWalletMode";
 
 interface Crumb {
   path: string;
   label: string;
 }
 
-/**
- * Build breadcrumbs from a URL pathname. The /app prefix is stripped
- * before we look up labels in the routeLabels map.
- *
- * Mirrors the new Sidebar structure:
- *   /app                          → Dashboard
- *   /app/assets                   → Assets
- *   /app/payments                 → Payments
- *   /app/rewards                  → Rewards Hub
- *   /app/identification           → Identification
- *   /app/security                  → Security
- *   /app/statement                 → Statements
- *   /app/settings                  → Settings
- */
 function buildCrumbs(pathname: string): Crumb[] {
-  // Strip /app prefix and any trailing slash
   const stripped = pathname.replace(/^\/app\/?/, "").replace(/\/$/, "");
   const segments = stripped.split("/").filter(Boolean);
 
@@ -56,9 +31,15 @@ function buildCrumbs(pathname: string): Crumb[] {
   return crumbs;
 }
 
-export default function TopBar() {
+interface TopBarProps {
+  onChatToggle?: () => void;
+}
+
+export default function TopBar({ onChatToggle }: TopBarProps) {
   const pathname = usePathname() ?? "/app";
   const crumbs = buildCrumbs(pathname);
+  const { mode, setMode, cliAvailable } = useWalletMode();
+  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 h-14 bg-white border-b border-brand-border flex items-center justify-between px-8">
@@ -105,8 +86,66 @@ export default function TopBar() {
 
       {/* Right-side actions */}
       <div className="flex items-center gap-3">
+        {/* Chat button */}
+        {onChatToggle && (
+          <button
+            type="button"
+            onClick={onChatToggle}
+            className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+            title="Team Chat"
+          >
+            <MessageCircle size={14} />
+          </button>
+        )}
+
         {/* Network badge */}
         <NetworkBadge />
+
+        {/* Wallet switcher */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setWalletMenuOpen(!walletMenuOpen)}
+            className="flex items-center gap-1.5 rounded-md border border-brand-blue bg-white px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-light cursor-pointer"
+          >
+            <span>{mode === "loop" ? "Loop Wallet" : "CLI Wallet"}</span>
+            <ChevronDown size={11} />
+          </button>
+
+          {walletMenuOpen && (
+            <div className="absolute right-0 top-full mt-1 z-50 w-48 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
+              <div className="p-2">
+                <p className="mb-2 font-mono text-[10px] uppercase tracking-wider2 text-gray-400">
+                  Wallet Type
+                </p>
+                <label className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="walletMode"
+                    checked={mode === "loop"}
+                    onChange={() => setMode("loop")}
+                    className="accent-blue-600"
+                  />
+                  <span className="text-sm text-gray-700">Loop Wallet</span>
+                </label>
+                <label className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="walletMode"
+                    checked={mode === "cli"}
+                    onChange={() => setMode("cli")}
+                    disabled={!cliAvailable}
+                    className="accent-blue-600"
+                  />
+                  <span className="text-sm text-gray-700">CLI Wallet</span>
+                  {!cliAvailable && (
+                    <span className="text-[10px] text-gray-400">(offline)</span>
+                  )}
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Connect Wallet — drives the Loop SDK */}
         <ConnectButton />
