@@ -3,7 +3,6 @@ import {
   Wallet,
   ArrowRightLeft,
   Gift,
-  Settings as SettingsIcon,
   Clock,
   type LucideIcon,
 } from "lucide-react";
@@ -46,7 +45,6 @@ export const topItems: NavItem[] = [
   { path: "/app/attendance", label: "Attendance", icon: Clock },
   { path: "/app/payments", label: "Payments", icon: ArrowRightLeft },
   { path: "/app/rewards", label: "Rewards Hub", icon: Gift },
-  { path: "/app/settings", label: "Settings", icon: SettingsIcon },
 ];
 
 /** Single utility button rendered at the very bottom of the Sidebar.

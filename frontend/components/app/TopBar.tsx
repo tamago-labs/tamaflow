@@ -92,6 +92,17 @@ export default function TopBar() {
 
       {/* Right-side actions */}
       <div className="flex items-center gap-2" ref={menuRef}>
+        {/* Network Badge */}
+        <div className="relative">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 rounded-md border border-brand-blue bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-light"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-teal" />
+            <span className="font-sans text-xs font-bold ">Devnet</span>
+          </button>
+        </div>
+
         {connected && cliPartyId ? (
           <div className="relative">
             <button

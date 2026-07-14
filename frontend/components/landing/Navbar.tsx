@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Menu, X, ArrowUpRight, ChevronDown, Github } from "lucide-react";
+import { Menu, X, ChevronDown, Github } from "lucide-react";
 import Wordmark from "@/components/shared/Wordmark";
 import { marketingNav, marketingMore } from "@/lib/nav";
 
@@ -76,7 +76,7 @@ export default function Navbar() {
             <a
               key={item.href}
               href={item.href}
-              className="font-mono text-[11px] font-semibold tracking-wider2 text-brand-navy uppercase no-underline hover:text-brand-blue transition-colors"
+              className="font-sans text-xs font-semibold tracking-wider2 text-brand-navy uppercase no-underline hover:text-brand-blue transition-colors"
             >
               {item.label}
             </a>
@@ -90,7 +90,7 @@ export default function Navbar() {
                 aria-haspopup="menu"
                 aria-expanded={moreOpen}
                 onClick={() => setMoreOpen((v) => !v)}
-                className="font-mono text-[11px] font-semibold tracking-wider2 text-brand-navy uppercase cursor-pointer bg-transparent border-0 p-0 inline-flex items-center gap-1 hover:text-brand-blue transition-colors"
+                className="font-sans text-xs font-semibold tracking-wider2 text-brand-navy uppercase cursor-pointer bg-transparent border-0 p-0 inline-flex items-center gap-1 hover:text-brand-blue transition-colors"
               >
                 More
                 <ChevronDown
@@ -120,7 +120,7 @@ export default function Navbar() {
                           <span className="flex items-center justify-center w-7 h-7 rounded-md bg-brand-light border border-brand-border text-brand-blue">
                             <Github size={14} />
                           </span>
-                          <span className="font-mono text-[11px] font-bold tracking-wider2 text-brand-navy uppercase">
+                          <span className="font-sans text-xs font-bold tracking-wider2 text-brand-navy uppercase">
                             {item.label}
                           </span>
                         </a>
@@ -137,10 +137,9 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/app"
-            className="inline-flex items-center gap-1.5 py-2 px-4 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity"
-          >
-            Employee Portal
-            <ArrowUpRight size={12} />
+            className="inline-flex items-center gap-1.5 py-2 px-4 bg-brand-blue text-white rounded-md font-mono text-xs font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity"
+          > 
+            Employee Portal 
           </Link>
         </div>
 
@@ -164,7 +163,7 @@ export default function Navbar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="font-mono text-[11px] font-semibold tracking-wider2 text-brand-navy uppercase no-underline"
+                className="font-sans text-xs font-semibold tracking-wider2 text-brand-navy uppercase no-underline"
               >
                 {item.label}
               </a>
@@ -178,7 +177,7 @@ export default function Navbar() {
                 target={item.external ? "_blank" : undefined}
                 rel={item.external ? "noreferrer" : undefined}
                 onClick={() => setOpen(false)}
-                className="font-mono text-[11px] font-semibold tracking-wider2 text-brand-navy uppercase no-underline inline-flex items-center gap-2"
+                className="font-sans text-xs font-semibold tracking-wider2 text-brand-navy uppercase no-underline inline-flex items-center gap-2"
               >
                 <Github size={12} className="text-brand-muted" />
                 {item.label}
@@ -188,10 +187,9 @@ export default function Navbar() {
             <Link
               href="/app"
               onClick={() => setOpen(false)}
-              className="inline-flex items-center justify-center gap-1.5 py-2.5 px-4 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline"
-            >
+              className="inline-flex items-center justify-center gap-1.5 py-2.5 px-4 bg-brand-blue text-white rounded-md font-mono text-xs font-bold tracking-wider2 uppercase no-underline"
+            > 
               Employee Portal
-              <ArrowUpRight size={12} />
             </Link>
           </div>
         </div>
