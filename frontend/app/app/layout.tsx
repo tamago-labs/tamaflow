@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Sidebar from "@/components/app/Sidebar";
 import AppShellClient from "@/components/app/AppShellClient";
-import { WalletProvider } from "@/lib/wallet/WalletContext";
+import { WalletModeProvider } from "@/lib/wallet/useWalletMode";
 import { PriceProvider } from "@/lib/price/PriceContext";
 
 export const metadata: Metadata = {
@@ -17,12 +17,12 @@ export default function AppLayout({
 }) {
   return (
     <div className="min-h-screen bg-brand-light flex">
-      <WalletProvider>
+      <WalletModeProvider>
         <PriceProvider>
           <Sidebar />
           <AppShellClient>{children}</AppShellClient>
         </PriceProvider>
-      </WalletProvider>
+      </WalletModeProvider>
     </div>
   );
 }

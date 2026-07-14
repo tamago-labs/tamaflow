@@ -1,20 +1,9 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Wallet, User } from "lucide-react";
-import PageHeader from "@/components/app/PageHeader";
-import AccountIsland from "@/components/wallet/AccountIsland";
+import { User } from "lucide-react";
 
-/**
- * Settings placeholder — two sub-tabs (mirrors the desktop-app):
- *   • Wallet    — Connect Wallet (Canton)
- *   • Profile   — company / employer info
- *
- * The AI Model and Netting tabs that used to live here have been
- * removed — local AI and auto-netting are desktop-app-only surfaces.
- */
-
-type Tab = "wallet" | "profile";
+type Tab = "profile";
 
 interface TabDef {
   key: Tab;
@@ -23,12 +12,11 @@ interface TabDef {
 }
 
 const TABS: TabDef[] = [
-  { key: "wallet", label: "Wallet", icon: <Wallet size={12} /> },
   { key: "profile", label: "Profile", icon: <User size={12} /> },
 ];
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<Tab>("wallet");
+  const [tab, setTab] = useState<Tab>("profile");
 
   return (
     <div>
@@ -51,16 +39,13 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {tab === "wallet" && <AccountIsland />}
-
       {tab === "profile" && (
         <div className="bg-white border border-brand-border rounded-md p-6 max-w-2xl">
           <p className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase mb-3 m-0">
             Employer Profile
           </p>
-          <p className="font-sans text-sm text-brand-muted m-0">
-            Company name, base country, and default currency will live
-            here.
+          <p className="text-sm text-gray-600 m-0">
+            Profile settings will be available here.
           </p>
         </div>
       )}

@@ -71,7 +71,7 @@ function deduplicate(records: EmployeeRecord[]): EmployeeRecord[] {
 }
 
 export default function AttendancePage() {
-  const { mode, cliPartyId } = useWalletMode();
+  const { connected } = useWalletMode();
   const [records, setRecords] = useState<EmployeeRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
@@ -94,11 +94,11 @@ export default function AttendancePage() {
   }, []);
 
   useEffect(() => {
-    if (mode === "cli" && cliPartyId) {
+    if (connected) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchRecords();
     }
-  }, [mode, cliPartyId, fetchRecords]);
+  }, [connected, fetchRecords]);
 
   const latestRecord = useMemo(() => {
     if (records.length === 0) return null;
@@ -148,7 +148,7 @@ export default function AttendancePage() {
   const newSelectionCount = HOURS.filter((h) => selectedHours.has(h) && !existingByHour.has(h)).length;
 
   const handleCheckIn = useCallback(async () => {
-    if (mode !== "cli" || !cliPartyId || !latestRecord || newSelectionCount === 0) return;
+    if (!connected || !latestRecord || newSelectionCount === 0) return;
     setCheckingIn(true);
 
     try {
@@ -185,7 +185,7 @@ export default function AttendancePage() {
     } finally {
       setCheckingIn(false);
     }
-  }, [mode, cliPartyId, latestRecord, selectedHours, existingByHour, selectedDate, newSelectionCount, fetchRecords]);
+  }, [connected, latestRecord, selectedHours, existingByHour, selectedDate, newSelectionCount, fetchRecords]);
 
   const allBlocks = useMemo(() => {
     if (!latestRecord) return [];
@@ -208,7 +208,7 @@ export default function AttendancePage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-light tracking-tight text-[#0a0a5c]">Attendance</h1>
         <div className="flex items-center gap-3">
-          {mode === "cli" && latestRecord && (
+          {connected && latestRecord && (
             <button
               onClick={handleCheckIn}
               disabled={checkingIn || newSelectionCount === 0}

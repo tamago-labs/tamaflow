@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import {
   TrendingUp,
   Check,
@@ -12,7 +11,6 @@ import {
   Calendar,
 } from "lucide-react";
 import { motion, type Variants } from "framer-motion";
-import HowToUseModal from "@/components/app/HowToUseModal";
 
 /**
  * Dashboard — the Employee Portal's home.
@@ -163,8 +161,6 @@ const headingVariants: Variants = {
 };
 
 export default function DashboardPage() {
-  const [howToUseOpen, setHowToUseOpen] = useState(true);
-
   return (
     <div>
       {/* ── Welcome banner + 2 stat cards (side-by-side) ──────────── */}
@@ -357,8 +353,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* How to Use modal — auto-opens on every dashboard visit */}
-      <HowToUseModal open={howToUseOpen} onClose={() => setHowToUseOpen(false)} />
     </div>
   );
 }

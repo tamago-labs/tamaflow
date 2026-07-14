@@ -3,10 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, Copy, Check } from "lucide-react";
+import { ChevronDown, ChevronRight, LogIn, LogOut, User, Droplets } from "lucide-react";
 import { routeLabels } from "@/lib/nav";
-import ConnectButton from "@/components/wallet/ConnectButton";
 import { useWalletMode } from "@/lib/wallet/useWalletMode";
+import ConnectModal from "./ConnectModal";
+import AccountInfoModal from "./AccountInfoModal";
+import FaucetModal from "./FaucetModal";
+
+function truncateParty(partyId: string): string {
+  if (!partyId) return "";
+  if (partyId.length <= 20) return partyId;
+  return `${partyId.slice(0, 12)}...${partyId.slice(-6)}`;
+}
 
 interface Crumb {
   path: string;
@@ -33,30 +41,26 @@ function buildCrumbs(pathname: string): Crumb[] {
 export default function TopBar() {
   const pathname = usePathname() ?? "/app";
   const crumbs = buildCrumbs(pathname);
-  const { mode, setMode, cliAvailable, cliPartyId } = useWalletMode();
-  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
-  const [partyModalOpen, setPartyModalOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const { connected, cliPartyId, disconnect } = useWalletMode();
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
+  const [accountInfoOpen, setAccountInfoOpen] = useState(false);
+  const [faucetModalOpen, setFaucetModalOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close menus on click outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setWalletMenuOpen(false);
-        setPartyModalOpen(false);
+        setDropdownOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleCopy = async () => {
-    if (cliPartyId) {
-      await navigator.clipboard.writeText(cliPartyId);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const handleDisconnect = () => {
+    disconnect();
+    setDropdownOpen(false);
   };
 
   return (
@@ -86,89 +90,73 @@ export default function TopBar() {
 
       {/* Right-side actions */}
       <div className="flex items-center gap-2" ref={menuRef}>
-        {/* Wallet type switcher with label */}
-        <span className="text-xs text-gray-500 font-medium">Wallet:</span>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setWalletMenuOpen(!walletMenuOpen)}
-            className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 cursor-pointer"
-          >
-            <span>{mode === "loop" ? "Loop" : "CLI"}</span>
-            <ChevronDown size={11} />
-          </button>
-
-          {walletMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 z-50 w-48 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
-              <div className="p-2">
-                <p className="mb-2 font-mono text-[10px] uppercase tracking-wider2 text-gray-400">Wallet Type</p>
-                <label className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-gray-50 cursor-pointer">
-                  <input type="radio" name="walletMode" checked={mode === "loop"} onChange={() => setMode("loop")} className="accent-blue-600" />
-                  <span className="text-sm text-gray-700">Loop Wallet</span>
-                </label>
-                <label className="flex items-center gap-2 rounded px-2 py-1.5 hover:bg-gray-50 cursor-pointer">
-                  <input type="radio" name="walletMode" checked={mode === "cli"} onChange={() => setMode("cli")} disabled={!cliAvailable} className="accent-blue-600" />
-                  <span className="text-sm text-gray-700">CLI Wallet</span>
-                  {!cliAvailable && <span className="text-[10px] text-gray-400">(offline)</span>}
-                </label>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Connect Wallet / CLI Connected Button with Dropdown */}
-        {mode === "cli" && cliPartyId ? (
+        {connected && cliPartyId ? (
           <div className="relative">
             <button
               type="button"
-              onClick={() => setPartyModalOpen(!partyModalOpen)}
-              className="flex items-center gap-1.5 rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-100 cursor-pointer"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer"
             >
-              <span className="font-mono text-[10px] uppercase tracking-wider2">Connected</span>
+              <span className="font-mono text-[10px]">{truncateParty(cliPartyId)}</span>
               <ChevronDown size={11} />
             </button>
 
-            {partyModalOpen && (
-              <div className="absolute right-0 top-full mt-1 z-50 w-72 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
-                <div className="p-3">
-                  <p className="mb-2 font-mono text-[10px] uppercase tracking-wider2 text-gray-400">CLI Wallet</p>
-                  <div className="flex items-center gap-2 bg-gray-50 rounded-md p-2 mb-3">
-                    <code className="flex-1 font-mono text-[10px] text-gray-700 break-all leading-tight">{cliPartyId}</code>
-                    <button
-                      type="button"
-                      onClick={handleCopy}
-                      className="flex-shrink-0 p-1 rounded hover:bg-gray-200 transition-colors"
-                      title="Copy party ID"
-                    >
-                      {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} className="text-gray-500" />}
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-gray-400 mb-3">Use this party ID to identify your CLI wallet on the Canton network.</p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setMode("loop")}
-                      className="flex-1 rounded-md border border-gray-200 px-3 py-1.5 text-[10px] font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
-                    >
-                      Switch to Loop
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPartyModalOpen(false)}
-                      className="flex-1 rounded-md bg-blue-600 px-3 py-1.5 text-[10px] font-semibold text-white hover:bg-blue-700 transition-colors"
-                    >
-                      Close
-                    </button>
-                  </div>
+            {dropdownOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50 w-44 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
+                <div className="p-1">
+                  <button
+                    type="button"
+                    onClick={() => { setDropdownOpen(false); setAccountInfoOpen(true); }}
+                    className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-[13px] text-brand-navy hover:bg-brand-light cursor-pointer"
+                  >
+                    <User size={14} className="text-brand-muted" />
+                    Account Info
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDropdownOpen(false); setFaucetModalOpen(true); }}
+                    className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-[13px] text-brand-navy hover:bg-brand-light cursor-pointer"
+                  >
+                    <Droplets size={14} className="text-brand-muted" />
+                    Faucet
+                  </button>
+                  <div className="my-0.5 border-t border-gray-100" />
+                  <button
+                    type="button"
+                    onClick={handleDisconnect}
+                    className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-[13px] text-red-600 hover:bg-red-50 cursor-pointer"
+                  >
+                    <LogOut size={14} />
+                    Disconnect
+                  </button>
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <ConnectButton />
+          <button
+            type="button"
+            onClick={() => setConnectModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-md border border-brand-blue bg-white px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-light cursor-pointer"
+          >
+            <LogIn size={12} />
+            Connect
+          </button>
         )}
       </div>
 
+      <ConnectModal
+        open={connectModalOpen}
+        onClose={() => setConnectModalOpen(false)}
+      />
+      <AccountInfoModal
+        open={accountInfoOpen}
+        onClose={() => setAccountInfoOpen(false)}
+      />
+      <FaucetModal
+        open={faucetModalOpen}
+        onClose={() => setFaucetModalOpen(false)}
+      />
     </header>
   );
 }

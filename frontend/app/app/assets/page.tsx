@@ -2,11 +2,11 @@
 
 /**
  * Assets Page — Employee's tokenized portfolio on Canton.
- * Supports both Loop wallet and CLI wallet modes.
+ * CLI wallet only.
  */
 
 import { useContext, useEffect, useState } from "react";
-import { RefreshCw, Droplets } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useWalletMode } from "@/lib/wallet/useWalletMode";
 import { PriceContext, formatChange } from "@/lib/price/PriceContext";
 import { cli } from "@/lib/cli";
@@ -38,22 +38,17 @@ function formatUsd(value: number): string {
 }
 
 export default function AssetsPage() {
-  const { mode, cliPartyId } = useWalletMode();
+  const { connected } = useWalletMode();
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [loading, setLoading] = useState(false);
-  const [fauceting, setFauceting] = useState(false);
   const prices = useContext(PriceContext);
 
-  // Fetch holdings from CLI
   const fetchHoldings = async () => {
-    if (mode !== "cli" || !cliPartyId) return;
+    if (!connected) return;
     setLoading(true);
     try {
       const result = await cli.holdings.list();
       if (Array.isArray(result)) {
-        // Parse raw Canton Ledger contract objects
-        // Amulet contracts: templateId contains "Amulet" (skip LockedAmulet)
-        // Amount is nested: createArgument.amount.initialAmount
         const ccUtxos = result.filter((c: Record<string, unknown>) => {
           const tid = (c.contractEntry as Record<string, unknown>)?.JsActiveContract as Record<string, unknown> | undefined;
           const createdEvent = tid?.createdEvent as Record<string, unknown> | undefined;
@@ -84,51 +79,24 @@ export default function AssetsPage() {
   };
 
   useEffect(() => {
-    if (mode === "cli" && cliPartyId) {
+    if (connected) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchHoldings();
     }
-  }, [mode, cliPartyId]);
-
-  const handleFaucet = async () => {
-    setFauceting(true);
-    try {
-      await cli.wallet.faucet("1000.0000000000");
-      fetchHoldings();
-    } catch (e) {
-      console.error("[Assets] Faucet failed:", e);
-    } finally {
-      setFauceting(false);
-    }
-  };
-
-  // Show Loop wallet holdings or CLI holdings
-  const isCliMode = mode === "cli";
+  }, [connected]);
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-light tracking-tight text-[#0a0a5c]">Assets</h1>
-        {isCliMode && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={fetchHoldings}
-              disabled={loading}
-              className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-            >
-              <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
-              Refresh
-            </button>
-            <button
-              onClick={handleFaucet}
-              disabled={fauceting}
-              className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-            >
-              <Droplets size={12} />
-              {fauceting ? "Minting..." : "Faucet"}
-            </button>
-          </div>
-        )}
+        <button
+          onClick={fetchHoldings}
+          disabled={loading || !connected}
+          className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+        >
+          <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+          Refresh
+        </button>
       </div>
 
       {/* Holdings Table */}
@@ -143,7 +111,13 @@ export default function AssetsPage() {
             </tr>
           </thead>
           <tbody>
-            {holdings.length === 0 ? (
+            {!connected ? (
+              <tr>
+                <td colSpan={4} className="px-4 py-12 text-center text-sm text-gray-400">
+                  Connect your CLI wallet to view assets.
+                </td>
+              </tr>
+            ) : holdings.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-4 py-12 text-center text-sm text-gray-400">
                   {loading ? "Loading..." : "No holdings yet"}
@@ -163,7 +137,7 @@ export default function AssetsPage() {
                           className="h-8 w-8 rounded-full"
                           onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                         />
-                        <span className="font-sans text-sm font-medium text-gray-900">{h.symbol}</span>
+                        <span className="font-sans text-sm font-medium text-gray-900">Canton</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">

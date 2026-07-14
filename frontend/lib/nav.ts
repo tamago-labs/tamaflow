@@ -3,8 +3,6 @@ import {
   Wallet,
   ArrowRightLeft,
   Gift,
-  IdCard, 
-  FileText,
   Settings as SettingsIcon,
   Clock,
   type LucideIcon,
@@ -45,23 +43,10 @@ export interface NavCategory {
 export const topItems: NavItem[] = [
   { path: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
   { path: "/app/assets", label: "Assets", icon: Wallet },
+  { path: "/app/attendance", label: "Attendance", icon: Clock },
   { path: "/app/payments", label: "Payments", icon: ArrowRightLeft },
   { path: "/app/rewards", label: "Rewards Hub", icon: Gift },
-  { path: "/app/attendance", label: "Attendance", icon: Clock },
-];
-
-/** Categorized items, rendered with a mono label. */
-export const navCategories: NavCategory[] = [
-  {
-    key: "account",
-    label: "Account",
-    items: [
-      { path: "/app/identification", label: "Identification", icon: IdCard },
-      // { path: "/app/security", label: "Security", icon: ShieldCheck },
-      { path: "/app/statement", label: "Statements", icon: FileText },
-      { path: "/app/settings", label: "Settings", icon: SettingsIcon },
-    ],
-  },
+  { path: "/app/settings", label: "Settings", icon: SettingsIcon },
 ];
 
 /** Single utility button rendered at the very bottom of the Sidebar.
