@@ -196,5 +196,9 @@ contextBridge.exposeInMainWorld('bridge', {
     getEmployees: (partyId) => ipcRenderer.invoke('contracts:getEmployees', partyId),
     addEmployee: (companyContractId, employeePartyId, displayName, role) => ipcRenderer.invoke('contracts:addEmployee', companyContractId, employeePartyId, displayName, role),
     exerciseBlockChoice: (contractId, choice, blockId) => ipcRenderer.invoke('contracts:exerciseBlockChoice', contractId, choice, blockId),
+  },
+  payslip: {
+    generate: (opts) => ipcRenderer.invoke('payslip:generate', opts),
+    buildPayload: (opts) => ipcRenderer.invoke('payslip:buildPayload', opts),
   }
 })

@@ -1,0 +1,280 @@
+{
+  "version": 2,
+  "schema": [
+    {
+      "name": "invite",
+      "namespace": "tamaflow",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "invite",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "publicKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "expires",
+          "required": true,
+          "type": "int",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "chat-msg",
+      "namespace": "tamaflow",
+      "compact": false,
+      "flagsPosition": 2,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "text",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "info",
+          "type": "json",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "chats-remove",
+      "namespace": "tamaflow",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "ids",
+          "required": true,
+          "type": "json",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "ai-state",
+      "namespace": "tamaflow",
+      "compact": false,
+      "flagsPosition": 1,
+      "fields": [
+        {
+          "name": "writerKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "modelId",
+          "required": false,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "modelName",
+          "required": false,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "loadedAt",
+          "required": false,
+          "type": "int",
+          "version": 1
+        },
+        {
+          "name": "accepting",
+          "required": false,
+          "type": "bool",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "ai-state-update",
+      "namespace": "tamaflow",
+      "compact": false,
+      "flagsPosition": 0,
+      "fields": [
+        {
+          "name": "_writerKey",
+          "required": false,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "modelId",
+          "required": false,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "modelName",
+          "required": false,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "loadedAt",
+          "required": false,
+          "type": "int",
+          "version": 1
+        },
+        {
+          "name": "accepting",
+          "required": false,
+          "type": "bool",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "relay-request",
+      "namespace": "tamaflow",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "requestId",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "fromKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "toKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "messages",
+          "required": true,
+          "type": "json",
+          "version": 1
+        },
+        {
+          "name": "modelId",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "createdAt",
+          "required": true,
+          "type": "int",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "relay-response",
+      "namespace": "tamaflow",
+      "compact": false,
+      "flagsPosition": 4,
+      "fields": [
+        {
+          "name": "requestId",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "fromKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "toKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "kind",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "text",
+          "required": false,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "error",
+          "required": false,
+          "type": "json",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "relay-cancel",
+      "namespace": "tamaflow",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "requestId",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "fromKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "toKey",
+          "required": true,
+          "type": "buffer",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "writer",
+      "namespace": "tamaflow",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "key",
+          "required": true,
+          "type": "buffer",
+          "version": 2
+        }
+      ]
+    }
+  ]
+}

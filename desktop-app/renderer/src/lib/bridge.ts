@@ -221,6 +221,10 @@ export interface BridgeAPI {
     addEmployee(companyContractId: string, employeePartyId: string, displayName: string, role: string): Promise<unknown>
     exerciseBlockChoice(contractId: string, choice: string, blockId: string): Promise<unknown>
   }
+  payslip: {
+    generate(opts: { settlementData: Record<string, unknown>; companyProfile: Record<string, unknown>; style: string }): Promise<{ success: boolean; markdown?: string; error?: string }>
+    buildPayload(opts: { markdown: string; settlementData: Record<string, unknown>; companyProfile: Record<string, unknown>; style: string }): Promise<{ success: boolean; payload?: Record<string, unknown>; error?: string }>
+  }
 }
 
 // Canton wallet types — mirror the JSDoc typedefs in
@@ -441,6 +445,10 @@ const noopBridge: BridgeAPI = {
     getEmployees: () => Promise.resolve([]),
     addEmployee: () => Promise.resolve(null),
     exerciseBlockChoice: () => Promise.resolve(null),
+  },
+  payslip: {
+    generate: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    buildPayload: () => Promise.resolve({ success: false, error: 'bridge not available' }),
   }
 }
 
