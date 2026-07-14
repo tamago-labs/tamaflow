@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, LogIn, LogOut, User, Droplets } from "lucide-react";
+import { ChevronDown, ChevronRight, LogIn, LogOut, User, Droplets, PenLine } from "lucide-react";
 import { routeLabels } from "@/lib/nav";
 import { useWalletMode } from "@/lib/wallet/useWalletMode";
 import ConnectModal from "./ConnectModal";
 import AccountInfoModal from "./AccountInfoModal";
 import FaucetModal from "./FaucetModal";
+import UsernameModal from "./UsernameModal";
 
 function truncateParty(partyId: string): string {
   if (!partyId) return "";
@@ -45,6 +46,7 @@ export default function TopBar() {
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [accountInfoOpen, setAccountInfoOpen] = useState(false);
   const [faucetModalOpen, setFaucetModalOpen] = useState(false);
+  const [usernameModalOpen, setUsernameModalOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -114,6 +116,14 @@ export default function TopBar() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => { setDropdownOpen(false); setUsernameModalOpen(true); }}
+                    className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-[13px] text-brand-navy hover:bg-brand-light cursor-pointer"
+                  >
+                    <PenLine size={14} className="text-brand-muted" />
+                    Change Username
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => { setDropdownOpen(false); setFaucetModalOpen(true); }}
                     className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-[13px] text-brand-navy hover:bg-brand-light cursor-pointer"
                   >
@@ -156,6 +166,10 @@ export default function TopBar() {
       <FaucetModal
         open={faucetModalOpen}
         onClose={() => setFaucetModalOpen(false)}
+      />
+      <UsernameModal
+        open={usernameModalOpen}
+        onClose={() => setUsernameModalOpen(false)}
       />
     </header>
   );

@@ -58,6 +58,47 @@ export const cli = {
 
   chat: {
     list: () => fetchJson(`${CLI_URL}/api/chat`),
+    send: (text: string) =>
+      fetchJson(`${CLI_URL}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      }),
+  },
+
+  assets: {
+    pendingTransfers: () => fetchJson(`${CLI_URL}/api/pending-transfers`),
+    accept: (contractId: string) =>
+      fetchJson(`${CLI_URL}/api/contracts/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId }),
+      }),
+    reject: (contractId: string) =>
+      fetchJson(`${CLI_URL}/api/contracts/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contractId }),
+      }),
+  },
+
+  payslips: {
+    list: () => fetchJson(`${CLI_URL}/api/payslips`),
+    send: (payslip: Record<string, unknown>) =>
+      fetchJson(`${CLI_URL}/api/payslips`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payslip),
+      }),
+  },
+
+  username: {
+    set: (name: string) =>
+      fetchJson(`${CLI_URL}/api/username`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      }),
   },
 
   health: () => fetchJson(`${CLI_URL}/api/health`),

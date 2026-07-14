@@ -2,11 +2,11 @@
 
 /**
  * Assets Page — Employee's tokenized portfolio on Canton.
- * CLI wallet only.
+ * CLI wallet only. Shows pending transfers + holdings.
  */
 
-import { useContext, useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { useCallback, useContext, useEffect, useState } from "react";
+import { RefreshCw, Check, X, ArrowDownLeft } from "lucide-react";
 import { useWalletMode } from "@/lib/wallet/useWalletMode";
 import { PriceContext, formatChange } from "@/lib/price/PriceContext";
 import { cli } from "@/lib/cli";
@@ -16,6 +16,16 @@ interface Holding {
   amount: number;
   usdValue: number;
   change24h: number;
+}
+
+interface PendingTransfer {
+  contractId: string;
+  sender: string;
+  receiver: string;
+  amount: string;
+  instrumentId: string;
+  executeBefore: string;
+  memo: string;
 }
 
 const TOKEN_IMAGE_OVERRIDES: Record<string, string> = {
@@ -37,13 +47,22 @@ function formatUsd(value: number): string {
   return `$${value.toFixed(3)}`;
 }
 
+function truncateAddr(addr: string): string {
+  if (!addr) return "—";
+  if (addr.length <= 16) return addr;
+  return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
+}
+
 export default function AssetsPage() {
   const { connected } = useWalletMode();
   const [holdings, setHoldings] = useState<Holding[]>([]);
+  const [pendingTransfers, setPendingTransfers] = useState<PendingTransfer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const prices = useContext(PriceContext);
 
-  const fetchHoldings = async () => {
+  const fetchHoldings = useCallback(async () => {
     if (!connected) return;
     setLoading(true);
     try {
@@ -76,21 +95,62 @@ export default function AssetsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [connected]);
+
+  const fetchPendingTransfers = useCallback(async () => {
+    if (!connected) return;
+    setPendingLoading(true);
+    try {
+      const result = await cli.assets.pendingTransfers();
+      if (Array.isArray(result)) {
+        setPendingTransfers(result);
+      }
+    } catch (e) {
+      console.error("[Assets] Failed to fetch pending transfers:", e);
+    } finally {
+      setPendingLoading(false);
+    }
+  }, [connected]);
 
   useEffect(() => {
     if (connected) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchHoldings();
+      fetchPendingTransfers();
     }
   }, [connected]);
+
+  const handleAccept = useCallback(async (contractId: string) => {
+    setAcceptingId(contractId);
+    try {
+      await cli.assets.accept(contractId);
+      fetchPendingTransfers();
+      fetchHoldings();
+    } catch (e) {
+      console.error("[Assets] Accept failed:", e);
+    } finally {
+      setAcceptingId(null);
+    }
+  }, [fetchPendingTransfers, fetchHoldings]);
+
+  const handleReject = useCallback(async (contractId: string) => {
+    setAcceptingId(contractId);
+    try {
+      await cli.assets.reject(contractId);
+      fetchPendingTransfers();
+    } catch (e) {
+      console.error("[Assets] Reject failed:", e);
+    } finally {
+      setAcceptingId(null);
+    }
+  }, [fetchPendingTransfers]);
 
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-light tracking-tight text-[#0a0a5c]">Assets</h1>
         <button
-          onClick={fetchHoldings}
+          onClick={() => { fetchHoldings(); fetchPendingTransfers(); }}
           disabled={loading || !connected}
           className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
         >
@@ -98,6 +158,55 @@ export default function AssetsPage() {
           Refresh
         </button>
       </div>
+
+      {/* Pending Transfers */}
+      {!connected ? (
+        <div className="rounded-md border border-gray-200 bg-white py-12 text-center mb-6">
+          <p className="m-0 text-sm text-gray-400">Connect your CLI wallet to view assets.</p>
+        </div>
+      ) : pendingTransfers.length > 0 && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 mb-6">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200">
+            <ArrowDownLeft size={14} className="text-amber-600" />
+            <span className="text-xs font-semibold text-amber-800">Pending Transfers</span>
+            <span className="text-[10px] text-amber-600">
+              {pendingLoading ? "Loading..." : `(${pendingTransfers.length})`}
+            </span>
+          </div>
+          <ul className="divide-y divide-amber-100">
+            {pendingTransfers.map((t) => (
+              <li key={t.contractId} className="flex items-center justify-between px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 m-0">
+                    {t.amount} CC from {truncateAddr(t.sender)}
+                  </p>
+                  {t.memo && (
+                    <p className="text-xs text-gray-500 m-0 mt-0.5">{t.memo}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 ml-4">
+                  <button
+                    onClick={() => handleAccept(t.contractId)}
+                    disabled={acceptingId === t.contractId}
+                    className="flex items-center gap-1 rounded bg-green-600 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    <Check size={12} />
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleReject(t.contractId)}
+                    disabled={acceptingId === t.contractId}
+                    className="flex items-center gap-1 rounded border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <X size={12} />
+                    Reject
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Holdings Table */}
       <div className="bg-white border border-gray-200 rounded-md overflow-hidden">
@@ -111,13 +220,7 @@ export default function AssetsPage() {
             </tr>
           </thead>
           <tbody>
-            {!connected ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-sm text-gray-400">
-                  Connect your CLI wallet to view assets.
-                </td>
-              </tr>
-            ) : holdings.length === 0 ? (
+            {holdings.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-4 py-12 text-center text-sm text-gray-400">
                   {loading ? "Loading..." : "No holdings yet"}

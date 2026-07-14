@@ -40,14 +40,9 @@ class EmployeeCLI {
     this.pear = new PearP2P()
   }
 
-  async start(port = 3001, inviteCode = null) {
+  async start(port = 3001) {
     // Load persisted wallet if exists
     this.loadWallet()
-
-    if (inviteCode) {
-      const result = await this.pear.connect(inviteCode)
-      console.log('[employee-cli] Pear connection:', result)
-    }
 
     this.setupRoutes()
     this.app.listen(port, () => {
@@ -253,6 +248,14 @@ class EmployeeCLI {
     // Health
     this.app.get('/api/health', (_req, res) => {
       res.json({ status: 'ok', timestamp: new Date().toISOString() })
+    })
+
+    // Username
+    this.app.post('/api/username', (req, res) => {
+      const { name } = req.body
+      if (!name) return res.status(400).json({ error: 'Name required' })
+      this.pear.setName(name)
+      res.json({ success: true, name: this.pear.identity.name })
     })
 
     // ============================================
@@ -482,14 +485,171 @@ class EmployeeCLI {
     })
 
     this.app.post('/api/room/connect', async (req, res) => {
-      const { invite } = req.body
-      if (!invite) return res.status(400).json({ error: 'Invite code required' })
-      const result = await this.pear.connect(invite)
-      res.json(result)
+      try {
+        const { invite } = req.body
+        if (!invite) return res.status(400).json({ error: 'Invite code required' })
+        await this.pear.connect(invite)
+        res.json({ success: true, connected: true })
+      } catch (err) {
+        console.error('[room] Connect failed:', err.message)
+        res.status(500).json({ error: err.message })
+      }
     })
 
     this.app.get('/api/chat', (_req, res) => {
       res.json(this.pear.getChatMessages())
+    })
+
+    this.app.post('/api/chat', async (req, res) => {
+      try {
+        if (!this.pear.connected) return res.status(400).json({ error: 'Not connected to room' })
+        const { text } = req.body
+        if (!text) return res.status(400).json({ error: 'Message text required' })
+        await this.pear.sendMessage(text)
+        res.json({ success: true })
+      } catch (err) {
+        console.error('[chat] Send failed:', err.message)
+        res.status(500).json({ error: err.message })
+      }
+    })
+
+    // ============================================
+    // Asset approval endpoints
+    // ============================================
+
+    this.app.get('/api/pending-transfers', async (_req, res) => {
+      try {
+        if (!this.wallet) return res.status(400).json({ error: 'No wallet' })
+        const token = await this.getToken()
+        const ledgerEnd = await fetch(`${DEVNET.ledgerClientUrl}/v2/state/ledger-end`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(r => r.json())
+
+        const result = await fetch(`${DEVNET.ledgerClientUrl}/v2/state/active-contracts`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            eventFormat: {
+              filtersByParty: {
+                [this.wallet.partyId]: { cumulative: [] }
+              },
+              verbose: true
+            },
+            activeAtOffset: ledgerEnd.offset
+          })
+        }).then(r => r.json())
+
+        const contracts = Array.isArray(result) ? result : (result?.activeContracts || [])
+        const pending = contracts.filter(c => {
+          const tid = c.contractEntry?.JsActiveContract?.createdEvent?.templateId || ''
+          return tid.includes('TransferInstruction') && tid.includes('TransferPendingReceiverAcceptance')
+        }).map(c => {
+          const event = c.contractEntry?.JsActiveContract?.createdEvent
+          const arg = event?.createArgument || {}
+          return {
+            contractId: event?.contractId,
+            sender: arg.sender || '',
+            receiver: arg.receiver || '',
+            amount: arg.amount || '',
+            instrumentId: arg.instrumentId || '',
+            executeBefore: arg.executeBefore || '',
+            memo: arg.memo || ''
+          }
+        })
+
+        res.json(pending)
+      } catch (err) {
+        console.error('[assets] Failed to fetch pending transfers:', err.message)
+        res.status(500).json({ error: err.message })
+      }
+    })
+
+    this.app.post('/api/contracts/accept', async (req, res) => {
+      try {
+        if (!this.wallet) return res.status(400).json({ error: 'No wallet' })
+        const { contractId } = req.body
+        if (!contractId) return res.status(400).json({ error: 'Contract ID required' })
+
+        const sdk = await this.getSDK()
+        const command = {
+          ExerciseCommand: {
+            templateId: 'Splice.Api.Token.TransferInstruction:TransferInstruction',
+            contractId,
+            choice: 'TransferInstruction_Accept',
+            choiceArgument: {}
+          }
+        }
+
+        const preparedTx = sdk.ledger.prepare({
+          commands: [command],
+          partyId: this.wallet.partyId
+        })
+        const result = await preparedTx.sign(this.wallet.privateKey).execute({
+          partyId: this.wallet.partyId
+        })
+
+        console.log('[assets] Accept transfer:', contractId)
+        res.json({ success: true, updateId: result.updateId })
+      } catch (err) {
+        console.error('[assets] Accept failed:', err.message)
+        res.status(500).json({ error: err.message })
+      }
+    })
+
+    this.app.post('/api/contracts/reject', async (req, res) => {
+      try {
+        if (!this.wallet) return res.status(400).json({ error: 'No wallet' })
+        const { contractId } = req.body
+        if (!contractId) return res.status(400).json({ error: 'Contract ID required' })
+
+        const sdk = await this.getSDK()
+        const command = {
+          ExerciseCommand: {
+            templateId: 'Splice.Api.Token.TransferInstruction:TransferInstruction',
+            contractId,
+            choice: 'TransferInstruction_Reject',
+            choiceArgument: {}
+          }
+        }
+
+        const preparedTx = sdk.ledger.prepare({
+          commands: [command],
+          partyId: this.wallet.partyId
+        })
+        const result = await preparedTx.sign(this.wallet.privateKey).execute({
+          partyId: this.wallet.partyId
+        })
+
+        console.log('[assets] Reject transfer:', contractId)
+        res.json({ success: true, updateId: result.updateId })
+      } catch (err) {
+        console.error('[assets] Reject failed:', err.message)
+        res.status(500).json({ error: err.message })
+      }
+    })
+
+    // ============================================
+    // Payslip endpoints
+    // ============================================
+
+    this.app.get('/api/payslips', (_req, res) => {
+      res.json(this.pear.getPayslips())
+    })
+
+    this.app.post('/api/payslips', async (req, res) => {
+      try {
+        if (!this.pear.connected) return res.status(400).json({ error: 'Not connected to room' })
+        const payslip = req.body
+        if (!payslip || !payslip.id) return res.status(400).json({ error: 'Invalid payslip data' })
+        await this.pear.sendPayslip(payslip)
+        res.json({ success: true, id: payslip.id })
+      } catch (err) {
+        console.error('[payslip] Send failed:', err.message)
+        res.status(500).json({ error: err.message })
+      }
     })
   }
 }
@@ -498,8 +658,6 @@ class EmployeeCLI {
 const args = process.argv.slice(2)
 const portIdx = args.indexOf('--port')
 const port = portIdx !== -1 ? parseInt(args[portIdx + 1]) : 3001
-const inviteIdx = args.indexOf('--invite')
-const inviteCode = inviteIdx !== -1 ? args[inviteIdx + 1] : null
 
 const cli = new EmployeeCLI()
-cli.start(port, inviteCode)
+cli.start(port)

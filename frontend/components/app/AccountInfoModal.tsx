@@ -25,7 +25,6 @@ export default function AccountInfoModal({ open, onClose }: AccountInfoModalProp
     }
   };
 
-  // Fetch account info when modal opens
   if (open && !accountInfo) {
     fetchAccountInfo();
   }

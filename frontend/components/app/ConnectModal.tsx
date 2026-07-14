@@ -8,8 +8,8 @@ import { useWalletMode } from "@/lib/wallet/useWalletMode";
 
 const STEPS = [
   { num: "01", text: "Start the employee-cli server" },
-  { num: "02", text: "Click Connect below" },
-  { num: "03", text: "Start using TamaFlow" },
+  { num: "02", text: "Enter invite code below (optional)" },
+  { num: "03", text: "Click Connect" },
 ];
 
 interface ConnectModalProps {
@@ -21,12 +21,13 @@ export default function ConnectModal({ open, onClose }: ConnectModalProps) {
   const { connect } = useWalletMode();
   const [step, setStep] = useState<"idle" | "connecting" | "done" | "error">("idle");
   const [error, setError] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
 
   const handleConnect = async () => {
     setStep("connecting");
     setError("");
     try {
-      await connect();
+      await connect(inviteCode || undefined);
       setStep("done");
       setTimeout(() => onClose(), 800);
     } catch {
@@ -38,6 +39,7 @@ export default function ConnectModal({ open, onClose }: ConnectModalProps) {
   const handleClose = () => {
     setStep("idle");
     setError("");
+    setInviteCode("");
     onClose();
   };
 
@@ -76,7 +78,7 @@ export default function ConnectModal({ open, onClose }: ConnectModalProps) {
         </div>
 
         {/* Steps */}
-        <ol className="space-y-3 mb-6">
+        <ol className="space-y-3 mb-5">
           {STEPS.map((s) => (
             <li key={s.num} className="flex items-center gap-3">
               <span className="font-mono text-[10px] tracking-wider2 text-brand-teal uppercase font-semibold flex-shrink-0">
@@ -86,6 +88,21 @@ export default function ConnectModal({ open, onClose }: ConnectModalProps) {
             </li>
           ))}
         </ol>
+
+        {/* Invite code */}
+        <div className="mb-5">
+          <label htmlFor="invite-code" className="block font-mono text-[10px] uppercase tracking-wider2 text-gray-400 mb-1.5">
+            Invite Code (optional)
+          </label>
+          <input
+            id="invite-code"
+            type="text"
+            value={inviteCode}
+            onChange={(e) => setInviteCode(e.target.value)}
+            placeholder="Enter Hyperswarm invite code..."
+            className="w-full rounded-md border border-gray-200 bg-white py-2 px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-blue focus:outline-none"
+          />
+        </div>
 
         {/* Status */}
         {step === "error" && (
@@ -102,7 +119,7 @@ export default function ConnectModal({ open, onClose }: ConnectModalProps) {
         )}
 
         {/* Connect + Close buttons */}
-        <div className="flex items-center gap-2 mt-2">
+        <div className="flex items-center gap-2">
           <motion.button
             type="button"
             onClick={handleConnect}
