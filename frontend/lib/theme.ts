@@ -17,7 +17,7 @@ export const SITE = {
   tagline: "AI Auto-Payroll on Canton",
   shortDesc:
     "Privacy-first payroll that nets cross-border obligations and settles atomically on Canton — without ever leaking data to a third-party LLM.",
-  url: "https://tamaflow.xyz",
+  url: "https://tamaflow.tamagolabs.com",
   twitter: "@tamaflow",
   version: "v0.1",
 } as const;
