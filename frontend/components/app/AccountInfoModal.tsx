@@ -57,16 +57,19 @@ export default function AccountInfoModal({ open, onClose }: AccountInfoModalProp
       <div className="p-6 lg:p-8">
         <h2
           id="account-info-title"
-          className="text-xl font-light text-brand-navy leading-tight m-0 mb-4"
+          className="text-xl font-light text-brand-navy leading-tight m-0"
         >
           Account Info
         </h2>
+        <p className="mt-2 text-sm text-brand-navy/70 leading-relaxed m-0">
+          Your CLI wallet details for the Canton network.
+        </p>
 
         {/* Party ID */}
-        <div className="mb-4">
+        <div className="mt-5 mb-4">
           <p className="font-mono text-[10px] uppercase tracking-wider2 text-gray-400 mb-1">Party ID</p>
           <div className="flex items-center gap-2 bg-gray-50 rounded-md p-2">
-            <code className="flex-1 font-mono text-[10px] text-gray-700 break-all leading-tight">{cliPartyId}</code>
+            <code className="flex-1 font-mono text-xs text-gray-700 break-all">{cliPartyId}</code>
             <button
               type="button"
               onClick={handleCopy}
@@ -81,13 +84,13 @@ export default function AccountInfoModal({ open, onClose }: AccountInfoModalProp
         {/* Account details */}
         {accountInfo && (
           <div className="space-y-2">
-            {accountInfo.fingerprint ? (
+            {"fingerprint" in accountInfo && accountInfo.fingerprint ? (
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-wider2 text-gray-400 mb-1">Fingerprint</p>
                 <p className="font-mono text-xs text-gray-700 break-all">{accountInfo.fingerprint as React.ReactNode}</p>
               </div>
             ) : null}
-            {accountInfo.publicKey ? (
+            {"publicKey" in accountInfo && accountInfo.publicKey ? (
               <div>
                 <p className="font-mono text-[10px] uppercase tracking-wider2 text-gray-400 mb-1">Public Key</p>
                 <p className="font-mono text-xs text-gray-700 break-all">{accountInfo.publicKey as React.ReactNode}</p>
@@ -96,7 +99,12 @@ export default function AccountInfoModal({ open, onClose }: AccountInfoModalProp
           </div>
         )}
 
-        <div className="mt-5 flex justify-end">
+        {/* Wallet file location */}
+        <p className="mt-4 text-[11px] text-gray-400 m-0">
+          Wallet file: employee-cli/.wallet.json
+        </p>
+
+        <div className="mt-4 flex justify-end">
           <button
             type="button"
             onClick={onClose}

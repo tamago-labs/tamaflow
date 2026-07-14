@@ -6,6 +6,12 @@ import { X, Loader2, CheckCircle2, LinkIcon } from "lucide-react";
 import Modal from "@/components/shared/Modal";
 import { useWalletMode } from "@/lib/wallet/useWalletMode";
 
+const STEPS = [
+  { num: "01", text: "Start the employee-cli server" },
+  { num: "02", text: "Click Connect below" },
+  { num: "03", text: "Start using TamaFlow" },
+];
+
 interface ConnectModalProps {
   open: boolean;
   onClose: () => void;
@@ -25,7 +31,7 @@ export default function ConnectModal({ open, onClose }: ConnectModalProps) {
       setTimeout(() => onClose(), 800);
     } catch {
       setStep("error");
-      setError("CLI server not reachable. Start the employee-cli first.");
+      setError("CLI server not reachable.");
     }
   };
 
@@ -65,69 +71,72 @@ export default function ConnectModal({ open, onClose }: ConnectModalProps) {
             CLI Wallet
           </h2>
           <p className="mt-2 text-sm text-brand-navy/70 leading-relaxed m-0">
-            Connect to your local CLI wallet to interact with the Canton network.
+            Follow these steps to connect your CLI wallet:
           </p>
         </div>
 
+        {/* Steps */}
+        <ol className="space-y-3 mb-6">
+          {STEPS.map((s) => (
+            <li key={s.num} className="flex items-center gap-3">
+              <span className="font-mono text-[10px] tracking-wider2 text-brand-teal uppercase font-semibold flex-shrink-0">
+                {s.num}
+              </span>
+              <span className="font-sans text-sm text-brand-navy">{s.text}</span>
+            </li>
+          ))}
+        </ol>
+
         {/* Status */}
-        <div className="mb-6">
-          {step === "idle" && (
-            <div className="flex items-center gap-3 rounded-md border border-gray-200 bg-gray-50 p-3">
-              <LinkIcon size={16} className="text-gray-400" />
-              <span className="text-sm text-gray-600">Not connected</span>
-            </div>
-          )}
-          {step === "connecting" && (
-            <div className="flex items-center gap-3 rounded-md border border-blue-200 bg-blue-50 p-3">
-              <Loader2 size={16} className="text-blue-600 animate-spin" />
-              <span className="text-sm text-blue-700">Connecting to CLI server...</span>
-            </div>
-          )}
-          {step === "done" && (
-            <div className="flex items-center gap-3 rounded-md border border-green-200 bg-green-50 p-3">
-              <CheckCircle2 size={16} className="text-green-600" />
-              <span className="text-sm text-green-700">Connected successfully!</span>
-            </div>
-          )}
-          {step === "error" && (
-            <div className="flex items-center gap-3 rounded-md border border-red-200 bg-red-50 p-3">
-              <X size={16} className="text-red-600" />
-              <span className="text-sm text-red-700">{error}</span>
-            </div>
-          )}
+        {step === "error" && (
+          <div className="mb-4 flex items-center gap-2 rounded-md border border-red-200 bg-red-50 p-3">
+            <X size={14} className="text-red-600 flex-shrink-0" />
+            <span className="text-xs text-red-700">{error}</span>
+          </div>
+        )}
+        {step === "done" && (
+          <div className="mb-4 flex items-center gap-2 rounded-md border border-green-200 bg-green-50 p-3">
+            <CheckCircle2 size={14} className="text-green-600 flex-shrink-0" />
+            <span className="text-xs text-green-700">Connected successfully!</span>
+          </div>
+        )}
+
+        {/* Connect + Close buttons */}
+        <div className="flex items-center gap-2 mt-2">
+          <motion.button
+            type="button"
+            onClick={handleConnect}
+            disabled={step === "connecting" || step === "done"}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+            className="inline-flex items-center justify-center gap-2 flex-1 py-3 px-6 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase hover:opacity-90 transition-opacity shadow-[0_4px_18px_-6px_rgba(26,26,232,0.45)] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {step === "connecting" ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Connecting...
+              </>
+            ) : step === "done" ? (
+              <>
+                <CheckCircle2 size={14} />
+                Connected
+              </>
+            ) : (
+              <>
+                <LinkIcon size={14} />
+                Connect
+              </>
+            )}
+          </motion.button>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="inline-flex items-center justify-center py-3 px-5 bg-white border border-brand-border rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase text-brand-navy hover:bg-brand-light transition-colors"
+          >
+            Close
+          </button>
         </div>
-
-        {/* Connect button */}
-        <motion.button
-          type="button"
-          onClick={handleConnect}
-          disabled={step === "connecting" || step === "done"}
-          whileHover={{ y: -1 }}
-          whileTap={{ scale: 0.98 }}
-          transition={{ type: "spring", stiffness: 400, damping: 28 }}
-          className="inline-flex items-center justify-center gap-2 w-full py-3 px-6 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase hover:opacity-90 transition-opacity shadow-[0_4px_18px_-6px_rgba(26,26,232,0.45)] disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {step === "connecting" ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Connecting...
-            </>
-          ) : step === "done" ? (
-            <>
-              <CheckCircle2 size={14} />
-              Connected
-            </>
-          ) : (
-            <>
-              <LinkIcon size={14} />
-              Connect
-            </>
-          )}
-        </motion.button>
-
-        <p className="mt-3 text-center text-[11px] text-brand-muted m-0">
-          Make sure the employee-cli server is running on localhost:3001.
-        </p>
       </div>
     </Modal>
   );
