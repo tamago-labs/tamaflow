@@ -1,0 +1,23 @@
+module TamaFlow.Company.PayslipRecord where
+
+-- | Payslip status.
+data PayslipStatus
+  = Sent
+  | Viewed
+  deriving (Eq, Show)
+
+-- | Lightweight payslip reference on-ledger.
+-- The actual payslip content (markdown, amounts) is sent via P2P.
+-- This contract is just a pointer for audit and history.
+-- Uniqueness enforced off-chain (CLI/frontend checks for existing payslipId).
+template PayslipRecord
+  with
+    employer : Party
+    employee : Party
+    payslipId : Text
+    period : Text
+    status : PayslipStatus
+    createdAt : Time
+  where
+    signatory employer
+    observer employee

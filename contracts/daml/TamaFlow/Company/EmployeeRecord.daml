@@ -18,7 +18,7 @@ template EmployeeRecord
     observer employee
 
     -- | Employee checks in (auto-generated block ID from timestamp)
-    nonconsuming choice CheckIn : ()
+    choice CheckIn : ContractId EmployeeRecord
       with
         blockStart : Time
         blockEnd : Time
@@ -27,11 +27,10 @@ template EmployeeRecord
         let blockId = show blockStart
         let newBlock = BlockInfo { blockStart, blockEnd, status = Open }
         let newBlocks = TM.insert blockId newBlock blocks
-        _ <- create this with blocks = newBlocks
-        return ()
+        create this with blocks = newBlocks
 
     -- | Employer confirms a block
-    nonconsuming choice ConfirmBlock : ()
+    choice ConfirmBlock : ContractId EmployeeRecord
       with
         blockId : Text
       controller employer
@@ -41,11 +40,10 @@ template EmployeeRecord
           Just oldBlock -> do
             let newBlock = oldBlock with status = Confirmed
             let newBlocks = TM.insert blockId newBlock blocks
-            _ <- create this with blocks = newBlocks
-            return ()
+            create this with blocks = newBlocks
 
     -- | Employer rejects a block
-    nonconsuming choice RejectBlock : ()
+    choice RejectBlock : ContractId EmployeeRecord
       with
         blockId : Text
       controller employer
@@ -55,5 +53,4 @@ template EmployeeRecord
           Just oldBlock -> do
             let newBlock = oldBlock with status = Rejected
             let newBlocks = TM.insert blockId newBlock blocks
-            _ <- create this with blocks = newBlocks
-            return ()
+            create this with blocks = newBlocks

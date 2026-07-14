@@ -1,8 +1,10 @@
 module TamaFlow.Company.CompanyProfile where
 
+import DA.Time
 import DA.TextMap as TM
 
 import TamaFlow.Company.EmployeeRecord (EmployeeRecord(..))
+import TamaFlow.Company.PayslipRecord (PayslipRecord(..), PayslipStatus(..))
 import TamaFlow.Company.Types (BlockInfo(..))
 
 -- | Company profile. Admin creates, employer manages.
@@ -31,3 +33,20 @@ template CompanyProfile
           displayName
           role
           blocks = TM.empty
+
+    -- | Create payslip record. Employer exercises when sending payslip.
+    nonconsuming choice CreatePayslip : ContractId PayslipRecord
+      with
+        employee : Party
+        payslipId : Text
+        period : Text
+      controller employer
+      do
+        now <- getTime
+        create PayslipRecord with
+          employer
+          employee
+          payslipId
+          period
+          status = Sent
+          createdAt = now
