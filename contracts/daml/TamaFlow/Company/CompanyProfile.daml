@@ -33,6 +33,7 @@ template CompanyProfile
           displayName
           role
           blocks = TM.empty
+          points = 0
 
     -- | Create payslip record. Employer exercises when sending payslip.
     nonconsuming choice CreatePayslip : ContractId PayslipRecord

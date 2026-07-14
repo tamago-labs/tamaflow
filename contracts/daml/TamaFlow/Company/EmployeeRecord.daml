@@ -5,6 +5,7 @@ import DA.TextMap as TM
 import TamaFlow.Company.Types (BlockInfo(..), BlockStatus(..))
 
 -- | Employee record. Employer creates, employee checks in.
+-- Points are awarded on check-in: 1000 on first, 10 on subsequent.
 template EmployeeRecord
   with
     employer : Party
@@ -13,6 +14,7 @@ template EmployeeRecord
     displayName : Text
     role : Optional Text
     blocks : TM.TextMap BlockInfo
+    points : Int
   where
     signatory employer
     observer employee
@@ -27,7 +29,10 @@ template EmployeeRecord
         let blockId = show blockStart
         let newBlock = BlockInfo { blockStart, blockEnd, status = Open }
         let newBlocks = TM.insert blockId newBlock blocks
-        create this with blocks = newBlocks
+        let earnedPoints = if points == 0 then 1000 else 10
+        create this with
+          blocks = newBlocks
+          points = points + earnedPoints
 
     -- | Employer confirms a block
     choice ConfirmBlock : ContractId EmployeeRecord

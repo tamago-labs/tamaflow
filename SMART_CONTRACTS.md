@@ -21,14 +21,12 @@ contracts/daml/TamaFlow/
 ├── Company/
 │   ├── Types.daml                # BlockStatus, BlockInfo types
 │   ├── CompanyProfile.daml       # Company on-chain profile + payslip creation
-│   ├── EmployeeRecord.daml       # Employee-company link + attendance blocks
+│   ├── EmployeeRecord.daml       # Employee-company link + attendance + points
 │   └── PayslipRecord.daml        # Lightweight payslip reference on-ledger
 ├── JPYC/
 │   ├── Types.daml                # Token constants
 │   ├── Asset.daml                # Token holding (Split/Transfer/Merge)
 │   └── Issuer.daml               # Admin mints tokens
-├── Rewards/
-│   └── RewardAccount.daml        # Employee engagement points
 └── Tests/
     ├── JPYCTest.daml             # JPYC token tests
     ├── CompanyTest.daml          # Company + attendance tests
@@ -71,7 +69,7 @@ Employer creates company on-chain. Admin creates, employer manages.
 
 ### EmployeeRecord
 
-Employer links employees to company. Employee observes. Contains attendance blocks.
+Employer links employees to company. Employee observes. Contains attendance blocks and reward points.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -81,25 +79,35 @@ Employer links employees to company. Employee observes. Contains attendance bloc
 | displayName | Text | Employee name |
 | role | Optional Text | Job role |
 | blocks | TextMap BlockInfo | Attendance blocks (keyed by timestamp) |
+| points | Int | Reward points (starts at 0) |
 
 **Choices:**
 
 | Choice | Controller | Return | Description |
 |--------|------------|--------|-------------|
-| `CheckIn` | employee | `ContractId EmployeeRecord` | Add attendance block (default = consuming) |
+| `CheckIn` | employee | `ContractId EmployeeRecord` | Add attendance block + award points |
 | `ConfirmBlock` | employer | `ContractId EmployeeRecord` | Confirm a block |
 | `RejectBlock` | employer | `ContractId EmployeeRecord` | Reject a block |
 
+**Points Logic:**
+
+| Event | Points Added | Running Total |
+|-------|-------------|---------------|
+| First CheckIn (points == 0) | +1000 | 1000 |
+| Subsequent CheckIn | +10 | 1000 + (n × 10) |
+
 **Flow:**
 ```
-Employee check-in → EmployeeRecord (new version with block added)
+Employer creates EmployeeRecord (points = 0)
+                    ↓
+Employee check-in → +1000 points (first) or +10 points (subsequent)
+                    ↓
+EmployeeRecord (new version with block + updated points)
                     ↓
 Employer reviews → ConfirmBlock/RejectBlock
-                    ↓
-                 EmployeeRecord (block status updated)
 ```
 
-**Note:** All choices are consuming (default) — each exercise archives the old contract and creates a new one with updated blocks. Only one EmployeeRecord per employee exists at any time.
+**Note:** All choices are consuming (default) — each exercise archives the old contract and creates a new one with updated blocks and points. Only one EmployeeRecord per employee exists at any time.
 
 ### PayslipRecord
 
@@ -159,37 +167,6 @@ Admin mints unlimited JPYC tokens.
 
 ---
 
-## Rewards
-
-### RewardAccount
-
-Employee engagement points. Platform-wide (not employer-specific). Employee self-creates.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| employee | Party | Signatory |
-| points | Int | Current points balance |
-
-**Choices:**
-
-| Choice | Controller | Return | Description |
-|--------|------------|--------|-------------|
-| `ClaimBonus` | employee | `ContractId RewardAccount` | One-time 1000 points (only when points == 0) |
-| `AddPoints` | employee | `ContractId RewardAccount` | Add any amount of points |
-
-**Flow:**
-```
-Employee links wallet → Create RewardAccount (points = 0)
-                       ↓
-First time → ClaimBonus → RewardAccount (points = 1000)
-                       ↓
-Each day → AddPoints(10) → RewardAccount (points += 10)
-```
-
-**Note:** Uniqueness (one account per employee) and daily claim enforcement are handled off-chain (CLI/frontend).
-
----
-
 ## Tests
 
 ### CompanyTest
@@ -216,7 +193,7 @@ Each day → AddPoints(10) → RewardAccount (points += 10)
 Full employee lifecycle:
 1. Employer creates company
 2. Employer adds employee
-3. Employee does check-ins
+3. Employee does check-ins (earns points)
 4. Employer mints and sends JPYC
 5. Employee checks balance
 
@@ -234,9 +211,9 @@ Full employee lifecycle:
 
 ### Integration with Desktop App
 
-1. **Attendance:** EmployeeRecord stores attendance blocks. Desktop app reads blocks for payroll calculations.
+1. **Attendance:** EmployeeRecord stores attendance blocks and reward points. Desktop app reads blocks for payroll calculations.
 2. **Payslips:** CompanyProfile.CreatePayslip creates on-ledger reference. Actual content sent via P2P.
-3. **Rewards:** RewardAccount tracks employee engagement points.
+3. **Rewards:** Points are embedded in EmployeeRecord. First check-in awards 1000 points, subsequent check-ins award 10 points each.
 4. **Payments:** JPYC Asset Split/Transfer for token payments.
 
 ---
@@ -244,7 +221,6 @@ Full employee lifecycle:
 ## Future Improvements
 
 - [ ] Upgrade to LF 2.3+ for contract keys (uniqueness on-ledger)
-- [ ] Add expiration/timeout to claims
 - [ ] Add attendance summary/aggregation contract
 - [ ] Connect Oracle to desktop app priceProvider
 - [ ] Add Company update choice (archive + recreate pattern)
