@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "offset": 0,
+  "schema": [
+    {
+      "id": 0,
+      "name": "@tamaflow/add-invite",
+      "requestType": "@tamaflow/invite",
+      "version": 1
+    },
+    {
+      "id": 1,
+      "name": "@tamaflow/add-chat",
+      "requestType": "@tamaflow/chat-msg",
+      "version": 1
+    },
+    {
+      "id": 2,
+      "name": "@tamaflow/remove-chats",
+      "requestType": "@tamaflow/chats-remove",
+      "version": 1
+    },
+    {
+      "id": 3,
+      "name": "@tamaflow/update-ai-state",
+      "requestType": "@tamaflow/ai-state-update",
+      "version": 1
+    },
+    {
+      "id": 4,
+      "name": "@tamaflow/relay-request",
+      "requestType": "@tamaflow/relay-request",
+      "version": 1
+    },
+    {
+      "id": 5,
+      "name": "@tamaflow/relay-response",
+      "requestType": "@tamaflow/relay-response",
+      "version": 1
+    },
+    {
+      "id": 6,
+      "name": "@tamaflow/relay-cancel",
+      "requestType": "@tamaflow/relay-cancel",
+      "version": 1
+    },
+    {
+      "id": 7,
+      "name": "@tamaflow/add-writer",
+      "requestType": "@tamaflow/writer",
+      "version": 1
+    }
+  ]
+}

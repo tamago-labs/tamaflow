@@ -1,0 +1,56 @@
+module TamaFlow.Company.EmployeeRecord where
+
+import DA.TextMap as TM
+
+import TamaFlow.Company.Types (BlockInfo(..), BlockStatus(..))
+
+-- | Employee record. Employer creates, employee checks in.
+template EmployeeRecord
+  with
+    employer : Party
+    employee : Party
+    companyName : Text
+    displayName : Text
+    role : Optional Text
+    blocks : TM.TextMap BlockInfo
+  where
+    signatory employer
+    observer employee
+
+    -- | Employee checks in (auto-generated block ID from timestamp)
+    choice CheckIn : ContractId EmployeeRecord
+      with
+        blockStart : Time
+        blockEnd : Time
+      controller employee
+      do
+        let blockId = show blockStart
+        let newBlock = BlockInfo { blockStart, blockEnd, status = Open }
+        let newBlocks = TM.insert blockId newBlock blocks
+        create this with blocks = newBlocks
+
+    -- | Employer confirms a block
+    choice ConfirmBlock : ContractId EmployeeRecord
+      with
+        blockId : Text
+      controller employer
+      do
+        case TM.lookup blockId blocks of
+          Nothing -> error "Block not found"
+          Just oldBlock -> do
+            let newBlock = oldBlock with status = Confirmed
+            let newBlocks = TM.insert blockId newBlock blocks
+            create this with blocks = newBlocks
+
+    -- | Employer rejects a block
+    choice RejectBlock : ContractId EmployeeRecord
+      with
+        blockId : Text
+      controller employer
+      do
+        case TM.lookup blockId blocks of
+          Nothing -> error "Block not found"
+          Just oldBlock -> do
+            let newBlock = oldBlock with status = Rejected
+            let newBlocks = TM.insert blockId newBlock blocks
+            create this with blocks = newBlocks

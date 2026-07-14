@@ -3,9 +3,8 @@ import {
   Wallet,
   ArrowRightLeft,
   Gift,
-  IdCard, 
-  FileText,
   Settings as SettingsIcon,
+  Clock,
   type LucideIcon,
 } from "lucide-react";
 
@@ -44,30 +43,18 @@ export interface NavCategory {
 export const topItems: NavItem[] = [
   { path: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
   { path: "/app/assets", label: "Assets", icon: Wallet },
+  { path: "/app/attendance", label: "Attendance", icon: Clock },
   { path: "/app/payments", label: "Payments", icon: ArrowRightLeft },
   { path: "/app/rewards", label: "Rewards Hub", icon: Gift },
-];
-
-/** Categorized items, rendered with a mono label. */
-export const navCategories: NavCategory[] = [
-  {
-    key: "account",
-    label: "Account",
-    items: [
-      { path: "/app/identification", label: "Identification", icon: IdCard },
-      // { path: "/app/security", label: "Security", icon: ShieldCheck },
-      { path: "/app/statement", label: "Statements", icon: FileText },
-      { path: "/app/settings", label: "Settings", icon: SettingsIcon },
-    ],
-  },
+  { path: "/app/settings", label: "Settings", icon: SettingsIcon },
 ];
 
 /** Single utility button rendered at the very bottom of the Sidebar.
- *  Opens the DownloadEmployerClientModal rather than navigating.
+ *  Opens the HowToUseModal rather than navigating.
  *  Keep the label short so it fits on a single line in the 200px sidebar. */
 export const bottomLink: { href: string; label: string } = {
   href: "https://github.com/tamago-labs/tamaflow",
-  label: "Download Client",
+  label: "How to Use",
 };
 
 /* -------------------------------------------------------------------------- */
@@ -78,6 +65,7 @@ export const routeLabels: Record<string, string> = {
   assets: "Assets",
   payments: "Payments",
   rewards: "Rewards Hub",
+  attendance: "Attendance",
   identification: "Identification",
   security: "Security",
   statement: "Statements",

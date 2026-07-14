@@ -1,0 +1,14 @@
+module TamaFlow.Company.Types where
+
+data BlockStatus
+  = Open
+  | Confirmed
+  | Rejected
+  deriving (Eq, Show)
+
+data BlockInfo = BlockInfo
+  with
+    blockStart : Time
+    blockEnd : Time
+    status : BlockStatus
+  deriving (Eq, Show)

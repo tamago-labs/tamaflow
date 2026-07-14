@@ -1,0 +1,112 @@
+module TamaFlow.JPYC.Asset where
+
+import TamaFlow.JPYC.Types (instrumentIdText)
+
+-- | Sum and validate sender-owned holdings.
+validateInputHoldings : Party -> [ContractId JPYCAsset] -> Update ([ContractId JPYCAsset], Decimal)
+validateInputHoldings expectedOwner cids = do
+  assertMsg "At least one input holding is required" (cids /= [])
+  validateInputHoldingsLoop expectedOwner cids 0.0 []
+
+validateInputHoldingsLoop : Party -> [ContractId JPYCAsset] -> Decimal -> [ContractId JPYCAsset] -> Update ([ContractId JPYCAsset], Decimal)
+validateInputHoldingsLoop _ [] total acc = return (reverse acc, total)
+validateInputHoldingsLoop expectedOwner (cid :: rest) total acc = do
+  asset <- fetch cid
+  assertMsg "Holding owner mismatch" (asset.owner == expectedOwner)
+  assertMsg "Holding amount must be positive" (asset.amount > 0.0)
+  validateInputHoldingsLoop expectedOwner rest (total + asset.amount) (cid :: acc)
+
+mintAsset : Party -> Party -> Decimal -> [Party] -> Update (ContractId JPYCAsset)
+mintAsset issuer owner amount observers = do
+  assertMsg "Mint amount must be positive" (amount > 0.0)
+  create
+    JPYCAsset with
+      issuer = issuer
+      owner = owner
+      amount = amount
+      instrumentId = instrumentIdText
+      observers = observers
+
+-- | JPYC token holding.
+template JPYCAsset
+  with
+    issuer : Party
+    owner : Party
+    amount : Decimal
+    instrumentId : Text
+    observers : [Party]
+  where
+    signatory issuer
+    observer owner, observers
+
+    ensure amount > 0.0
+
+    -- | Split: isolate an exact payment amount.
+    choice Split : (ContractId JPYCAsset, Optional (ContractId JPYCAsset))
+      with
+        paymentAmount : Decimal
+      controller owner
+      do
+        assertMsg "Payment amount must be positive" (paymentAmount > 0.0)
+        assertMsg "Insufficient balance for split" (amount >= paymentAmount)
+
+        paymentCid <-
+          create
+            JPYCAsset with
+              issuer
+              owner
+              amount = paymentAmount
+              instrumentId
+              observers
+
+        changeCid <-
+          if amount > paymentAmount
+            then do
+              cid <-
+                create
+                  JPYCAsset with
+                    issuer
+                    owner
+                    amount = amount - paymentAmount
+                    instrumentId
+                    observers
+              return (Some cid)
+            else return None
+
+        return (paymentCid, changeCid)
+
+    -- | TransferAsset: transfer holding to a new party.
+    choice TransferAsset : ContractId JPYCAsset
+      with
+        newOwner : Party
+      controller owner
+      do
+        assertMsg "Cannot transfer to the current owner" (newOwner /= owner)
+
+        create
+          JPYCAsset with
+            issuer
+            owner = newOwner
+            amount
+            instrumentId
+            observers
+
+    -- | MergeWith: consolidate two same-owner UTXOs into one.
+    choice MergeWith : ContractId JPYCAsset
+      with
+        otherCid : ContractId JPYCAsset
+      controller owner
+      do
+        otherAsset <- fetch otherCid
+        assertMsg "Cannot merge with self" (otherCid /= self)
+        assertMsg "Merge requires same owner" (otherAsset.owner == owner)
+        assertMsg "Merge requires same issuer" (otherAsset.issuer == issuer)
+        assertMsg "Merge requires same instrument" (otherAsset.instrumentId == instrumentId)
+
+        create
+          JPYCAsset with
+            issuer
+            owner
+            amount = amount + otherAsset.amount
+            instrumentId
+            observers

@@ -2,44 +2,27 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, ChevronRight, LogIn, LogOut, User, Droplets, PenLine } from "lucide-react";
 import { routeLabels } from "@/lib/nav";
-import ConnectButton from "@/components/wallet/ConnectButton";
-import NetworkBadge from "@/components/wallet/NetworkBadge";
+import { useWalletMode } from "@/lib/wallet/useWalletMode";
+import ConnectModal from "./ConnectModal";
+import AccountInfoModal from "./AccountInfoModal";
+import FaucetModal from "./FaucetModal";
+import UsernameModal from "./UsernameModal";
 
-/**
- * Sticky 56px top bar for the in-app shell.
- *
- *   Left  — clickable breadcrumb derived from the matched route.
- *   Right — Network badge + Connect Wallet button.
- *
- * The breadcrumb is built from `routeLabels` (a static route→label
- * map in `lib/nav.ts`) so we don't need a router config to
- * introspect. The first crumb is always the Dashboard root, with
- * deeper segments appended.
- */
+function truncateParty(partyId: string): string {
+  if (!partyId) return "";
+  if (partyId.length <= 20) return partyId;
+  return `${partyId.slice(0, 12)}...${partyId.slice(-6)}`;
+}
 
 interface Crumb {
   path: string;
   label: string;
 }
 
-/**
- * Build breadcrumbs from a URL pathname. The /app prefix is stripped
- * before we look up labels in the routeLabels map.
- *
- * Mirrors the new Sidebar structure:
- *   /app                          → Dashboard
- *   /app/assets                   → Assets
- *   /app/payments                 → Payments
- *   /app/rewards                  → Rewards Hub
- *   /app/identification           → Identification
- *   /app/security                  → Security
- *   /app/statement                 → Statements
- *   /app/settings                  → Settings
- */
 function buildCrumbs(pathname: string): Crumb[] {
-  // Strip /app prefix and any trailing slash
   const stripped = pathname.replace(/^\/app\/?/, "").replace(/\/$/, "");
   const segments = stripped.split("/").filter(Boolean);
 
@@ -59,41 +42,45 @@ function buildCrumbs(pathname: string): Crumb[] {
 export default function TopBar() {
   const pathname = usePathname() ?? "/app";
   const crumbs = buildCrumbs(pathname);
+  const { connected, cliPartyId, disconnect } = useWalletMode();
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
+  const [accountInfoOpen, setAccountInfoOpen] = useState(false);
+  const [faucetModalOpen, setFaucetModalOpen] = useState(false);
+  const [usernameModalOpen, setUsernameModalOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleDisconnect = () => {
+    disconnect();
+    setDropdownOpen(false);
+  };
 
   return (
     <header className="sticky top-0 z-50 h-14 bg-white border-b border-brand-border flex items-center justify-between px-8">
       {/* Breadcrumb */}
-      <nav
-        aria-label="Breadcrumb"
-        className="flex items-center gap-1.5 min-w-0 flex-1"
-      >
+      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 min-w-0 flex-1">
         <ol className="flex items-center gap-1.5 min-w-0">
           {crumbs.map((c, i) => {
             const isLast = i === crumbs.length - 1;
             return (
-              <li
-                key={c.path}
-                className="flex items-center gap-1.5 min-w-0"
-              >
-                {i > 0 && (
-                  <ChevronRight
-                    size={12}
-                    className="text-brand-muted flex-shrink-0"
-                    aria-hidden
-                  />
-                )}
+              <li key={c.path} className="flex items-center gap-1.5 min-w-0">
+                {i > 0 && <ChevronRight size={12} className="text-brand-muted flex-shrink-0" aria-hidden />}
                 {isLast ? (
-                  <span
-                    aria-current="page"
-                    className="font-mono text-[11px] tracking-wider2 uppercase whitespace-nowrap text-brand-navy font-medium"
-                  >
+                  <span aria-current="page" className="font-mono text-[11px] tracking-wider2 uppercase whitespace-nowrap text-brand-navy font-medium">
                     {c.label}
                   </span>
                 ) : (
-                  <Link
-                    href={c.path}
-                    className="font-mono text-[11px] tracking-wider2 uppercase whitespace-nowrap text-brand-muted hover:text-brand-blue transition-colors no-underline"
-                  >
+                  <Link href={c.path} className="font-mono text-[11px] tracking-wider2 uppercase whitespace-nowrap text-brand-muted hover:text-brand-blue transition-colors no-underline">
                     {c.label}
                   </Link>
                 )}
@@ -104,13 +91,86 @@ export default function TopBar() {
       </nav>
 
       {/* Right-side actions */}
-      <div className="flex items-center gap-3">
-        {/* Network badge */}
-        <NetworkBadge />
+      <div className="flex items-center gap-2" ref={menuRef}>
+        {connected && cliPartyId ? (
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer"
+            >
+              <span className="font-mono text-[10px]">{truncateParty(cliPartyId)}</span>
+              <ChevronDown size={11} />
+            </button>
 
-        {/* Connect Wallet — drives the Loop SDK */}
-        <ConnectButton />
+            {dropdownOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50 w-44 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
+                <div className="p-1">
+                  <button
+                    type="button"
+                    onClick={() => { setDropdownOpen(false); setAccountInfoOpen(true); }}
+                    className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-[13px] text-brand-navy hover:bg-brand-light cursor-pointer"
+                  >
+                    <User size={14} className="text-brand-muted" />
+                    Account Info
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDropdownOpen(false); setUsernameModalOpen(true); }}
+                    className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-[13px] text-brand-navy hover:bg-brand-light cursor-pointer"
+                  >
+                    <PenLine size={14} className="text-brand-muted" />
+                    Change Username
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setDropdownOpen(false); setFaucetModalOpen(true); }}
+                    className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-[13px] text-brand-navy hover:bg-brand-light cursor-pointer"
+                  >
+                    <Droplets size={14} className="text-brand-muted" />
+                    Faucet
+                  </button>
+                  <div className="my-0.5 border-t border-gray-100" />
+                  <button
+                    type="button"
+                    onClick={handleDisconnect}
+                    className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-[13px] text-red-600 hover:bg-red-50 cursor-pointer"
+                  >
+                    <LogOut size={14} />
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConnectModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-md border border-brand-blue bg-white px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-light cursor-pointer"
+          >
+            <LogIn size={12} />
+            Connect
+          </button>
+        )}
       </div>
+
+      <ConnectModal
+        open={connectModalOpen}
+        onClose={() => setConnectModalOpen(false)}
+      />
+      <AccountInfoModal
+        open={accountInfoOpen}
+        onClose={() => setAccountInfoOpen(false)}
+      />
+      <FaucetModal
+        open={faucetModalOpen}
+        onClose={() => setFaucetModalOpen(false)}
+      />
+      <UsernameModal
+        open={usernameModalOpen}
+        onClose={() => setUsernameModalOpen(false)}
+      />
     </header>
   );
 }

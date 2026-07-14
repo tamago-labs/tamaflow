@@ -1,0 +1,28 @@
+module TamaFlow.Rewards.RewardAccount where
+
+-- | Employee reward account. Platform-wide, not employer-specific.
+-- Employee self-creates. Contract key ensures one per employee.
+-- Daily claim enforcement is handled off-chain (CLI/frontend).
+-- Uniqueness enforced off-chain (one RewardAccount per employee).
+template RewardAccount
+  with
+    employee : Party
+    points : Int
+  where
+    signatory employee
+
+    -- | First-time bonus: 1000 points (only when points == 0)
+    choice ClaimBonus : ContractId RewardAccount
+      controller employee
+      do
+        if points /= 0
+          then error "Bonus already claimed"
+          else create this with points = 1000
+
+    -- | Add points (daily claim or other rewards)
+    choice AddPoints : ContractId RewardAccount
+      with
+        amount : Int
+      controller employee
+      do
+        create this with points = points + amount

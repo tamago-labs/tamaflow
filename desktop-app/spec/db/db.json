@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "offset": 0,
+  "schema": [
+    {
+      "name": "chat",
+      "namespace": "tamaflow",
+      "id": 0,
+      "type": 1,
+      "version": 1,
+      "versionField": null,
+      "indexes": [],
+      "schema": "@tamaflow/chat-msg",
+      "derived": false,
+      "key": [
+        "id"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "invites",
+      "namespace": "tamaflow",
+      "id": 1,
+      "type": 1,
+      "version": 1,
+      "versionField": null,
+      "indexes": [],
+      "schema": "@tamaflow/invite",
+      "derived": false,
+      "key": [
+        "id"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "ai-state",
+      "namespace": "tamaflow",
+      "id": 2,
+      "type": 1,
+      "version": 1,
+      "versionField": null,
+      "indexes": [],
+      "schema": "@tamaflow/ai-state",
+      "derived": false,
+      "key": [
+        "writerKey"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "relay-request",
+      "namespace": "tamaflow",
+      "id": 3,
+      "type": 1,
+      "version": 1,
+      "versionField": null,
+      "indexes": [],
+      "schema": "@tamaflow/relay-request",
+      "derived": false,
+      "key": [
+        "requestId"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "relay-response",
+      "namespace": "tamaflow",
+      "id": 4,
+      "type": 1,
+      "version": 1,
+      "versionField": null,
+      "indexes": [],
+      "schema": "@tamaflow/relay-response",
+      "derived": false,
+      "key": [
+        "requestId",
+        "fromKey"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "relay-cancel",
+      "namespace": "tamaflow",
+      "id": 5,
+      "type": 1,
+      "version": 1,
+      "versionField": null,
+      "indexes": [],
+      "schema": "@tamaflow/relay-cancel",
+      "derived": false,
+      "key": [
+        "requestId"
+      ],
+      "trigger": null
+    }
+  ]
+}

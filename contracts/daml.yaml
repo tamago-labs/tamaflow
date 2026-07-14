@@ -1,0 +1,8 @@
+sdk-version: 3.5.1
+name: tamaflow-dev8
+source: daml
+version: 1.0.8
+dependencies:
+  - daml-prim
+  - daml-stdlib
+  - daml-script

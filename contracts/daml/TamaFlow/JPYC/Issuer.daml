@@ -1,0 +1,22 @@
+module TamaFlow.JPYC.Issuer where
+
+import TamaFlow.JPYC.Asset (JPYCAsset(..), mintAsset)
+
+-- | JPYC Issuer. Admin mints tokens to any owner.
+template JPYCIssuer
+  with
+    admin : Party
+    instrumentId : Text
+  where
+    signatory admin
+
+    -- | Mint JPYC tokens to any owner. Admin is the minter.
+    nonconsuming choice Mint : ContractId JPYCAsset
+      with
+        owner : Party
+        amount : Decimal
+        observers : [Party]
+      controller admin
+      do
+        assertMsg "Mint amount must be positive" (amount > 0.0)
+        mintAsset admin owner amount observers

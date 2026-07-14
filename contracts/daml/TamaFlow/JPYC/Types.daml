@@ -1,0 +1,14 @@
+module TamaFlow.JPYC.Types where
+
+-- CIP-0056 requires decimals to always be 10 (Daml Decimal type has 10 decimal places)
+tokenDecimals : Int
+tokenDecimals = 10
+
+tokenName : Text
+tokenName = "JPYC Token"
+
+tokenSymbol : Text
+tokenSymbol = "JPYC"
+
+instrumentIdText : Text
+instrumentIdText = "JPYC"

@@ -26,6 +26,7 @@ const PRICES: Record<string, Price> = {
   CC: { usd: 0.153, change24h: 1.47 },
   cETH: { usd: 1629.618, change24h: -2.78 },
   CBTC: { usd: 61138.372, change24h: -2.69 },
+  JPYC: { usd: 0.0067, change24h: 0.01 },
 };
 
 export const PriceContext = createContext<Record<string, Price>>(PRICES);
