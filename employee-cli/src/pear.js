@@ -72,18 +72,15 @@ class CliTamaflowRoom extends ReadyResource {
       apply: this._applyBase.bind(this)
     })
 
-    const writablePromise = new Promise((resolve) => {
-      this.base.on('update', () => {
-        if (this.base.writable) resolve()
-        if (!this.base._interrupting) this.emit('update')
-      })
+    // Don't block on writable — let it resolve in background
+    this.base.on('update', () => {
+      if (!this.base._interrupting) this.emit('update')
     })
 
     await this.base.ready()
     this.swarm.join(this.base.discoveryKey)
 
-    if (!this.base.writable) await writablePromise
-
+    // Start download in background (non-blocking)
     this.view.core.download({ start: 0, end: -1 })
   }
 

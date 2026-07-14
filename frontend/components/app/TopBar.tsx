@@ -42,7 +42,7 @@ function buildCrumbs(pathname: string): Crumb[] {
 export default function TopBar() {
   const pathname = usePathname() ?? "/app";
   const crumbs = buildCrumbs(pathname);
-  const { connected, cliPartyId, disconnect } = useWalletMode();
+  const { connected, cliPartyId, p2pConnected, disconnect } = useWalletMode();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [accountInfoOpen, setAccountInfoOpen] = useState(false);
   const [faucetModalOpen, setFaucetModalOpen] = useState(false);
@@ -117,7 +117,8 @@ export default function TopBar() {
                   <button
                     type="button"
                     onClick={() => { setDropdownOpen(false); setUsernameModalOpen(true); }}
-                    className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-[13px] text-brand-navy hover:bg-brand-light cursor-pointer"
+                    disabled={!p2pConnected}
+                    className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-[13px] text-brand-navy hover:bg-brand-light cursor-pointer disabled:text-gray-400 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                   >
                     <PenLine size={14} className="text-brand-muted" />
                     Change Username
