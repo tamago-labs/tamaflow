@@ -65,11 +65,11 @@ export const navCategories: NavCategory[] = [
 ];
 
 /** Single utility button rendered at the very bottom of the Sidebar.
- *  Opens the DownloadEmployerClientModal rather than navigating.
+ *  Opens the HowToUseModal rather than navigating.
  *  Keep the label short so it fits on a single line in the 200px sidebar. */
 export const bottomLink: { href: string; label: string } = {
   href: "https://github.com/tamago-labs/tamaflow",
-  label: "Download Client",
+  label: "How to Use",
 };
 
 /* -------------------------------------------------------------------------- */

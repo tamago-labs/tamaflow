@@ -3,10 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Download } from "lucide-react";
-import { topItems, navCategories, bottomLink } from "@/lib/nav";
+import { HelpCircle } from "lucide-react";
+import { topItems, navCategories } from "@/lib/nav";
 import BrandLockup from "@/components/shared/BrandLockup";
-import DownloadEmployerClientModal from "./DownloadEmployerClientModal";
+import HowToUseModal from "./HowToUseModal";
 
 /**
  * Fixed 200px left navigation for the in-app shell (Employee Portal).
@@ -25,7 +25,7 @@ import DownloadEmployerClientModal from "./DownloadEmployerClientModal";
  */
 export default function Sidebar() {
   const pathname = usePathname() ?? "";
-  const [downloadOpen, setDownloadOpen] = useState(false);
+  const [howToUseOpen, setHowToUseOpen] = useState(false);
 
   return (
     <>
@@ -102,28 +102,28 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        {/* Bottom utility button — Download Desktop App */}
+        {/* Bottom utility button — How to Use */}
         <div className="pt-4 mt-2 border-t border-brand-border">
           <button
             type="button"
-            onClick={() => setDownloadOpen(true)}
-            className="flex items-center justify-center gap-2.5 py-2.5 px-3 rounded-md w-full bg-transparent border-0 cursor-pointer text-brand-muted hover:text-brand-navy hover:bg-brand-light transition-colors group"
+            onClick={() => setHowToUseOpen(true)}
+            className="flex items-center gap-2.5 py-2 px-3 rounded-md w-full bg-transparent border-0 cursor-pointer text-brand-muted hover:text-brand-navy hover:bg-brand-light transition-colors group"
           >
-            <Download
+            <HelpCircle
               size={16}
               className="flex-shrink-0 group-hover:text-brand-blue"
             />
-            <span className="font-mono text-[10px] font-bold tracking-wider2 text-brand-muted group-hover:text-brand-navy uppercase">
-              {bottomLink.label}
+            <span className="font-sans text-[13px] text-brand-muted group-hover:text-brand-navy">
+              What's New
             </span>
           </button>
         </div>
       </aside>
 
-      {/* Download modal — opens when the bottom button is clicked */}
-      <DownloadEmployerClientModal
-        open={downloadOpen}
-        onClose={() => setDownloadOpen(false)}
+      {/* How to Use modal — opens when the bottom button is clicked */}
+      <HowToUseModal
+        open={howToUseOpen}
+        onClose={() => setHowToUseOpen(false)}
       />
     </>
   );
