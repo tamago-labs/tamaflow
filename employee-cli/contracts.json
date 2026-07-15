@@ -1,0 +1,12 @@
+{
+  "packageId": "4b54a4a5de912eca2ddfcf7126efe2c95a76a82bc1e61eda26b5260db05bbc48",
+  "templates": {
+    "CompanyProfile": "4b54a4a5de912eca2ddfcf7126efe2c95a76a82bc1e61eda26b5260db05bbc48:TamaFlow.Company.CompanyProfile:CompanyProfile",
+    "EmployeeRecord": "4b54a4a5de912eca2ddfcf7126efe2c95a76a82bc1e61eda26b5260db05bbc48:TamaFlow.Company.EmployeeRecord:EmployeeRecord",
+    "JPYCAsset": "4b54a4a5de912eca2ddfcf7126efe2c95a76a82bc1e61eda26b5260db05bbc48:TamaFlow.JPYC.Asset:JPYCAsset",
+    "PayslipRecord": "4b54a4a5de912eca2ddfcf7126efe2c95a76a82bc1e61eda26b5260db05bbc48:TamaFlow.Company.PayslipRecord:PayslipRecord"
+  },
+  "contracts": {
+    "company": "00ff8857228d7f5f372ee72716f1e0ef30d958e6a1bdd49c1c3ab43f73d5a8a491ca121220d7df1d1bc05edadc3ba23f39700482694fa67dd29740f1741010ac674f4aba31"
+  }
+}

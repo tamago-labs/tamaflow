@@ -220,10 +220,30 @@ export interface BridgeAPI {
     getEmployees(partyId: string): Promise<unknown[]>
     addEmployee(companyContractId: string, employeePartyId: string, displayName: string, role: string): Promise<unknown>
     exerciseBlockChoice(contractId: string, choice: string, blockId: string): Promise<unknown>
+    createPayslip(companyContractId: string, employeePartyId: string, payslipId: string, period: string): Promise<unknown>
   }
   payslip: {
     generate(opts: { settlementData: Record<string, unknown>; companyProfile: Record<string, unknown>; style: string }): Promise<{ success: boolean; markdown?: string; error?: string }>
     buildPayload(opts: { markdown: string; settlementData: Record<string, unknown>; companyProfile: Record<string, unknown>; style: string }): Promise<{ success: boolean; payload?: Record<string, unknown>; error?: string }>
+  }
+  contractsConfig: {
+    get(): Promise<ContractsConfig>
+    save(config: ContractsConfig): Promise<ContractsConfig>
+    reset(): Promise<ContractsConfig>
+    onChange(cb: (config: ContractsConfig) => void): () => void
+  }
+}
+
+export interface ContractsConfig {
+  packageId: string
+  templates: {
+    companyProfile: string
+    employeeRecord: string
+    jpycAsset: string
+    payslipRecord: string
+  }
+  contracts: {
+    company: string
   }
 }
 
@@ -445,6 +465,13 @@ const noopBridge: BridgeAPI = {
     getEmployees: () => Promise.resolve([]),
     addEmployee: () => Promise.resolve(null),
     exerciseBlockChoice: () => Promise.resolve(null),
+    createPayslip: () => Promise.resolve(null),
+  },
+  contractsConfig: {
+    get: () => Promise.resolve({ packageId: '', templates: { companyProfile: '', employeeRecord: '', jpycAsset: '', payslipRecord: '' }, contracts: { company: '' } }),
+    save: (config) => Promise.resolve(config),
+    reset: () => Promise.resolve({ packageId: '', templates: { companyProfile: '', employeeRecord: '', jpycAsset: '', payslipRecord: '' }, contracts: { company: '' } }),
+    onChange: () => () => {},
   },
   payslip: {
     generate: () => Promise.resolve({ success: false, error: 'bridge not available' }),

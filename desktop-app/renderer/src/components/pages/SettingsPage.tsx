@@ -9,15 +9,16 @@
 // reduced to the lifecycle (status + create + export + destroy).
 
 import { useState, useEffect } from 'react'
-import { Wallet, Power, KeyRound, Trash2, Building2, Users } from 'lucide-react'
+import { Wallet, Power, KeyRound, Trash2, Building2, Users, FileCode } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useWallet } from '../../context/WalletContext'
 import { useRoom } from '../../hooks/useRoom'
 import { bridge } from '../../lib/bridge'
 import type { CompanyProfile, CompanyFile } from '../../ai/types'
+import type { ContractsConfig } from '../../lib/bridge'
 import CompanyForm from '../CompanyForm'
 
-type Tab = 'company' | 'p2p' | 'wallet'
+type Tab = 'company' | 'p2p' | 'wallet' | 'contracts'
 
 interface TabDef {
   key: Tab
@@ -28,7 +29,8 @@ interface TabDef {
 const TABS: TabDef[] = [
   { key: 'company', label: 'Company', icon: <Building2 size={12} /> },
   { key: 'p2p', label: 'Hyperswarm', icon: <Users size={12} /> },
-  { key: 'wallet', label: 'Wallet', icon: <Wallet size={12} /> }
+  { key: 'wallet', label: 'Wallet', icon: <Wallet size={12} /> },
+  { key: 'contracts', label: 'Contracts', icon: <FileCode size={12} /> }
 ]
 
 export function SettingsPage() {
@@ -41,6 +43,8 @@ export function SettingsPage() {
   const [companySaving, setCompanySaving] = useState(false)
   const [username, setUsername] = useState('')
   const [usernameSaving, setUsernameSaving] = useState(false)
+  const [contractsConfig, setContractsConfig] = useState<ContractsConfig | null>(null)
+  const [contractsSaving, setContractsSaving] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -49,6 +53,20 @@ export function SettingsPage() {
     })
     const unsub = bridge.company.onChange((file) => {
       if (!cancelled) setCompanyFile(file)
+    })
+    return () => {
+      cancelled = true
+      unsub()
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    bridge.contractsConfig.get().then((config) => {
+      if (!cancelled) setContractsConfig(config)
+    })
+    const unsub = bridge.contractsConfig.onChange((config) => {
+      if (!cancelled) setContractsConfig(config)
     })
     return () => {
       cancelled = true
@@ -67,6 +85,16 @@ export function SettingsPage() {
       await bridge.company.save(profile)
     } finally {
       setCompanySaving(false)
+    }
+  }
+
+  const handleContractsSave = async () => {
+    if (!contractsConfig) return
+    setContractsSaving(true)
+    try {
+      await bridge.contractsConfig.save(contractsConfig)
+    } finally {
+      setContractsSaving(false)
     }
   }
 
@@ -239,6 +267,88 @@ export function SettingsPage() {
             onSubmit={handleCompanySave}
             submitting={companySaving}
           />
+        </div>
+      )}
+
+      {tab === 'contracts' && (
+        <div className='max-w-2xl rounded-md border border-brand-border bg-white p-6'>
+          <p className='m-0 mb-3 font-mono text-[10px] uppercase tracking-wider2 text-brand-muted'>
+            Smart Contracts
+          </p>
+          <p className='m-0 mb-4 font-sans text-sm text-gray-500'>
+            Configure contract IDs and template IDs for the Canton DevNet deployment.
+          </p>
+
+          {contractsConfig && (
+            <div className='space-y-4'>
+              <div>
+                <label className='mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400'>
+                  Package ID
+                </label>
+                <input
+                  type='text'
+                  value={contractsConfig.packageId}
+                  onChange={(e) => setContractsConfig({ ...contractsConfig, packageId: e.target.value })}
+                  className='w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-mono text-xs text-gray-900 focus:border-blue-500 focus:outline-none'
+                />
+              </div>
+
+              <div>
+                <label className='mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400'>
+                  Company Contract ID
+                </label>
+                <input
+                  type='text'
+                  value={contractsConfig.contracts.company}
+                  onChange={(e) => setContractsConfig({ ...contractsConfig, contracts: { ...contractsConfig.contracts, company: e.target.value } })}
+                  className='w-full rounded-md border border-gray-300 bg-white px-3 py-2 font-mono text-xs text-gray-900 focus:border-blue-500 focus:outline-none'
+                />
+              </div>
+
+              <div>
+                <label className='mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400'>
+                  Template IDs
+                </label>
+                <div className='space-y-2'>
+                  {Object.entries(contractsConfig.templates).map(([key, value]) => (
+                    <div key={key}>
+                      <label className='mb-1 block font-mono text-[9px] text-gray-500 capitalize'>{key}</label>
+                      <input
+                        type='text'
+                        value={value}
+                        onChange={(e) => setContractsConfig({
+                          ...contractsConfig,
+                          templates: { ...contractsConfig.templates, [key]: e.target.value }
+                        })}
+                        className='w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 font-mono text-[10px] text-gray-900 focus:border-blue-500 focus:outline-none'
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className='flex items-center gap-2 pt-2'>
+                <button
+                  type='button'
+                  onClick={handleContractsSave}
+                  disabled={contractsSaving}
+                  className='rounded-md border-0 bg-blue-600 px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:bg-blue-700 disabled:opacity-50'
+                >
+                  {contractsSaving ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type='button'
+                  onClick={async () => {
+                    const resetConfig = await bridge.contractsConfig.reset()
+                    setContractsConfig(resetConfig)
+                  }}
+                  className='rounded-md border border-gray-200 bg-white px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-wider2 text-gray-600 hover:bg-gray-50'
+                >
+                  Reset to Defaults
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

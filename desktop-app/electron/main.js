@@ -960,6 +960,31 @@ function registerCompanyIpc() {
   console.log('Company IPC handlers registered')
 }
 
+let contractsStore = null
+
+function registerContractsConfigIpc() {
+  const { ContractsStore } = require('./contractsStore')
+  contractsStore = new ContractsStore()
+
+  ipcMain.handle('contractsConfig:get', () => {
+    return contractsStore.get()
+  })
+
+  ipcMain.handle('contractsConfig:save', (_evt, config) => {
+    const file = contractsStore.save(config)
+    sendToAll('contractsConfig:onChange', file)
+    return file
+  })
+
+  ipcMain.handle('contractsConfig:reset', () => {
+    const file = contractsStore.reset()
+    sendToAll('contractsConfig:onChange', file)
+    return file
+  })
+
+  console.log('ContractsConfig IPC handlers registered')
+}
+
 function handleDeepLink(url) {
   console.log('deep link:', url)
 }
@@ -993,6 +1018,7 @@ if (!lock) {
     registerWalletIpcHandlers()
     registerEmployeeIpc()
     registerCompanyIpc()
+    registerContractsConfigIpc()
     registerFlowIpcHandlers()
     registerContractIpcHandlers()
     registerPayslipIpc()
