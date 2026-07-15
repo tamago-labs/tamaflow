@@ -53,6 +53,19 @@ function truncateAddr(addr: string): string {
   return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
 }
 
+function formatExpiry(executeBefore: string): { text: string; urgent: boolean; expired: boolean } {
+  const now = Date.now();
+  const expiry = new Date(executeBefore).getTime();
+  const diff = expiry - now;
+
+  if (diff <= 0) return { text: "Expired", urgent: false, expired: true };
+  const hours = Math.floor(diff / 3600000);
+  const minutes = Math.floor((diff % 3600000) / 60000);
+
+  if (hours > 0) return { text: `in ${hours}h ${minutes}m`, urgent: hours < 1, expired: false };
+  return { text: `in ${minutes}m`, urgent: true, expired: false };
+}
+
 export default function AssetsPage() {
   const { connected } = useWalletMode();
   const [holdings, setHoldings] = useState<Holding[]>([]);
@@ -164,7 +177,7 @@ export default function AssetsPage() {
         <div className="rounded-md border border-gray-200 bg-white py-12 text-center mb-6">
           <p className="m-0 text-sm text-gray-400">Connect your CLI wallet to view assets.</p>
         </div>
-      ) : pendingTransfers.length > 0 && (
+      ) : (
         <div className="rounded-md border border-amber-200 bg-amber-50 mb-6">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-200">
             <ArrowDownLeft size={14} className="text-amber-600" />
@@ -173,38 +186,54 @@ export default function AssetsPage() {
               {pendingLoading ? "Loading..." : `(${pendingTransfers.length})`}
             </span>
           </div>
-          <ul className="divide-y divide-amber-100">
-            {pendingTransfers.map((t) => (
-              <li key={t.contractId} className="flex items-center justify-between px-4 py-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 m-0">
-                    {t.amount} CC from {truncateAddr(t.sender)}
-                  </p>
-                  {t.memo && (
-                    <p className="text-xs text-gray-500 m-0 mt-0.5">{t.memo}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 ml-4">
-                  <button
-                    onClick={() => handleAccept(t.contractId)}
-                    disabled={acceptingId === t.contractId}
-                    className="flex items-center gap-1 rounded bg-green-600 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-green-700 disabled:opacity-50"
-                  >
-                    <Check size={12} />
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleReject(t.contractId)}
-                    disabled={acceptingId === t.contractId}
-                    className="flex items-center gap-1 rounded border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    <X size={12} />
-                    Reject
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {pendingTransfers.length === 0 && !pendingLoading ? (
+            <div className="px-4 py-6 text-center">
+              <p className="text-xs text-amber-600 m-0">No pending transfers</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-amber-100">
+              {pendingTransfers.map((t) => (
+                <li key={t.contractId} className="flex items-center justify-between px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 m-0">
+                      {t.amount} CC from {truncateAddr(t.sender)}
+                    </p>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      {t.memo && (
+                        <p className="text-xs text-gray-500 m-0">{t.memo}</p>
+                      )}
+                      {t.executeBefore && (() => {
+                        const expiry = formatExpiry(t.executeBefore);
+                        return (
+                          <span className={`text-[10px] font-medium ${expiry.expired ? "text-red-600" : expiry.urgent ? "text-amber-600" : "text-gray-400"}`}>
+                            {expiry.text}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      onClick={() => handleAccept(t.contractId)}
+                      disabled={acceptingId === t.contractId || !!(t.executeBefore && formatExpiry(t.executeBefore).expired)}
+                      className="flex items-center gap-1 rounded bg-green-600 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-green-700 disabled:opacity-50"
+                    >
+                      <Check size={12} />
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleReject(t.contractId)}
+                      disabled={acceptingId === t.contractId || !!(t.executeBefore && formatExpiry(t.executeBefore).expired)}
+                      className="flex items-center gap-1 rounded border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      <X size={12} />
+                      Reject
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 

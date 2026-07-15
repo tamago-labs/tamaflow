@@ -515,46 +515,52 @@ class EmployeeCLI {
     this.app.get('/api/pending-transfers', async (_req, res) => {
       try {
         if (!this.wallet) return res.status(400).json({ error: 'No wallet' })
+
         const token = await this.getToken()
-        const ledgerEnd = await fetch(`${DEVNET.ledgerClientUrl}/v2/state/ledger-end`, {
-          headers: { Authorization: `Bearer ${token}` }
-        }).then(r => r.json())
+        const base = await SDK.create({
+          auth: { method: 'static', token },
+          ledgerClientUrl: DEVNET.ledgerClientUrl
+        })
 
-        const result = await fetch(`${DEVNET.ledgerClientUrl}/v2/state/active-contracts`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            eventFormat: {
-              filtersByParty: {
-                [this.wallet.partyId]: { cumulative: [] }
-              },
-              verbose: true
-            },
-            activeAtOffset: ledgerEnd.offset
-          })
-        }).then(r => r.json())
-
-        const contracts = Array.isArray(result) ? result : (result?.activeContracts || [])
-        const pending = contracts.filter(c => {
-          const tid = c.contractEntry?.JsActiveContract?.createdEvent?.templateId || ''
-          return tid.includes('TransferInstruction') && tid.includes('TransferPendingReceiverAcceptance')
-        }).map(c => {
-          const event = c.contractEntry?.JsActiveContract?.createdEvent
-          const arg = event?.createArgument || {}
-          return {
-            contractId: event?.contractId,
-            sender: arg.sender || '',
-            receiver: arg.receiver || '',
-            amount: arg.amount || '',
-            instrumentId: arg.instrumentId || '',
-            executeBefore: arg.executeBefore || '',
-            memo: arg.memo || ''
+        // Extend SDK with token namespace for pending transfer queries
+        const sdk = await base.extend({
+          token: {
+            validatorUrl: DEVNET.validatorUrl,
+            auth: { method: 'static', token },
+            registries: ['https://wallet.validator.devnet.sandbox.fivenorth.io/api/validator']
           }
         })
 
+        // Use SDK's token.transfer.pending() to get contracts with interfaceViewValue
+        const contracts = await sdk.token.transfer.pending(this.wallet.partyId)
+        const pending = []
+
+        for (const c of contracts) {
+          const view = c.interfaceViewValue
+          if (!view?.transfer) continue
+          if (view.transfer.receiver !== this.wallet.partyId) continue
+          if (view.status?.tag !== 'TransferPendingReceiverAcceptance') continue
+
+          const t = view.transfer
+          const rawAmount = typeof t.amount === 'object' && t.amount !== null
+            ? t.amount.initialAmount
+            : t.amount
+          const amountStr = String(rawAmount ?? '0')
+
+          const memo = view.meta?.values?.memo
+
+          pending.push({
+            contractId: c.contractId,
+            sender: t.sender ?? '',
+            receiver: t.receiver ?? this.wallet.partyId,
+            amount: amountStr,
+            instrumentId: t.instrumentId?.id ?? '',
+            executeBefore: t.executeBefore ?? '',
+            ...(memo ? { memo } : {})
+          })
+        }
+
+        console.log('[assets] found', pending.length, 'pending transfers')
         res.json(pending)
       } catch (err) {
         console.error('[assets] Failed to fetch pending transfers:', err.message)
@@ -568,18 +574,30 @@ class EmployeeCLI {
         const { contractId } = req.body
         if (!contractId) return res.status(400).json({ error: 'Contract ID required' })
 
-        const sdk = await this.getSDK()
-        const command = {
-          ExerciseCommand: {
-            templateId: 'Splice.Api.Token.TransferInstruction:TransferInstruction',
-            contractId,
-            choice: 'TransferInstruction_Accept',
-            choiceArgument: {}
+        const token = await this.getToken()
+        const base = await SDK.create({
+          auth: { method: 'static', token },
+          ledgerClientUrl: DEVNET.ledgerClientUrl
+        })
+
+        const sdk = await base.extend({
+          token: {
+            validatorUrl: DEVNET.validatorUrl,
+            auth: { method: 'static', token },
+            registries: ['https://wallet.validator.devnet.sandbox.fivenorth.io/api/validator']
           }
-        }
+        })
+
+        // Use SDK's token.transfer.accept() which handles disclosed contracts
+        const tokenTransfer = sdk.token.transfer
+        const [wrapped, disclosed] = await tokenTransfer.accept({
+          transferInstructionCid: contractId,
+          registryUrl: new URL(`${DEVNET.validatorUrl}/v0/scan-proxy`)
+        })
 
         const preparedTx = sdk.ledger.prepare({
-          commands: [command],
+          commands: [wrapped],
+          disclosedContracts: disclosed,
           partyId: this.wallet.partyId
         })
         const result = await preparedTx.sign(this.wallet.privateKey).execute({
@@ -600,18 +618,30 @@ class EmployeeCLI {
         const { contractId } = req.body
         if (!contractId) return res.status(400).json({ error: 'Contract ID required' })
 
-        const sdk = await this.getSDK()
-        const command = {
-          ExerciseCommand: {
-            templateId: 'Splice.Api.Token.TransferInstruction:TransferInstruction',
-            contractId,
-            choice: 'TransferInstruction_Reject',
-            choiceArgument: {}
+        const token = await this.getToken()
+        const base = await SDK.create({
+          auth: { method: 'static', token },
+          ledgerClientUrl: DEVNET.ledgerClientUrl
+        })
+
+        const sdk = await base.extend({
+          token: {
+            validatorUrl: DEVNET.validatorUrl,
+            auth: { method: 'static', token },
+            registries: ['https://wallet.validator.devnet.sandbox.fivenorth.io/api/validator']
           }
-        }
+        })
+
+        // Use SDK's token.transfer.reject() which handles disclosed contracts
+        const tokenTransfer = sdk.token.transfer
+        const [wrapped, disclosed] = await tokenTransfer.reject({
+          transferInstructionCid: contractId,
+          registryUrl: new URL(`${DEVNET.validatorUrl}/v0/scan-proxy`)
+        })
 
         const preparedTx = sdk.ledger.prepare({
-          commands: [command],
+          commands: [wrapped],
+          disclosedContracts: disclosed,
           partyId: this.wallet.partyId
         })
         const result = await preparedTx.sign(this.wallet.privateKey).execute({
