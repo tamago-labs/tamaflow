@@ -70,8 +70,18 @@ export default function Hero() {
           {/* Trust line — single sentence framing the privacy promise */}
           <div className="mt-10 flex items-center gap-2.5 text-sm text-brand-navy/80 font-medium leading-relaxed">
             <ShieldCheck size={14} className="text-brand-teal flex-shrink-0" />
-            Edge-AI parses payroll on-device, so no cloud can leak it under GDPR.
+
+             Canton settlement
+
+             <ShieldCheck size={14} className="text-brand-teal flex-shrink-0" />
+
+              Hyperswarm data sharing
+
+             <ShieldCheck size={14} className="text-brand-teal flex-shrink-0" />
+
+             GDPR-clean by design
           </div>
+          
         </div>
 
         {/* Right: visual mockup */}

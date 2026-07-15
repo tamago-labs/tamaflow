@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Menu, X, ChevronDown, Github } from "lucide-react";
+import { Menu, X, ChevronDown } from "lucide-react";
 import Wordmark from "@/components/shared/Wordmark";
 import { marketingNav, marketingMore } from "@/lib/nav";
 
@@ -90,7 +90,7 @@ export default function Navbar() {
                 aria-haspopup="menu"
                 aria-expanded={moreOpen}
                 onClick={() => setMoreOpen((v) => !v)}
-                className="font-sans text-xs font-semibold tracking-wider2 text-brand-navy uppercase cursor-pointer bg-transparent border-0 p-0 inline-flex items-center gap-1 hover:text-brand-blue transition-colors"
+                className="font-sans text-xs font-semibold tracking-wider2 text-brand-navy uppercase cursor-pointer bg-transparent border-0 p-0 mb-2 inline-flex items-center gap-1 leading-none hover:text-brand-blue transition-colors"
               >
                 More
                 <ChevronDown
@@ -115,11 +115,8 @@ export default function Navbar() {
                           rel={item.external ? "noreferrer" : undefined}
                           role="menuitem"
                           onClick={() => setMoreOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 hover:bg-brand-light transition-colors no-underline"
+                          className="flex items-center px-4 py-2.5 hover:bg-brand-light transition-colors no-underline"
                         >
-                          <span className="flex items-center justify-center w-7 h-7 rounded-md bg-brand-light border border-brand-border text-brand-blue">
-                            <Github size={14} />
-                          </span>
                           <span className="font-sans text-xs font-bold tracking-wider2 text-brand-navy uppercase">
                             {item.label}
                           </span>
@@ -177,9 +174,8 @@ export default function Navbar() {
                 target={item.external ? "_blank" : undefined}
                 rel={item.external ? "noreferrer" : undefined}
                 onClick={() => setOpen(false)}
-                className="font-sans text-xs font-semibold tracking-wider2 text-brand-navy uppercase no-underline inline-flex items-center gap-2"
+                className="font-sans text-xs font-semibold tracking-wider2 text-brand-navy uppercase no-underline"
               >
-                <Github size={12} className="text-brand-muted" />
                 {item.label}
               </a>
             ))}

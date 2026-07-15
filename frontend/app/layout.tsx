@@ -26,22 +26,22 @@ const spaceMono = Space_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "TamaFlow | AI Auto-Payroll on Canton",
+    default: "TamaFlow | AI Auto-Payroll for Global Teams",
     template: "%s · TamaFlow",
   },
   description:
-    "Privacy-first payroll that nets cross-border obligations and settles them confidentially on Canton — without ever leaking data to a third-party LLM.",
+    "Privacy-first AI auto-payroll for global teams — withholding tax, social security, and atomic settlement on Canton.",
   openGraph: {
-    title: "TamaFlow | AI Auto-Payroll on Canton",
+    title: "TamaFlow | AI Auto-Payroll for Global Teams",
     description:
-      "Zero-Cloud AI. Zero-Leaked Payroll Data. TamaFlow runs autonomous workforce settlement agents entirely within your secure local infrastructure.",
+      "Privacy-first AI auto-payroll for global teams — withholding tax, social security, and atomic settlement on Canton.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "TamaFlow | AI Auto-Payroll on Canton",
+    title: "TamaFlow | AI Auto-Payroll for Global Teams",
     description:
-      "Zero-Cloud AI. Zero-Leaked Payroll Data. Run private global payroll on Canton.",
+      "Privacy-first AI auto-payroll for global teams — withholding tax, social security, and atomic settlement on Canton.",
   },
 };
 

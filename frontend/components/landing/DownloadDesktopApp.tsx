@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, Monitor, Github } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 /**
  * DownloadDesktopApp — secondary CTA in the Hero, for the
@@ -25,29 +25,17 @@ const GITHUB_REPO = "https://github.com/tamago-labs/tamaflow";
 
 interface DownloadOption {
   label: string;
-  Icon: typeof Monitor;
   href: string;
-  hint: string;
 }
 
 const options: DownloadOption[] = [
   {
-    label: "Windows",
-    Icon: Monitor,
+    label: "For Windows",
     href: GITHUB_REPO,
-    hint: ".exe installer",
   },
-//   {
-//     label: "Linux",
-//     Icon: Apple,
-//     href: GITHUB_REPO,
-//     hint: ".AppImage · .deb",
-//   },
   {
     label: "Build from Source",
-    Icon: Github,
     href: GITHUB_REPO,
-    hint: "git clone · pnpm install",
   },
 ];
 
@@ -105,7 +93,7 @@ export default function DownloadDesktopApp() {
             Download Desktop App
           </p>
           <ul className="pb-1">
-            {options.map(({ label, Icon, href, hint }) => (
+            {options.map(({ label, href }) => (
               <li key={label}>
                 <a
                   href={href}
@@ -113,18 +101,10 @@ export default function DownloadDesktopApp() {
                   rel="noreferrer"
                   role="menuitem"
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-brand-light transition-colors no-underline group"
+                  className="flex items-center px-4 py-2.5 hover:bg-brand-light transition-colors no-underline"
                 >
-                  <span className="flex items-center justify-center w-8 h-8 rounded-md bg-brand-light border border-brand-border text-brand-blue group-hover:bg-brand-blue group-hover:text-white transition-colors">
-                    <Icon size={16} />
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block  text-[12px] font-bold tracking-wider2 text-brand-navy uppercase">
-                      {label}
-                    </span>
-                    <span className="block text-[10px] text-brand-muted">
-                      {hint}
-                    </span>
+                  <span className="text-[12px] font-bold tracking-wider2 text-brand-navy uppercase">
+                    {label}
                   </span>
                 </a>
               </li>

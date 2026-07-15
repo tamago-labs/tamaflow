@@ -10,9 +10,9 @@ import CTA from "@/components/landing/CTA";
 import Footer from "@/components/landing/Footer";
 
 export const metadata: Metadata = {
-  title: "TamaFlow | AI Auto-Payroll on Canton",
+  title: "TamaFlow | AI Auto-Payroll for Global Teams",
   description:
-    "Privacy-first payroll that nets cross-border obligations and settles them confidentially on Canton — without ever leaking data to a third-party LLM.",
+    "Privacy-first AI auto-payroll for global teams — withholding tax, social security, and atomic settlement on Canton.",
 };
 
 export default function LandingPage() {
