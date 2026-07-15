@@ -92,6 +92,10 @@ export const cli = {
       }),
   },
 
+  payslipRecords: {
+    list: () => fetchJson(`${CLI_URL}/api/payslip-records`),
+  },
+
   username: {
     set: (name: string) =>
       fetchJson(`${CLI_URL}/api/username`, {

@@ -34,14 +34,14 @@ export default function PaymentsPage() {
     if (!connected) return;
     setLoading(true);
     try {
-      const result = await cli.payslips.list();
-      if (Array.isArray(result)) {
-        setPayslips(
-          result
+      // Fetch P2P payslips (have markdown content)
+      const p2pResult = await cli.payslips.list();
+      const p2pPayslips: Payslip[] = Array.isArray(p2pResult)
+        ? p2pResult
             .filter((p: Record<string, unknown>) => p.type === "payslip" && p.markdown)
             .map((p: Record<string, unknown>) => ({
               id: (p.id as string) || "",
-              type: (p.type as string) || "payslip",
+              type: "payslip",
               employee: (p.employee as string) || "",
               period: (p.period as string) || "",
               grossPay: (p.grossPay as string) || "0",
@@ -52,9 +52,45 @@ export default function PaymentsPage() {
               companyName: (p.companyName as string) || "",
               createdAt: (p.createdAt as string) || "",
             }))
-            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        );
+        : [];
+
+      // Fetch on-ledger PayslipRecord contracts
+      let onChainPayslips: Payslip[] = [];
+      try {
+        const records = await cli.payslipRecords.list();
+        if (Array.isArray(records)) {
+          onChainPayslips = records.map((r: Record<string, unknown>) => ({
+            id: (r.payslipId as string) || "",
+            type: "payslip",
+            employee: (r.employee as string) || "",
+            period: (r.period as string) || "",
+            grossPay: "0",
+            netPay: "0",
+            currency: "USD",
+            style: "standard",
+            markdown: "", // Content is in P2P, not on-chain
+            companyName: "",
+            createdAt: (r.createdAt as string) || "",
+            onChain: true,
+          }));
+        }
+      } catch {
+        // PayslipRecord query may fail if contract not deployed yet
       }
+
+      // Merge: prefer P2P payslips (they have markdown), fill gaps from on-chain
+      const mergedMap = new Map<string, Payslip>();
+      for (const p of onChainPayslips) {
+        if (p.id) mergedMap.set(p.id, p);
+      }
+      for (const p of p2pPayslips) {
+        if (p.id) mergedMap.set(p.id, { ...mergedMap.get(p.id), ...p });
+      }
+
+      setPayslips(
+        Array.from(mergedMap.values())
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      );
     } catch (e) {
       console.error("[Payments] Failed to fetch payslips:", e);
     } finally {

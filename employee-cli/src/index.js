@@ -123,12 +123,7 @@ class EmployeeCLI {
   // ============================================
 
   async resolveTemplateId(token, partialId) {
-    // Known package IDs for our deployed contracts
-    const KNOWN_PACKAGES = {
-      'EmployeeRecord': 'a0408b35c53eb7449b5e8eff14d3f0dc4cce9f626c0da2b5f59ef37557cf4bf5',
-      'CompanyProfile': 'a0408b35c53eb7449b5e8eff14d3f0dc4cce9f626c0da2b5f59ef37557cf4bf5',
-      'JPYCAsset': 'a0408b35c53eb7449b5e8eff14d3f0dc4cce9f626c0da2b5f59ef37557cf4bf5'
-    }
+    const { KNOWN_PACKAGES } = require('./contracts-ids')
 
     for (const [name, pkgId] of Object.entries(KNOWN_PACKAGES)) {
       if (partialId.includes(name)) {
@@ -648,6 +643,57 @@ class EmployeeCLI {
         res.json({ success: true, id: payslip.id })
       } catch (err) {
         console.error('[payslip] Send failed:', err.message)
+        res.status(500).json({ error: err.message })
+      }
+    })
+
+    // Query PayslipRecord contracts on-ledger
+    this.app.get('/api/payslip-records', async (_req, res) => {
+      try {
+        if (!this.wallet) return res.status(400).json({ error: 'No wallet' })
+        const token = await this.getToken()
+        const ledgerEnd = await fetch(`${DEVNET.ledgerClientUrl}/v2/state/ledger-end`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(r => r.json())
+
+        const result = await fetch(`${DEVNET.ledgerClientUrl}/v2/state/active-contracts`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            eventFormat: {
+              filtersByParty: {
+                [this.wallet.partyId]: { cumulative: [] }
+              },
+              verbose: true
+            },
+            activeAtOffset: ledgerEnd.offset
+          })
+        }).then(r => r.json())
+
+        const contracts = Array.isArray(result) ? result : (result?.activeContracts || [])
+        const payslipRecords = contracts.filter(c => {
+          const tid = c.contractEntry?.JsActiveContract?.createdEvent?.templateId || ''
+          return tid.includes('PayslipRecord')
+        }).map(c => {
+          const event = c.contractEntry?.JsActiveContract?.createdEvent
+          const arg = event?.createArgument || {}
+          return {
+            contractId: event?.contractId,
+            employer: arg.employer || '',
+            employee: arg.employee || '',
+            payslipId: arg.payslipId || '',
+            period: arg.period || '',
+            status: arg.status || '',
+            createdAt: arg.createdAt || ''
+          }
+        })
+
+        res.json(payslipRecords)
+      } catch (err) {
+        console.error('[payslip-records] Failed to query:', err.message)
         res.status(500).json({ error: err.message })
       }
     })
