@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Search } from 'lucide-react'
+import { Search, Loader2 } from 'lucide-react'
 import RouteStatusPill from '../RouteStatusPill'
 import { useFlows } from '../../context/FlowContext'
 import { useEmployees } from '../../context/EmployeeContext'
@@ -42,16 +42,20 @@ export default function SettlementsPage() {
   const { employees } = useEmployees()
 
   const [routes, setRoutes] = useState<RouteSummary[]>([])
+  const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [search, setSearch] = useState('')
 
   const reload = useCallback(async () => {
+    setLoading(true)
     try {
       const list = await listAllRoutes()
       setRoutes(list)
     } catch (e) {
       console.error('[SettlementsPage] reload failed:', e)
+    } finally {
+      setLoading(false)
     }
   }, [listAllRoutes])
 
@@ -172,10 +176,18 @@ export default function SettlementsPage() {
         )}
 
         {/* Empty state */}
-        {!hasAny && (
+        {!loading && !hasAny && (
           <div className="flex flex-col items-center gap-3 py-16 text-center">
             <p className="m-0 font-sans text-sm font-medium text-gray-900">No settlements yet</p>
             <p className="m-0 max-w-sm font-sans text-xs text-gray-400">Settled and failed routes will appear here as you run flows.</p>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {loading && (
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <Loader2 size={20} className="animate-spin text-gray-400" />
+            <p className="m-0 font-sans text-sm text-gray-400">Loading settlements...</p>
           </div>
         )}
 

@@ -6,6 +6,7 @@
 const { ipcMain } = require('electron')
 const { SDK } = require('@canton-network/wallet-sdk')
 const { DEVNET } = require('./devnet')
+const { TEMPLATES, CONTRACTS } = require('./contracts-ids')
 
 // ============================================
 // Hardcoded DevNet OAuth credentials (same as wallet.js)
@@ -153,7 +154,7 @@ async function getJPYCBalance(partyId) {
     for (const contract of contracts) {
       const entry = contract.contractEntry?.JsActiveContract?.createdEvent
       const templateId = entry?.templateId || ''
-      if (templateId.includes('a0408b35c53eb7449b5e8eff14d3f0dc4cce9f626c0da2b5f59ef37557cf4bf5:TamaFlow.JPYC.Asset:JPYCAsset')) {
+      if (templateId.includes(TEMPLATES.JPYC_ASSET)) {
         const payload = entry?.createArgument || {}
         // Only count contracts where THIS party is the owner
         if (payload.owner === partyId) {
@@ -211,7 +212,7 @@ async function getEmployees(partyId) {
     for (const contract of contracts) {
       const entry = contract.contractEntry?.JsActiveContract?.createdEvent
       const templateId = entry?.templateId || ''
-      if (templateId.includes('EmployeeRecord')) {
+      if (templateId.includes(TEMPLATES.EMPLOYEE_RECORD)) {
         const payload = entry?.createArgument || {}
         employees.push({
           contractId: entry?.contractId,
@@ -249,7 +250,7 @@ async function addEmployee(companyContractId, employeePartyId, displayName, role
     // Build the exercise command
     const command = {
       ExerciseCommand: {
-        templateId: 'a0408b35c53eb7449b5e8eff14d3f0dc4cce9f626c0da2b5f59ef37557cf4bf5:TamaFlow.Company.CompanyProfile:CompanyProfile',
+        templateId: TEMPLATES.COMPANY_PROFILE,
         contractId: companyContractId,
         choice: 'AddEmployee',
         choiceArgument: {
@@ -282,6 +283,51 @@ async function addEmployee(companyContractId, employeePartyId, displayName, role
 }
 
 /**
+ * Exercise CreatePayslip choice on a CompanyProfile contract.
+ */
+async function createPayslip(companyContractId, employeePartyId, payslipId, period) {
+  try {
+    const token = await getToken()
+    const sdk = await buildBaseSdk(token)
+
+    const { getWalletStatus } = require('./wallet')
+    const wallet = await getWalletStatus()
+    if (!wallet.exists) throw new Error('No wallet')
+
+    const command = {
+      ExerciseCommand: {
+        templateId: TEMPLATES.COMPANY_PROFILE,
+        contractId: companyContractId,
+        choice: 'CreatePayslip',
+        choiceArgument: {
+          employee: employeePartyId,
+          payslipId,
+          period
+        }
+      }
+    }
+
+    const { loadWallet } = require('./wallet')
+    const walletData = await loadWallet()
+    if (!walletData) throw new Error('No wallet data')
+
+    const preparedTx = sdk.ledger.prepare({
+      commands: [command],
+      partyId: wallet.partyId
+    })
+    const result = await preparedTx.sign(walletData.privateKey).execute({
+      partyId: wallet.partyId
+    })
+
+    console.log('[contracts] CreatePayslip result:', result.updateId)
+    return { success: true, updateId: result.updateId }
+  } catch (err) {
+    console.error('[contracts] Failed to create payslip:', err)
+    throw err
+  }
+}
+
+/**
  * Exercise ConfirmBlock or RejectBlock on an EmployeeRecord contract.
  */
 async function exerciseBlockChoice(contractId, choice, blockId) {
@@ -295,7 +341,7 @@ async function exerciseBlockChoice(contractId, choice, blockId) {
 
     const command = {
       ExerciseCommand: {
-        templateId: 'a0408b35c53eb7449b5e8eff14d3f0dc4cce9f626c0da2b5f59ef37557cf4bf5:TamaFlow.Company.EmployeeRecord:EmployeeRecord',
+        templateId: TEMPLATES.EMPLOYEE_RECORD,
         contractId,
         choice,
         choiceArgument: { blockId }
@@ -351,6 +397,10 @@ function registerContractIpcHandlers() {
     return await exerciseBlockChoice(contractId, choice, blockId)
   })
 
+  ipcMain.handle('contracts:createPayslip', async (_e, companyContractId, employeePartyId, payslipId, period) => {
+    return await createPayslip(companyContractId, employeePartyId, payslipId, period)
+  })
+
   console.log('[contracts] IPC handlers registered')
 }
 
@@ -361,5 +411,6 @@ module.exports = {
   getCompanyProfile,
   getEmployees,
   addEmployee,
-  exerciseBlockChoice
+  exerciseBlockChoice,
+  createPayslip
 }

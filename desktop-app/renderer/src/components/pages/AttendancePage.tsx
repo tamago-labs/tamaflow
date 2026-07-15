@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Plus, Search, ChevronDown, ChevronRight, Check, X } from 'lucide-react'
+import { Plus, Search, ChevronDown, ChevronRight, Check, X, Loader2 } from 'lucide-react'
 import { useContracts } from '../../context/ContractsContext'
 import { useWallet } from '../../context/WalletContext'
 import { bridge } from '../../lib/bridge'
@@ -17,6 +17,7 @@ export function AttendancePage() {
   const [search, setSearch] = useState('')
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [expandedEmployee, setExpandedEmployee] = useState<string | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
   const partyId = status?.partyId
 
   useEffect(() => {
@@ -54,20 +55,26 @@ export function AttendancePage() {
   }
 
   const handleConfirm = useCallback(async (contractId: string, blockId: string) => {
+    setActionLoading(blockId)
     try {
       await bridge.contracts.exerciseBlockChoice(contractId, 'ConfirmBlock', blockId)
       if (partyId) await fetchEmployees(partyId)
     } catch (e) {
       console.error('[Attendance] ConfirmBlock failed:', e)
+    } finally {
+      setActionLoading(null)
     }
   }, [partyId, fetchEmployees])
 
   const handleReject = useCallback(async (contractId: string, blockId: string) => {
+    setActionLoading(blockId)
     try {
       await bridge.contracts.exerciseBlockChoice(contractId, 'RejectBlock', blockId)
       if (partyId) await fetchEmployees(partyId)
     } catch (e) {
       console.error('[Attendance] RejectBlock failed:', e)
+    } finally {
+      setActionLoading(null)
     }
   }, [partyId, fetchEmployees])
 
@@ -152,6 +159,14 @@ export function AttendancePage() {
               <Plus size={11} />
               Add Employee
             </button>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {loading && !hasAny && (
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <Loader2 size={20} className="animate-spin text-gray-400" />
+            <p className="m-0 font-sans text-sm text-gray-400">Loading employees...</p>
           </div>
         )}
 
@@ -259,18 +274,28 @@ export function AttendancePage() {
                                         <button
                                           type="button"
                                           onClick={() => handleConfirm(expandedEmp.contractId, block.blockId)}
+                                          disabled={actionLoading === block.blockId}
                                           title="Confirm"
-                                          className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-green-200 bg-white text-green-600 transition-colors hover:bg-green-50"
+                                          className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-green-200 bg-white text-green-600 transition-colors hover:bg-green-50 disabled:opacity-50"
                                         >
-                                          <Check size={12} />
+                                          {actionLoading === block.blockId ? (
+                                            <Loader2 size={12} className="animate-spin" />
+                                          ) : (
+                                            <Check size={12} />
+                                          )}
                                         </button>
                                         <button
                                           type="button"
                                           onClick={() => handleReject(expandedEmp.contractId, block.blockId)}
+                                          disabled={actionLoading === block.blockId}
                                           title="Reject"
-                                          className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-red-200 bg-white text-red-600 transition-colors hover:bg-red-50"
+                                          className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-red-200 bg-white text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
                                         >
-                                          <X size={12} />
+                                          {actionLoading === block.blockId ? (
+                                            <Loader2 size={12} className="animate-spin" />
+                                          ) : (
+                                            <X size={12} />
+                                          )}
                                         </button>
                                       </div>
                                     )}

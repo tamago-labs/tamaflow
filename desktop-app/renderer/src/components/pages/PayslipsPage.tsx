@@ -6,6 +6,7 @@ import { useFlows } from '../../context/FlowContext'
 import { useEmployees } from '../../context/EmployeeContext'
 import { useCompany } from '../../context/CompanyContext'
 import { bridge } from '../../lib/bridge'
+import { CONTRACTS } from '../../lib/contracts-ids'
 import type { RouteSummary } from '../../ai/types'
 
 interface PayslipStyle {
@@ -176,6 +177,22 @@ export function PayslipsPage() {
         })
         if (payloadResult.success && payloadResult.payload) {
           setGeneratedPayload(payloadResult.payload)
+
+          // Register payslip on-ledger via CompanyProfile.CreatePayslip
+          try {
+            const payslipId = payloadResult.payload.id as string
+            const period = new Date().toISOString().slice(0, 7)
+            await bridge.contracts.createPayslip(
+              CONTRACTS.COMPANY,
+              expandedEmployee || '',
+              payslipId,
+              period
+            )
+            console.log('[PayslipsPage] Payslip registered on-ledger:', payslipId)
+          } catch (ledgerErr) {
+            console.error('[PayslipsPage] Failed to register payslip on-ledger:', ledgerErr)
+            // Don't fail the whole flow — P2P send still works
+          }
         }
       } else {
         setError(result.error || 'Generation failed')
@@ -249,6 +266,14 @@ export function PayslipsPage() {
             </div>
             <p className="m-0 font-sans text-sm font-medium text-gray-900">No settled payments yet</p>
             <p className="m-0 max-w-sm font-sans text-xs text-gray-400">Run a payroll flow first to generate payslips from settlement data.</p>
+          </div>
+        )}
+
+        {/* Loading state */}
+        {loading && employeesWithRoutes.length === 0 && (
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <Loader2 size={20} className="animate-spin text-gray-400" />
+            <p className="m-0 font-sans text-sm text-gray-400">Loading payments...</p>
           </div>
         )}
 

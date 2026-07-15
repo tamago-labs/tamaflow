@@ -1,46 +1,60 @@
+// HeatmapCard — weekly check-in heatmap.
+// Uses real attendance data from ContractsContext.
+
 import { useMemo } from 'react'
+
+interface HeatmapEntry {
+  day: string
+  hour: string
+  count: number
+}
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
 const HOURS = ['00-04', '04-08', '08-12', '12-16', '16-20', '20-24']
 
-function generateMockData(): Record<string, number> {
-  const data: Record<string, number> = {}
-  for (const d of DAYS) {
-    for (const h of HOURS) {
-      // More check-ins during 10am-2pm, fewer early/late
-      const hourIdx = HOURS.indexOf(h)
-      const peak = hourIdx >= 1 && hourIdx <= 4 ? 8 : 4
-      data[`${d}-${h}`] = Math.floor(Math.random() * peak)
-    }
-  }
-  return data
+interface HeatmapCardProps {
+  data: HeatmapEntry[]
 }
 
-export function HeatmapCard() {
-  const data = useMemo(() => generateMockData(), [])
-  const maxVal = Math.max(...Object.values(data), 1)
+export function HeatmapCard({ data }: HeatmapCardProps) {
+  const maxCount = useMemo(() => {
+    return Math.max(1, ...data.map((d) => d.count))
+  }, [data])
 
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <div className="mb-3">
-        <span className="font-mono text-[10px] uppercase tracking-wider2 text-gray-400 font-semibold">Check-in Heatmap</span>
-      </div>
-      <div className="w-full max-w-[320px] mx-auto">
-        <div className="grid gap-0.5" style={{ gridTemplateColumns: `40px repeat(${DAYS.length}, 1fr)` }}>
-          <div />
-          {DAYS.map(d => <div key={d} className="font-mono text-[9px] text-gray-400 text-center pb-1">{d}</div>)}
-          {HOURS.map(h => (
-            <div key={h} className="contents">
-              <div className="font-mono text-[9px] text-gray-400 text-right pr-1 flex items-center">{h}</div>
-              {DAYS.map(d => {
-                const val = data[`${d}-${h}`] || 0
-                const intensity = val / maxVal
+      <p className="font-mono text-[10px] uppercase tracking-wider2 text-gray-400 font-semibold mb-3">
+        Check-in Heatmap
+      </p>
+
+      <div className="flex gap-1">
+        {/* Hour labels */}
+        <div className="flex flex-col gap-1 mr-1">
+          {HOURS.map((h) => (
+            <div key={h} className="h-6 flex items-center">
+              <span className="font-mono text-[9px] text-gray-400">{h}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Grid */}
+        <div className="flex gap-1 flex-1">
+          {DAYS.map((day) => (
+            <div key={day} className="flex flex-col gap-1 flex-1">
+              {HOURS.map((hour) => {
+                const entry = data.find((d) => d.day === day && d.hour === hour)
+                const count = entry?.count || 0
+                const intensity = count > 0 ? Math.max(0.2, count / maxCount) : 0
                 return (
                   <div
-                    key={`${d}-${h}`}
-                    className="w-full aspect-square rounded-sm transition-colors"
-                    style={{ background: `rgba(26,26,232,${0.1 + intensity * 0.8})` }}
-                    title={`${d} ${h}: ${val} check-ins`}
+                    key={`${day}-${hour}`}
+                    className="h-6 rounded-sm"
+                    style={{
+                      background: count > 0
+                        ? `rgba(26, 26, 232, ${intensity})`
+                        : '#f3f4f6'
+                    }}
+                    title={`${day} ${hour}: ${count} check-in(s)`}
                   />
                 )
               })}
@@ -48,11 +62,26 @@ export function HeatmapCard() {
           ))}
         </div>
       </div>
-      <div className="flex items-center justify-end gap-2 mt-3">
+
+      {/* Day labels */}
+      <div className="flex gap-1 ml-7 mt-1">
+        {DAYS.map((day) => (
+          <div key={day} className="flex-1 text-center">
+            <span className="font-mono text-[9px] text-gray-400">{day}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-2 mt-3 justify-end">
         <span className="font-mono text-[9px] text-gray-400">Less</span>
         <div className="flex gap-0.5">
-          {[0.1, 0.3, 0.5, 0.7, 0.9].map((v) => (
-            <div key={v} className="w-3 h-3 rounded-sm" style={{ background: `rgba(26,26,232,${v})` }} />
+          {[0.1, 0.3, 0.5, 0.7, 1.0].map((intensity) => (
+            <div
+              key={intensity}
+              className="w-4 h-4 rounded-sm"
+              style={{ background: `rgba(26, 26, 232, ${intensity})` }}
+            />
           ))}
         </div>
         <span className="font-mono text-[9px] text-gray-400">More</span>

@@ -24,12 +24,13 @@ export function StatCard({ icon, label, value, color }: StatCardProps) {
 interface StatCardsProps {
   employeeCount: number
   settledCount: number
+  totalCheckInHours: number
 }
 
-export function StatCards({ employeeCount, settledCount }: StatCardsProps) {
+export function StatCards({ employeeCount, settledCount, totalCheckInHours }: StatCardsProps) {
   return (
     <div className="grid grid-cols-4 gap-4 mb-4">
-      <StatCard icon={<Clock size={18} />} label="Avg. Daily Hours" value="6.8h" color="#3EC4C0" />
+      <StatCard icon={<Clock size={18} />} label="Check-in Hours" value={`${totalCheckInHours}h`} color="#3EC4C0" />
       <StatCard icon={<Workflow size={18} />} label="Settled This Month" value={String(settledCount)} color="#1A1AE8" />
       <StatCard icon={<FileText size={18} />} label="Payroll Docs" value="12" color="#8B5CF6" />
       <StatCard icon={<Users size={18} />} label="Employees" value={String(employeeCount)} color="#F59E0B" />

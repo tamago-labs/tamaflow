@@ -26,7 +26,8 @@ import {
   Send,
   Wallet,
   Workflow,
-  Boxes
+  Boxes,
+  Loader2
 } from 'lucide-react'
 import { TokenAvatar } from '../TokenAvatar'
 import { PendingTransfersCard } from '../PendingTransfersCard'
@@ -154,7 +155,8 @@ export function AssetsPage({ onNavigate }: { onNavigate?: (page: string) => void
             </div>
 
             {holdingsLoading && sortedHoldings.length === 0 && (
-              <div className='py-12 text-center font-sans text-sm text-brand-muted'>
+              <div className='flex items-center justify-center gap-2 py-12 font-sans text-sm text-brand-muted'>
+                <Loader2 size={14} className='animate-spin' />
                 Loading holdings…
               </div>
             )}
@@ -413,7 +415,10 @@ function JPYCRow({ balance, loading }: { balance: number; loading: boolean }) {
 
       <div className='text-right'>
         {loading ? (
-          <p className='m-0 font-mono text-sm text-brand-muted'>Loading…</p>
+          <div className='flex items-center justify-end gap-1.5'>
+            <Loader2 size={12} className='animate-spin text-brand-muted' />
+            <p className='m-0 font-mono text-sm text-brand-muted'>Loading…</p>
+          </div>
         ) : (
           <p className='m-0 whitespace-nowrap font-mono text-sm text-brand-navy'>
             {formatAmount(balance)}{' '}

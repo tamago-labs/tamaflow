@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MessageSquare, Bot, Copy, Check, AlertTriangle, Share2 } from 'lucide-react'
 import { useEmployees } from '../../context/EmployeeContext'
 import { useFlows } from '../../context/FlowContext'
 import { useCompany } from '../../context/CompanyContext'
 import { useWallet } from '../../context/WalletContext'
+import { useContracts } from '../../context/ContractsContext'
 import { StatCards } from '../dashboard/StatCards'
 import { HeatmapCard } from '../dashboard/HeatmapCard'
 import { CountryChartCard } from '../dashboard/CountryChartCard'
@@ -43,6 +44,7 @@ export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPag
   const { flows } = useFlows()
   const { profile } = useCompany()
   const { status: walletStatus } = useWallet()
+  const { totalCheckInHours, heatmapData, fetchEmployees } = useContracts()
   const [teamChatOpen, setTeamChatOpen] = useState(false)
   const [aiChatOpen, setAiChatOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -52,6 +54,13 @@ export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPag
     flows.forEach(f => { count += f.settledCount })
     return count
   }, [flows])
+
+  // Fetch attendance data on mount so dashboard has real data
+  useEffect(() => {
+    if (walletStatus?.partyId) {
+      fetchEmployees(walletStatus.partyId)
+    }
+  }, [walletStatus?.partyId, fetchEmployees])
 
   const countryStats = useMemo(() => {
     const counts: Record<string, number> = {}
@@ -132,11 +141,11 @@ export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPag
       )}
 
       {/* Row 1: Stat cards */}
-      <StatCards employeeCount={employees.length} settledCount={settledCount} />
+      <StatCards employeeCount={employees.length} settledCount={settledCount} totalCheckInHours={totalCheckInHours} />
 
       {/* Row 2: Heatmap + Country chart */}
       <div className="grid grid-cols-2 gap-4 mb-4">
-        <HeatmapCard />
+        <HeatmapCard data={heatmapData} />
         <CountryChartCard stats={countryStats} />
       </div>
 
