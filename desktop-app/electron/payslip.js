@@ -1,125 +1,170 @@
 // Payslip generation via QVAC local AI.
 //
-// Takes settlement data + company profile + style preference,
-// generates a formatted payslip in markdown using local inference.
+// Two-phase flow:
+//   1. AI generates a payslip TEMPLATE (markdown with placeholders)
+//   2. User fills in numbers, previews, then sends
+//
+// Streaming: pushes thinking/content events to renderer via IPC.
 
-const { ipcMain } = require('electron')
+const { ipcMain, BrowserWindow } = require('electron')
 const { completion } = require('@qvac/sdk')
 const { getActiveModelId, setStreamingNow, mapError } = require('./qvac')
+const { PayslipStore } = require('./payslipStore')
 
 // ============================================
-// Payslip style templates
+// Style prompts (for template generation)
 // ============================================
 
-const STYLE_PROMPTS = {
-  standard: `Generate a clean, professional payslip in markdown format.
-Use clear section headers, aligned columns, and a summary footer.
-Include company name, employee name, pay period, and all financial details.`,
+const TEMPLATE_STYLE_PROMPTS = {
+  standard: `Generate a professional payslip TEMPLATE in markdown format.
+Use placeholders like {{employeeName}}, {{companyName}}, {{period}}, {{grossPay}}, {{taxAmount}}, {{netPay}} etc.
+Include clear section headers, aligned columns, and a summary footer.
+The template will be filled with actual numbers later.`,
 
-  japanese: `Generate a Japanese-style payslip (給与明細書) in markdown format.
-Use Japanese terminology where appropriate:
+  japanese: `Generate a Japanese-style payslip TEMPLATE (給与明細書) in markdown format.
+Use Japanese terminology:
 - 支給 (earnings), 控除 (deductions), 差引 (net)
 - Basic salary (基本給), Overtime (残業手当), Commuting allowance (通勤手当)
 - Health insurance (健康保険), Pension (厚生年付), Employment insurance (雇用保険)
 - Income tax (所得税), Resident tax (住民税)
-Format with clear sections and aligned amounts.`,
+Use placeholders like {{employeeName}}, {{grossPay}}, {{taxAmount}} etc.`,
 
-  detailed: `Generate a highly detailed payslip in markdown format.
+  detailed: `Generate a highly detailed payslip TEMPLATE in markdown format.
 Include separate sections for:
 - Earnings (itemized with descriptions)
 - Tax deductions (each tax type separately)
 - Social security deductions
 - Other deductions
 - Net pay calculation
-- Year-to-date totals if available
+Use placeholders like {{employeeName}}, {{grossPay}}, {{taxAmount}} etc.
 Use tables for clear presentation.`
 }
 
-const SYSTEM_PROMPT = `You are a professional payroll assistant. Generate formatted payslips based on settlement data.
+const TEMPLATE_SYSTEM_PROMPT = `You are a professional payroll assistant. Generate a payslip TEMPLATE with placeholders.
 
 Rules:
-1. Output ONLY the formatted payslip in markdown — no explanations
-2. Use the specified style template
-3. Include all provided financial data
-4. Calculate totals accurately
-5. Use appropriate currency formatting
-6. Add a professional footer with generation date
-7. Do NOT include any text outside the payslip markdown`
+1. Output ONLY the template in markdown — no explanations
+2. Use {{placeholderName}} syntax for all variable values
+3. Use the specified style
+4. Include standard payslip sections (header, earnings, deductions, net pay, footer)
+5. Do NOT include any text outside the template`
+
+const FILL_SYSTEM_PROMPT = `You are a payroll assistant. Fill in the placeholders in a payslip template with actual values.
+
+Rules:
+1. Replace ALL {{placeholderName}} with actual values from the data
+2. Keep the exact same markdown structure
+3. Format numbers appropriately for the currency
+4. Do NOT add any text outside the payslip
+5. Output the complete filled payslip`
 
 // ============================================
-// Main generation function
+// Template generation (streaming)
 // ============================================
 
 /**
- * Generate a payslip from settlement data using local QVAC AI.
- *
- * @param {object} opts
- * @param {object} opts.settlementData - Settlement record from routeStore
- * @param {object} opts.companyProfile - Company profile (name, country, currency)
- * @param {string} opts.style - Payslip style: 'standard' | 'japanese' | 'detailed'
- * @returns {Promise<string>} Formatted markdown payslip
+ * Generate a payslip template via streaming AI.
+ * Pushes thinking/content events to renderer.
  */
-async function generatePayslip({ settlementData, companyProfile, style = 'standard' }) {
+async function generateTemplate({ settlementData, companyProfile, style, window }) {
   const modelId = getActiveModelId()
-  if (!modelId) throw new Error('No AI model loaded. Load a model in Settings > AI Models first.')
+  if (!modelId) throw new Error('No AI model loaded.')
 
-  const stylePrompt = STYLE_PROMPTS[style] || STYLE_PROMPTS.standard
+  const stylePrompt = TEMPLATE_STYLE_PROMPTS[style] || TEMPLATE_STYLE_PROMPTS.standard
 
-  const userMessage = buildUserPrompt(settlementData, companyProfile)
+  const userMessage = buildTemplatePrompt(settlementData, companyProfile)
 
   setStreamingNow(true)
   try {
     const run = completion({
       modelId,
       history: [
-        { role: 'system', content: SYSTEM_PROMPT + '\n\n' + stylePrompt },
+        { role: 'system', content: TEMPLATE_SYSTEM_PROMPT + '\n\n' + stylePrompt },
         { role: 'user', content: userMessage }
       ],
       stream: true,
-      captureThinking: false
+      captureThinking: true
     })
 
+    let thinking = ''
+    let content = ''
+
+    for await (const event of run.events) {
+      if (event.type === 'thinkingDelta') {
+        thinking += event.text
+        if (window && !window.isDestroyed()) {
+          window.webContents.send('payslip:thinking', { text: event.text })
+        }
+      }
+      if (event.type === 'contentDelta') {
+        content += event.text
+        if (window && !window.isDestroyed()) {
+          window.webContents.send('payslip:token', { text: event.text })
+        }
+      }
+    }
+
     const final = await run.final
+    if (window && !window.isDestroyed()) {
+      window.webContents.send('payslip:done', { content: final.contentText, thinking })
+    }
     return final.contentText
   } catch (err) {
     const mapped = mapError(err)
-    throw new Error(mapped.message || 'AI generation failed')
+    if (window && !window.isDestroyed()) {
+      window.webContents.send('payslip:error', { error: mapped.message })
+    }
+    throw new Error(mapped.message || 'Template generation failed')
   } finally {
     setStreamingNow(false)
   }
 }
 
 /**
- * Build the user prompt from settlement + company data.
+ * Fill placeholders in a template with actual settlement data.
+ * This is a simple string replacement, not AI-powered.
  */
-function buildUserPrompt(settlementData, companyProfile) {
+function fillTemplate(template, settlementData, companyProfile) {
+  const replacements = {
+    '{{employeeName}}': settlementData.displayName || settlementData.employeeId || '',
+    '{{companyName}}': companyProfile.companyName || '',
+    '{{period}}': settlementData.period || settlementData.createdAt || '',
+    '{{grossPay}}': settlementData.grossPay || '0',
+    '{{withholding}}': settlementData.withholdingAmount || '0',
+    '{{taxAmount}}': settlementData.taxAmount || '0',
+    '{{socialSecurity}}': settlementData.socialSecurityAmount || '0',
+    '{{netPay}}': settlementData.netPay || '0',
+    '{{currency}}': settlementData.payCurrency || companyProfile.settlementCurrency || 'USD',
+    '{{country}}': companyProfile.country || '',
+    '{{fxRate}}': settlementData.fxRate || '',
+    '{{memo}}': settlementData.memo || '',
+    '{{txHash}}': settlementData.txHash || '',
+  }
+
+  let filled = template
+  for (const [placeholder, value] of Object.entries(replacements)) {
+    filled = filled.replaceAll(placeholder, value)
+  }
+  return filled
+}
+
+/**
+ * Build the user prompt for template generation.
+ */
+function buildTemplatePrompt(settlementData, companyProfile) {
   const lines = []
-  lines.push('Generate a payslip for the following data:')
+  lines.push('Generate a payslip template for this type of settlement:')
   lines.push('')
   lines.push(`**Company:** ${companyProfile.companyName || 'Unknown'}`)
   lines.push(`**Country:** ${companyProfile.country || 'Unknown'}`)
   lines.push(`**Currency:** ${companyProfile.settlementCurrency || 'USD'}`)
   lines.push('')
-  lines.push('**Settlement Details:**')
-  lines.push(`- Employee: ${settlementData.displayName || settlementData.employeeId || 'Unknown'}`)
-  lines.push(`- Period: ${settlementData.period || settlementData.memo || settlementData.createdAt || 'Unknown'}`)
-  lines.push(`- Gross Pay: ${settlementData.grossPay || '0'}`)
-  lines.push(`- Withholding: ${settlementData.withholdingAmount || '0'}`)
-  lines.push(`- Tax: ${settlementData.taxAmount || '0'}`)
-  lines.push(`- Social Security: ${settlementData.socialSecurityAmount || '0'}`)
-  lines.push(`- Net Pay: ${settlementData.netPay || '0'}`)
-  lines.push(`- Currency: ${settlementData.payCurrency || 'USD'}`)
-  if (settlementData.fxRate) {
-    lines.push(`- FX Rate: ${settlementData.fxRate}`)
-  }
-  if (settlementData.memo) {
-    lines.push(`- Memo: ${settlementData.memo}`)
-  }
-  if (settlementData.txHash) {
-    lines.push(`- Transaction: ${settlementData.txHash}`)
-  }
+  lines.push('**Available fields (use as placeholders):**')
+  lines.push('- {{employeeName}}, {{companyName}}, {{period}}')
+  lines.push('- {{grossPay}}, {{withholding}}, {{taxAmount}}, {{socialSecurity}}, {{netPay}}')
+  lines.push('- {{currency}}, {{country}}, {{fxRate}}, {{memo}}, {{txHash}}')
   lines.push('')
-  lines.push('Generate the payslip now.')
+  lines.push('Generate the template now.')
 
   return lines.join('\n')
 }
@@ -145,29 +190,64 @@ function buildPayslipPayload({ markdown, settlementData, companyProfile, style }
 }
 
 module.exports = {
-  generatePayslip,
+  generateTemplate,
+  fillTemplate,
   buildPayslipPayload,
-  buildUserPrompt,
   registerPayslipIpc,
-  STYLE_PROMPTS
+  TEMPLATE_STYLE_PROMPTS
 }
 
 // ============================================
 // IPC registration
 // ============================================
 
+let payslipStore = null
+
 function registerPayslipIpc() {
+  payslipStore = new PayslipStore()
+
+  // Template management
+  ipcMain.handle('payslip:templates:list', () => {
+    return payslipStore.list()
+  })
+
+  ipcMain.handle('payslip:templates:get', (_e, id) => {
+    return payslipStore.get(id)
+  })
+
+  ipcMain.handle('payslip:templates:save', (_e, template) => {
+    return payslipStore.save(template)
+  })
+
+  ipcMain.handle('payslip:templates:remove', (_e, id) => {
+    payslipStore.remove(id)
+    return { success: true }
+  })
+
+  // Streaming template generation
   ipcMain.handle('payslip:generate', async (_e, { settlementData, companyProfile, style }) => {
+    const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
     try {
-      const markdown = await generatePayslip({ settlementData, companyProfile, style })
-      return { success: true, markdown }
+      const template = await generateTemplate({ settlementData, companyProfile, style, window: win })
+      return { success: true, markdown: template }
     } catch (err) {
       console.error('[payslip] Generate failed:', err.message)
       return { success: false, error: err.message }
     }
   })
 
-  ipcMain.handle('payslip:buildPayload', async (_e, { markdown, settlementData, companyProfile, style }) => {
+  // Fill template with actual values
+  ipcMain.handle('payslip:fill', (_e, { template, settlementData, companyProfile }) => {
+    try {
+      const filled = fillTemplate(template, settlementData, companyProfile)
+      return { success: true, markdown: filled }
+    } catch (err) {
+      return { success: false, error: err.message }
+    }
+  })
+
+  // Build payload for P2P
+  ipcMain.handle('payslip:buildPayload', (_e, { markdown, settlementData, companyProfile, style }) => {
     try {
       const payload = buildPayslipPayload({ markdown, settlementData, companyProfile, style })
       return { success: true, payload }

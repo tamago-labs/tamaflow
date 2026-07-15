@@ -1,29 +1,34 @@
-// PayslipsPage — employee table + settlement selection + AI payslip generation + P2P send.
+// PayslipsPage — employee table + settlement selection + AI template generation + P2P send.
+//
+// Flow:
+//   1. Select employee + settlements
+//   2. Open drawer → choose style → click Generate
+//   3. AI streams template (thinking + content)
+//   4. Template filled with numbers → preview rendered markdown
+//   5. Click Send → P2P + on-ledger
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, Send, FileText, Loader2, Check } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
+import { ChevronDown, ChevronRight, Send, FileText, Loader2, Check, Wand2 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import Drawer from '../Drawer'
 import { useFlows } from '../../context/FlowContext'
 import { useEmployees } from '../../context/EmployeeContext'
 import { useCompany } from '../../context/CompanyContext'
+import { writeRoom } from '../../lib/room'
 import { bridge } from '../../lib/bridge'
-import { CONTRACTS } from '../../lib/contracts-ids'
 import type { RouteSummary } from '../../ai/types'
 
-interface PayslipStyle {
-  id: string
-  label: string
-  description: string
-}
-
-const STYLES: PayslipStyle[] = [
+const STYLES = [
   { id: 'standard', label: 'Standard', description: 'Clean international format' },
-  { id: 'japanese', label: 'Japanese (給与明細書)', description: 'Japanese payroll format with 惱/控除/差引' },
-  { id: 'detailed', label: 'Detailed', description: 'Itemized with full tax breakdowns' }
+  { id: 'japanese', label: 'Japanese (給与明細書)', description: 'Japanese payroll with 惱/控除/差引' },
+  { id: 'detailed', label: 'Detailed', description: 'Full itemized breakdown' }
 ]
 
 export function PayslipsPage() {
+  const { onProgress, onChange, listAllRoutes } = useFlows()
   const { employees: localEmployees } = useEmployees()
-  const { listAllRoutes } = useFlows()
   const { profile: companyProfile } = useCompany()
 
   const [allRoutes, setAllRoutes] = useState<RouteSummary[]>([])
@@ -31,23 +36,70 @@ export function PayslipsPage() {
   const [expandedEmployee, setExpandedEmployee] = useState<string | null>(null)
   const [selectedRoutes, setSelectedRoutes] = useState<Set<string>>(new Set())
   const [payslipStyle, setPayslipStyle] = useState('standard')
+
+  // Drawer state
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerStyle, setDrawerStyle] = useState('standard')
+  const [filledTemplate, setFilledTemplate] = useState<string | null>(null)
+  const [streamingContent, setStreamingContent] = useState('')
+  const [streamingThinking, setStreamingThinking] = useState('')
+  const [isStreaming, setIsStreaming] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [sending, setSending] = useState(false)
-  const [generatedMarkdown, setGeneratedMarkdown] = useState<string | null>(null)
-  const [generatedPayload, setGeneratedPayload] = useState<Record<string, unknown> | null>(null)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const offDoneRef = useRef<(() => void) | null>(null)
+  const offErrorRef = useRef<(() => void) | null>(null)
 
-  // Load all routes
+  // Subscribe to streaming events
+  useEffect(() => {
+    const offThinking = bridge.payslip.onThinking((data) => {
+      setStreamingThinking((prev) => prev + data.text)
+    })
+    const offToken = bridge.payslip.onToken((data) => {
+      setStreamingContent((prev) => prev + data.text)
+    })
+    offDoneRef.current = bridge.payslip.onDone((data) => {
+      // Auto-fill template with settlement data
+      const settlement = aggregateSettlement()
+      if (settlement && data.content) {
+        bridge.payslip.fill({
+          template: data.content,
+          settlementData: settlement as unknown as Record<string, unknown>,
+          companyProfile: companyProfile as unknown as Record<string, unknown>
+        }).then((fillResult) => {
+          if (fillResult.success && fillResult.markdown) {
+            setFilledTemplate(fillResult.markdown)
+          }
+        })
+      }
+      setIsStreaming(false)
+      setGenerating(false)
+    })
+    offErrorRef.current = bridge.payslip.onError((data) => {
+      setError(data.error)
+      setIsStreaming(false)
+      setGenerating(false)
+    })
+
+    return () => {
+      offThinking()
+      offToken()
+      offDoneRef.current?.()
+      offErrorRef.current?.()
+    }
+  }, [])
+
+  // Load routes
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     void (async () => {
       try {
-        const routes = await listAllRoutes()
-        if (!cancelled) setAllRoutes(routes)
+        const list = await listAllRoutes()
+        if (!cancelled) setAllRoutes(list)
       } catch (e) {
-        console.error('[PayslipsPage] Failed to load routes:', e)
+        console.error('[PayslipsPage] reload failed:', e)
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -55,7 +107,22 @@ export function PayslipsPage() {
     return () => { cancelled = true }
   }, [listAllRoutes])
 
-  // Group routes by employeeId
+  useEffect(() => {
+    const offProgress = onProgress(() => { void reload() })
+    const offChange = onChange(() => { void reload() })
+    return () => { offProgress?.(); offChange?.() }
+  }, [onProgress, onChange])
+
+  const reload = useCallback(async () => {
+    try {
+      const list = await listAllRoutes()
+      setAllRoutes(list)
+    } catch (e) {
+      console.error('[PayslipsPage] reload failed:', e)
+    }
+  }, [listAllRoutes])
+
+  // Group routes by employee
   const routesByEmployee = useMemo(() => {
     const map = new Map<string, RouteSummary[]>()
     for (const r of allRoutes) {
@@ -67,7 +134,12 @@ export function PayslipsPage() {
     return map
   }, [allRoutes])
 
-  // Employees with settlements
+  const employeeById = useMemo(() => {
+    const map = new Map<string, typeof localEmployees[0]>()
+    for (const e of localEmployees) map.set(e.id, e)
+    return map
+  }, [localEmployees])
+
   const employeesWithRoutes = useMemo(() => {
     return localEmployees.filter((e) => routesByEmployee.has(e.id))
   }, [localEmployees, routesByEmployee])
@@ -78,44 +150,13 @@ export function PayslipsPage() {
       .sort((a, b) => new Date(b.completedAt ?? b.createdAt).getTime() - new Date(a.completedAt ?? a.createdAt).getTime())
   }, [expandedEmployee, routesByEmployee])
 
-  const toggleEmployee = (id: string) => {
-    setExpandedEmployee((prev) => (prev === id ? null : id))
-    setSelectedRoutes(new Set())
-    setGeneratedMarkdown(null)
-    setGeneratedPayload(null)
-    setSent(false)
-    setError(null)
-  }
-
-  const toggleRoute = (id: string) => {
-    setSelectedRoutes((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-    setGeneratedMarkdown(null)
-    setGeneratedPayload(null)
-    setSent(false)
-  }
-
-  const toggleAllRoutes = () => {
-    if (selectedRoutes.size === expandedRoutes.length) {
-      setSelectedRoutes(new Set())
-    } else {
-      setSelectedRoutes(new Set(expandedRoutes.map((r) => r.id)))
-    }
-    setGeneratedMarkdown(null)
-    setGeneratedPayload(null)
-    setSent(false)
-  }
-
-  // Aggregate selected settlements into one payslip data object
-  const aggregateSettlement = useCallback((): RouteSummary | null => {
+  // Aggregate selected settlements
+  const aggregateSettlement = useCallback(() => {
     if (selectedRoutes.size === 0 || !expandedEmployee) return null
     const selected = expandedRoutes.filter((r) => selectedRoutes.has(r.id))
     if (selected.length === 0) return null
 
+    const emp = employeeById.get(expandedEmployee)
     let totalGross = 0; let totalWithholding = 0; let totalTax = 0; let totalSS = 0; let totalNet = 0
     for (const r of selected) {
       totalGross += parseFloat(r.grossPay) || 0
@@ -126,73 +167,47 @@ export function PayslipsPage() {
     }
 
     return {
-      id: selected[0].id,
-      flowId: selected[0].flowId,
       employeeId: expandedEmployee,
+      displayName: emp?.displayName || expandedEmployee,
       grossPay: String(totalGross),
       withholdingAmount: String(totalWithholding),
       taxAmount: String(totalTax),
       socialSecurityAmount: String(totalSS),
       netPay: String(totalNet),
       payCurrency: selected[0].payCurrency,
-      payeePlacementId: selected[0].payeePlacementId,
-      sourcePlacementId: '',
-      paymentPlacementId: '',
-      amountCC: '',
-      status: 'settled',
-      createdAt: selected[0].createdAt,
-      completedAt: selected[selected.length - 1].completedAt,
-      fxRate: selected[0].fxRate,
-      memo: `Payslip covering ${selected.length} payment(s)`,
-      recipientPartyId: ''
+      period: `${selected.length} settlement(s)`,
+      createdAt: selected[0].createdAt
     }
-  }, [selectedRoutes, expandedRoutes, expandedEmployee, localEmployees])
+  }, [selectedRoutes, expandedRoutes, expandedEmployee, employeeById])
 
-  // Generate payslip via AI
+  // Generate template via AI (streaming)
   const handleGenerate = useCallback(async () => {
-    const baseSettlement = aggregateSettlement()
-    if (!baseSettlement) return
-
-    const emp = localEmployees.find((e) => e.id === expandedEmployee)
-    const settlement = {
-      ...baseSettlement,
-      displayName: emp?.displayName || expandedEmployee
-    }
+    const settlement = aggregateSettlement()
+    if (!settlement || !companyProfile) return
 
     setGenerating(true)
+    setStreamingContent('')
+    setStreamingThinking('')
+    setIsStreaming(true)
     setError(null)
+    setFilledTemplate(null)
+
     try {
       const result = await bridge.payslip.generate({
         settlementData: settlement as unknown as Record<string, unknown>,
-        companyProfile: (companyProfile || {}) as Record<string, unknown>,
-        style: payslipStyle
+        companyProfile: companyProfile as unknown as Record<string, unknown>,
+        style: drawerStyle
       })
-      if (result.success && result.markdown) {
-        setGeneratedMarkdown(result.markdown)
-        const payloadResult = await bridge.payslip.buildPayload({
-          markdown: result.markdown,
-          settlementData: settlement as unknown as Record<string, unknown>,
-          companyProfile: (companyProfile || {}) as Record<string, unknown>,
-          style: payslipStyle
-        })
-        if (payloadResult.success && payloadResult.payload) {
-          setGeneratedPayload(payloadResult.payload)
 
-          // Register payslip on-ledger via CompanyProfile.CreatePayslip
-          try {
-            const payslipId = payloadResult.payload.id as string
-            const period = new Date().toISOString().slice(0, 7)
-            await bridge.contracts.createPayslip(
-              CONTRACTS.COMPANY,
-              expandedEmployee || '',
-              payslipId,
-              period
-            )
-            console.log('[PayslipsPage] Payslip registered on-ledger:', payslipId)
-          } catch (ledgerErr) {
-            console.error('[PayslipsPage] Failed to register payslip on-ledger:', ledgerErr)
-            // Don't fail the whole flow — P2P send still works
-          }
+      if (result.success && result.markdown) {
+        // Auto-fill with settlement data
+        const fillResult = await bridge.payslip.fill({
+          template: result.markdown,
+          settlementData: settlement as unknown as Record<string, unknown>,
+          companyProfile: companyProfile as unknown as Record<string, unknown>
+        })
+        if (fillResult.success && fillResult.markdown) {
+          setFilledTemplate(fillResult.markdown)
         }
       } else {
         setError(result.error || 'Generation failed')
@@ -201,31 +216,70 @@ export function PayslipsPage() {
       setError(e instanceof Error ? e.message : 'Generation failed')
     } finally {
       setGenerating(false)
+      setIsStreaming(false)
     }
-  }, [aggregateSettlement, payslipStyle, companyProfile, localEmployees, expandedEmployee])
+  }, [aggregateSettlement, companyProfile, drawerStyle])
 
-  // Send payslip via P2P (to room chat — the CLI employee receives it)
+  // Send payslip via P2P + on-ledger
   const handleSend = useCallback(async () => {
-    if (!generatedPayload) return
+    if (!filledTemplate || !expandedEmployee || !companyProfile) return
+    const settlement = aggregateSettlement()
+    if (!settlement) return
+
     setSending(true)
     setError(null)
     try {
-      // Send via P2P room chat
-      await bridge.writeWorkerIPC('room', JSON.stringify({
-        type: 'send-chat',
-        text: `[payslip] ${JSON.stringify(generatedPayload)}`
-      }))
-      setSent(true)
+      // Build payload
+      const payloadResult = await bridge.payslip.buildPayload({
+        markdown: filledTemplate,
+        settlementData: settlement as unknown as Record<string, unknown>,
+        companyProfile: companyProfile as unknown as Record<string, unknown>,
+        style: drawerStyle
+      })
+
+      if (payloadResult.success && payloadResult.payload) {
+        // Send via P2P using writeRoom (correct IPC channel)
+        await writeRoom({
+          type: 'send-chat',
+          text: `[payslip] ${JSON.stringify(payloadResult.payload)}`
+        })
+
+        // Register on-ledger
+        try {
+          const { CONTRACTS } = await import('../../lib/contracts-ids')
+          const emp = employeeById.get(expandedEmployee)
+          const cantonPartyId = emp?.cantonPartyId
+          if (cantonPartyId) {
+            await bridge.contracts.createPayslip(
+              CONTRACTS.COMPANY,
+              cantonPartyId,
+              payloadResult.payload.id as string,
+              settlement.period || new Date().toISOString().slice(0, 7)
+            )
+          } else {
+            console.warn('[PayslipsPage] Employee has no Canton party ID, skipping on-ledger registration')
+          }
+        } catch (ledgerErr) {
+          console.error('[PayslipsPage] Failed to register on-ledger:', ledgerErr)
+        }
+
+        setSent(true)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Send failed')
     } finally {
       setSending(false)
     }
-  }, [generatedPayload])
+  }, [filledTemplate, expandedEmployee, companyProfile, aggregateSettlement, drawerStyle])
 
-  const formatCurrency = (amount: string, currency: string) => {
-    const num = parseFloat(amount) || 0
-    return `${currency} ${num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+  const openDrawer = () => {
+    setDrawerStyle(payslipStyle)
+    setFilledTemplate(null)
+    setStreamingContent('')
+    setStreamingThinking('')
+    setSent(false)
+    setError(null)
+    setDrawerOpen(true)
   }
 
   return (
@@ -233,7 +287,6 @@ export function PayslipsPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Payslips</h1>
         <div className="flex items-center gap-3">
-          {/* Style selector */}
           <select
             value={payslipStyle}
             onChange={(e) => setPayslipStyle(e.target.value)}
@@ -249,7 +302,7 @@ export function PayslipsPage() {
       <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
         {/* Column header */}
         {employeesWithRoutes.length > 0 && (
-          <div className="grid grid-cols-[auto_2fr_1fr_1fr_1fr] gap-4 border-b border-gray-200 bg-white px-4 py-2.5">
+          <div className="grid grid-cols-[auto_2fr_1fr_1fr_1fr] gap-4 border-b border-gray-200 bg-gray-50 px-4 py-2.5">
             <span className="w-6" />
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Employee</span>
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Role</span>
@@ -269,14 +322,6 @@ export function PayslipsPage() {
           </div>
         )}
 
-        {/* Loading state */}
-        {loading && employeesWithRoutes.length === 0 && (
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <Loader2 size={20} className="animate-spin text-gray-400" />
-            <p className="m-0 font-sans text-sm text-gray-400">Loading payments...</p>
-          </div>
-        )}
-
         {/* Employee rows */}
         {employeesWithRoutes.length > 0 && (
           <ul className="divide-y divide-gray-200">
@@ -292,7 +337,7 @@ export function PayslipsPage() {
                   >
                     <button
                       type="button"
-                      onClick={() => toggleEmployee(emp.id)}
+                      onClick={() => { setExpandedEmployee(isExpanded ? null : emp.id); setSelectedRoutes(new Set()) }}
                       className="flex h-6 w-6 cursor-pointer items-center justify-center rounded border-0 bg-transparent text-gray-400 hover:text-gray-600"
                     >
                       {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -303,112 +348,75 @@ export function PayslipsPage() {
                     </div>
                     <span className="font-mono text-xs text-gray-700">{emp.role || '—'}</span>
                     <span className="font-mono text-xs text-gray-700">{routes.length}</span>
-                    <span className="font-mono text-xs font-medium text-gray-900">{formatCurrency(String(totalGross), routes[0]?.payCurrency || 'USD')}</span>
+                    <span className="font-mono text-xs font-medium text-gray-900">
+                      {emp.payCurrency || 'USD'} {totalGross.toLocaleString()}
+                    </span>
                   </div>
 
-                  {/* Expanded: route selection + generate + preview */}
+                  {/* Expanded: settlement selection + generate button */}
                   {isExpanded && (
                     <div className="border-t border-blue-100 bg-blue-50/50 px-4 py-4">
-                      {/* Settlement selection */}
-                      <div className="mb-4">
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">
-                            Select settlements ({selectedRoutes.size}/{expandedRoutes.length})
-                          </span>
-                          <button
-                            type="button"
-                            onClick={toggleAllRoutes}
-                            className="cursor-pointer border-0 bg-transparent font-mono text-[10px] uppercase tracking-wider2 text-blue-600 hover:text-blue-800"
-                          >
-                            {selectedRoutes.size === expandedRoutes.length ? 'Deselect All' : 'Select All'}
-                          </button>
-                        </div>
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">
+                          Select settlements ({selectedRoutes.size}/{expandedRoutes.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (selectedRoutes.size === expandedRoutes.length) {
+                              setSelectedRoutes(new Set())
+                            } else {
+                              setSelectedRoutes(new Set(expandedRoutes.map((r) => r.id)))
+                            }
+                          }}
+                          className="cursor-pointer border-0 bg-transparent font-mono text-[10px] uppercase tracking-wider2 text-blue-600 hover:text-blue-800"
+                        >
+                          {selectedRoutes.size === expandedRoutes.length ? 'Deselect All' : 'Select All'}
+                        </button>
+                      </div>
 
-                        <div className="max-h-60 space-y-1 overflow-y-auto">
-                          {expandedRoutes.map((r) => (
-                            <label
-                              key={r.id}
-                              className={`flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 transition-colors ${
-                                selectedRoutes.has(r.id) ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white hover:bg-gray-50'
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedRoutes.has(r.id)}
-                                onChange={() => toggleRoute(r.id)}
-                                className="accent-blue-600"
-                              />
-                              <div className="flex-1">
-                                <span className="font-sans text-xs text-gray-900">
-                                  {new Date(r.completedAt ?? r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                </span>
-                                <span className="ml-2 font-mono text-[10px] text-gray-400">{r.flowId}</span>
-                              </div>
-                              <span className="font-mono text-xs text-gray-900">{formatCurrency(r.grossPay, r.payCurrency)}</span>
-                            </label>
-                          ))}
-                        </div>
+                      <div className="max-h-60 space-y-1 overflow-y-auto">
+                        {expandedRoutes.map((r) => (
+                          <label
+                            key={r.id}
+                            className={`flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 transition-colors ${
+                              selectedRoutes.has(r.id) ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white hover:bg-gray-50'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedRoutes.has(r.id)}
+                              onChange={() => {
+                                setSelectedRoutes((prev) => {
+                                  const next = new Set(prev)
+                                  if (next.has(r.id)) next.delete(r.id)
+                                  else next.add(r.id)
+                                  return next
+                                })
+                              }}
+                              className="accent-blue-600"
+                            />
+                            <div className="flex-1">
+                              <span className="font-sans text-xs text-gray-900">
+                                {new Date(r.completedAt ?? r.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                              <span className="ml-2 font-mono text-[10px] text-gray-400">{r.flowId}</span>
+                            </div>
+                            <span className="font-mono text-xs text-gray-900">{r.payCurrency} {(parseFloat(r.grossPay) || 0).toLocaleString()}</span>
+                          </label>
+                        ))}
                       </div>
 
                       {/* Generate button */}
                       <button
                         type="button"
-                        onClick={handleGenerate}
-                        disabled={selectedRoutes.size === 0 || generating}
-                        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border-0 bg-[#1A1AE8] px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90 disabled:opacity-50"
+                        onClick={openDrawer}
+                        disabled={selectedRoutes.size === 0}
+                        className="mt-3 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-md border-0 bg-[#1A1AE8] px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90 disabled:opacity-50"
                       >
-                        {generating ? (
-                          <><Loader2 size={12} className="animate-spin" /> Generating...</>
-                        ) : (
-                          <><FileText size={12} /> Generate Payslip</>
-                        )}
+                        <Wand2 size={12} />
+                        Generate Payslip
                       </button>
-
-                      {/* Error */}
-                      {error && (
-                        <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2">
-                          <span className="font-mono text-[11px] text-red-600">{error}</span>
-                        </div>
-                      )}
-
-                      {/* Preview */}
-                      {generatedMarkdown && (
-                        <div className="mt-4">
-                          <div className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">
-                            Payslip Preview
-                          </div>
-                          <div className="rounded-md border border-gray-200 bg-white p-4">
-                            <pre className="m-0 whitespace-pre-wrap font-sans text-xs leading-relaxed text-gray-900">
-                              {generatedMarkdown}
-                            </pre>
-                          </div>
-
-                          {/* Send button */}
-                          <div className="mt-3 flex gap-2">
-                            <button
-                              type="button"
-                              onClick={handleSend}
-                              disabled={sending || sent}
-                              className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-md border-0 bg-green-600 px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90 disabled:opacity-50"
-                            >
-                              {sent ? (
-                                <><Check size={12} /> Sent!</>
-                              ) : sending ? (
-                                <><Loader2 size={12} className="animate-spin" /> Sending...</>
-                              ) : (
-                                <><Send size={12} /> Send via P2P</>
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => { setGeneratedMarkdown(null); setGeneratedPayload(null); setSent(false) }}
-                              className="cursor-pointer rounded-md border border-gray-200 bg-white px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-wider2 text-gray-600 hover:bg-gray-50"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </li>
@@ -416,18 +424,148 @@ export function PayslipsPage() {
             })}
           </ul>
         )}
-
-        {/* Footer count */}
-        {employeesWithRoutes.length > 0 && (
-          <div className="border-t border-gray-200 bg-gray-50 px-4 py-2">
-            <span className="font-sans text-[11px] text-gray-400">
-              {employeesWithRoutes.length} employee(s) with settled payments
-            </span>
-          </div>
-        )}
       </div>
+
+      {/* Payslip Drawer */}
+      <Drawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title="Payslip Preview"
+        subtitle={`${STYLES.find((s) => s.id === drawerStyle)?.label || 'Standard'} — ${expandedEmployee ? employeeById.get(expandedEmployee)?.displayName : ''}`}
+        width="640px"
+      >
+        <div className="space-y-4">
+          {/* Style selector */}
+          <div>
+            <label className="mb-1.5 block font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">
+              Template Style
+            </label>
+            <div className="flex gap-2">
+              {STYLES.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setDrawerStyle(s.id)}
+                  className={`flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+                    drawerStyle === s.id
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Generate button */}
+          {!filledTemplate && !isStreaming && (
+            <motion.button
+              type="button"
+              onClick={handleGenerate}
+              disabled={generating}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex w-full items-center justify-center gap-2 py-3 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold uppercase tracking-wider2 hover:opacity-90 disabled:opacity-50"
+            >
+              <Wand2 size={14} />
+              Generate Payslip
+            </motion.button>
+          )}
+
+          {/* Streaming thinking */}
+          {isStreaming && streamingThinking && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-amber-800">
+                  AI Thinking
+                </span>
+              </div>
+              <pre className="m-0 whitespace-pre-wrap font-mono text-[11px] text-amber-900 max-h-32 overflow-y-auto">
+                {streamingThinking}
+              </pre>
+            </div>
+          )}
+
+          {/* Streaming content */}
+          {isStreaming && streamingContent && (
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-blue-800">
+                  Generating Template
+                </span>
+              </div>
+              <pre className="m-0 whitespace-pre-wrap font-mono text-xs text-gray-700 max-h-64 overflow-y-auto">
+                {streamingContent}
+              </pre>
+            </div>
+          )}
+
+          {/* Loading state */}
+          {generating && !isStreaming && (
+            <div className="flex items-center gap-3 rounded-md border border-gray-200 bg-gray-50 p-4">
+              <Loader2 size={16} className="animate-spin text-gray-400" />
+              <span className="text-sm text-gray-600">Generating template...</span>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3">
+              <span className="text-sm text-red-700">{error}</span>
+            </div>
+          )}
+
+          {/* Filled template preview — rendered markdown */}
+          {filledTemplate && !isStreaming && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">
+                  Filled Payslip
+                </span>
+              </div>
+              <div className="rounded-md border border-gray-200 bg-white p-4 max-h-96 overflow-y-auto">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {filledTemplate}
+                </ReactMarkdown>
+              </div>
+            </div>
+          )}
+
+          {/* Send button */}
+          {filledTemplate && !isStreaming && (
+            <div className="flex gap-2">
+              <motion.button
+                type="button"
+                onClick={handleSend}
+                disabled={sending || sent}
+                whileHover={{ y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                className="flex flex-1 items-center justify-center gap-2 py-3 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold uppercase tracking-wider2 hover:opacity-90 disabled:opacity-50"
+              >
+                {sent ? <><Check size={14} /> Sent</> : sending ? <><Loader2 size={14} className="animate-spin" /> Sending...</> : <><Send size={14} /> Send via P2P</>}
+              </motion.button>
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                className="py-3 px-5 bg-white border border-brand-border rounded-md font-mono text-[11px] font-bold uppercase tracking-wider2 text-brand-navy hover:bg-brand-light"
+              >
+                Close
+              </button>
+            </div>
+          )}
+
+          {/* Sent confirmation */}
+          {sent && (
+            <div className="rounded-md border border-green-200 bg-green-50 p-3 flex items-center gap-2">
+              <Check size={14} className="text-green-600 flex-shrink-0" />
+              <span className="text-sm text-green-800">Payslip sent via P2P and registered on-ledger.</span>
+            </div>
+          )}
+        </div>
+      </Drawer>
     </div>
   )
 }
-
-export default PayslipsPage

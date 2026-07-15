@@ -324,12 +324,10 @@ async function ensureModel(entry) {
 }
 
 async function loadRegistry(entry) {
-  // Runtime dispatch is correct because the descriptor itself carries
-  // the engine tag; TypeScript can't narrow a Record<string, unknown>
-  // lookup, so we cast at this seam.
   const modelSrc = resolveRegistrySource(entry.source)
   const op = loadModel({
     modelSrc,
+    modelConfig: buildModelConfig(),
     onProgress: (p) =>
       emitProgress('loading', {
         downloaded: p.downloaded,

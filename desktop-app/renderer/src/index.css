@@ -63,4 +63,18 @@ body,
     background-size: 24px 24px;
     background-position: 0 0;
   }
+
+  /* Basic markdown rendering for payslip preview */
+  .prose h1 { font-size: 1.25rem; font-weight: 600; margin: 0.5rem 0; color: #111827; }
+  .prose h2 { font-size: 1.1rem; font-weight: 600; margin: 0.5rem 0; color: #111827; }
+  .prose h3 { font-size: 0.95rem; font-weight: 600; margin: 0.4rem 0; color: #111827; }
+  .prose p { margin: 0.25rem 0; font-size: 0.875rem; color: #374151; }
+  .prose ul { margin: 0.25rem 0; padding-left: 1rem; list-style: disc; }
+  .prose ol { margin: 0.25rem 0; padding-left: 1rem; list-style: decimal; }
+  .prose li { font-size: 0.875rem; color: #374151; }
+  .prose table { width: 100%; border-collapse: collapse; margin: 0.25rem 0; font-size: 0.75rem; }
+  .prose th { border: 1px solid #e5e7eb; background: #f9fafb; padding: 0.25rem 0.5rem; text-align: left; font-weight: 500; color: #111827; }
+  .prose td { border: 1px solid #e5e7eb; padding: 0.25rem 0.5rem; color: #374151; }
+  .prose strong { font-weight: 600; color: #111827; }
+  .prose hr { border-color: #e5e7eb; margin: 0.5rem 0; }
 }

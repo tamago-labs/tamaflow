@@ -14,9 +14,11 @@
 //   └────────────┴──────────────────────────────────┘
 
 import { useState, type JSX } from 'react'
+import { MessageCircle } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { CanvasFooter } from './CanvasFooter'
+import { TeamChatDrawer } from './dashboard/TeamChatDrawer'
 import { DashboardPage } from './pages/DashboardPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { ChatPage } from './pages/ChatPage'
@@ -84,6 +86,7 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
   const Page = PAGES[currentPage]
   const isFlowBuilder = currentPage === 'flow-builder'
   const isCanvasView = isFlowBuilder && view === 'canvas'
+  const [teamChatOpen, setTeamChatOpen] = useState(false)
 
   return (
     <PriceProvider>
@@ -126,6 +129,19 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
                 <CanvasFooter />
               </div>
             </div>
+
+            {/* Floating team chat button */}
+            <button
+              type="button"
+              onClick={() => setTeamChatOpen(!teamChatOpen)}
+              className="fixed right-6 bottom-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors cursor-pointer"
+              title="Team Chat"
+            >
+              <MessageCircle size={20} />
+            </button>
+
+            <TeamChatDrawer open={teamChatOpen} onClose={() => setTeamChatOpen(false)} />
+
             {/* Canton wallet modals — mounted at the AppShell level so
                any page (TopBar chip, AccountMenu, Settings page) can
                open them via the WalletContext. The modals render null

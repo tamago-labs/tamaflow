@@ -224,7 +224,15 @@ export interface BridgeAPI {
   }
   payslip: {
     generate(opts: { settlementData: Record<string, unknown>; companyProfile: Record<string, unknown>; style: string }): Promise<{ success: boolean; markdown?: string; error?: string }>
+    fill(opts: { template: string; settlementData: Record<string, unknown>; companyProfile: Record<string, unknown> }): Promise<{ success: boolean; markdown?: string; error?: string }>
     buildPayload(opts: { markdown: string; settlementData: Record<string, unknown>; companyProfile: Record<string, unknown>; style: string }): Promise<{ success: boolean; payload?: Record<string, unknown>; error?: string }>
+    listTemplates(): Promise<PayslipTemplate[]>
+    saveTemplate(template: PayslipTemplate): Promise<PayslipTemplate>
+    removeTemplate(id: string): Promise<{ success: boolean }>
+    onThinking(cb: (data: { text: string }) => void): () => void
+    onToken(cb: (data: { text: string }) => void): () => void
+    onDone(cb: (data: { content: string; thinking: string }) => void): () => void
+    onError(cb: (data: { error: string }) => void): () => void
   }
   contractsConfig: {
     get(): Promise<ContractsConfig>
@@ -245,6 +253,16 @@ export interface ContractsConfig {
   contracts: {
     company: string
   }
+}
+
+export interface PayslipTemplate {
+  id: string
+  name: string
+  style: string
+  markdown: string
+  companyName?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 // Canton wallet types — mirror the JSDoc typedefs in
@@ -475,7 +493,15 @@ const noopBridge: BridgeAPI = {
   },
   payslip: {
     generate: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    fill: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     buildPayload: () => Promise.resolve({ success: false, error: 'bridge not available' }),
+    listTemplates: () => Promise.resolve([]),
+    saveTemplate: (t) => Promise.resolve(t),
+    removeTemplate: () => Promise.resolve({ success: false }),
+    onThinking: () => () => {},
+    onToken: () => () => {},
+    onDone: () => () => {},
+    onError: () => () => {},
   }
 }
 

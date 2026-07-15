@@ -139,7 +139,7 @@ export function AIModelModal({ open, onClose }: AIModelModalProps) {
       open={open}
       onClose={onClose}
       title='Enable Team AI'
-      subtitle='Set up AI so your team can refine plans and automation.'
+      subtitle='Enable AI for team available across P2P hyperswarm'
       variant='canvas'
       busy={isLoading}
     >
@@ -360,7 +360,7 @@ function SelectionBar({
           <div className='flex flex-wrap items-center gap-1.5'>
             <span className='text-xs font-medium text-gray-800'>{model.name}</span>
             {isActive && !isLoading && !pending && (
-              <span className='rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700'>
+              <span className='rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-blue-700'>
                 Loaded
               </span>
             )}
@@ -382,7 +382,7 @@ function SelectionBar({
             <div className='mt-2'>
               <div className='h-1.5 w-full overflow-hidden rounded-full bg-gray-200'>
                 <div
-                  className='h-full rounded-full bg-tamarind-600 transition-all'
+                  className='h-full rounded-full bg-brand-blue transition-all'
                   style={{ width: `${Math.round(progress.percentage)}%` }}
                 />
               </div>
@@ -409,7 +409,7 @@ function SelectionBar({
               type='button'
               disabled
               aria-busy='true'
-              className='inline-flex cursor-not-allowed items-center gap-1.5 rounded-md bg-tamarind-700 px-3 py-1.5 text-xs font-medium text-white opacity-60'
+              className='inline-flex cursor-not-allowed items-center gap-1.5 rounded-md bg-brand-blue px-3 py-1.5 text-xs font-medium text-white opacity-60'
             >
               Starting…
             </button>
@@ -425,7 +425,7 @@ function SelectionBar({
             <button
               type='button'
               onClick={onLoad}
-              className='inline-flex items-center gap-1.5 rounded-md bg-tamarind-700 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-tamarind-800 focus:outline-none focus:ring-2 focus:ring-blue-500'
+              className='inline-flex items-center gap-1.5 rounded-md bg-brand-blue px-3 py-1.5 text-xs font-medium text-white transition hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-blue-500'
             >
               <Download className='h-3 w-3' aria-hidden='true' />
               Load
@@ -567,7 +567,7 @@ function ModelRow({
           aria-hidden='true'
           className={
             isSelected
-              ? 'mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-tamarind-700 bg-tamarind-700 text-white'
+              ? 'mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-brand-blue bg-brand-blue text-white'
               : 'mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-gray-300 bg-white'
           }
         >
@@ -580,7 +580,7 @@ function ModelRow({
               {sourceKindLabel[model.sourceKind]}
             </span> */}
             {isActive && !isLoading && (
-              <span className='rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700'>
+              <span className='rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-blue-700'>
                 Loaded
               </span>
             )}
@@ -592,7 +592,7 @@ function ModelRow({
             <div className='mt-1.5 flex items-center gap-2'>
               <div className='h-1 flex-1 overflow-hidden rounded-full bg-gray-200'>
                 <div
-                  className='h-full rounded-full bg-tamarind-600 transition-all'
+                  className='h-full rounded-full bg-brand-blue transition-all'
                   style={{ width: `${Math.round(progress.percentage)}%` }}
                 />
               </div>
@@ -749,7 +749,7 @@ function AddCustomModelForm({ onComplete, onCancel }: AddCustomModelFormProps) {
           type='button'
           onClick={handleSubmit}
           disabled={!canSubmit}
-          className='rounded-md bg-tamarind-700 px-4 py-1.5 text-xs font-medium text-white transition hover:bg-tamarind-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50'
+          className='rounded-md bg-brand-blue px-4 py-1.5 text-xs font-medium text-white transition hover:bg-brand-blue/90 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50'
         >
           Add model
         </button>

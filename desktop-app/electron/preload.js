@@ -200,7 +200,31 @@ contextBridge.exposeInMainWorld('bridge', {
   },
   payslip: {
     generate: (opts) => ipcRenderer.invoke('payslip:generate', opts),
+    fill: (opts) => ipcRenderer.invoke('payslip:fill', opts),
     buildPayload: (opts) => ipcRenderer.invoke('payslip:buildPayload', opts),
+    listTemplates: () => ipcRenderer.invoke('payslip:templates:list'),
+    saveTemplate: (template) => ipcRenderer.invoke('payslip:templates:save', template),
+    removeTemplate: (id) => ipcRenderer.invoke('payslip:templates:remove', id),
+    onThinking: (cb) => {
+      const handler = (_evt, data) => cb(data)
+      ipcRenderer.on('payslip:thinking', handler)
+      return () => ipcRenderer.removeListener('payslip:thinking', handler)
+    },
+    onToken: (cb) => {
+      const handler = (_evt, data) => cb(data)
+      ipcRenderer.on('payslip:token', handler)
+      return () => ipcRenderer.removeListener('payslip:token', handler)
+    },
+    onDone: (cb) => {
+      const handler = (_evt, data) => cb(data)
+      ipcRenderer.on('payslip:done', handler)
+      return () => ipcRenderer.removeListener('payslip:done', handler)
+    },
+    onError: (cb) => {
+      const handler = (_evt, data) => cb(data)
+      ipcRenderer.on('payslip:error', handler)
+      return () => ipcRenderer.removeListener('payslip:error', handler)
+    }
   },
   contractsConfig: {
     get: () => ipcRenderer.invoke('contractsConfig:get'),
