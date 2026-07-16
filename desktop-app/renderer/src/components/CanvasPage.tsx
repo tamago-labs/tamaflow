@@ -234,7 +234,6 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
       {/* Canvas area */}
       <div className="flex-1 min-h-0 relative">
         <FlowBuilder
-          flowId={flowId}
           canvas={canvas}
           onCanvasChange={handleCanvasChange}
           flowName={flowName}

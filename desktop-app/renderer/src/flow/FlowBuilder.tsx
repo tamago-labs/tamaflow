@@ -5,7 +5,7 @@ import Canvas from './Canvas'
 import CanvasToolbar from './CanvasToolbar'
 import AddCardPopover from './AddCardPopover'
 import { BLUE, MUTED, NAVY, monoFont, sansFont } from './theme'
-import { canConnect, describeConnectionRule, shortPartyId, toPlacedCard } from './flowCards'
+import { canConnect, describeConnectionRule, toPlacedCard } from './flowCards'
 import type { CanvasCard, CanvasState, CanvasCardEdit, Connection, SimCardTemplate } from './types'
 import type { PortSide } from './CanvasCard'
 import { useEmployees } from '../context/EmployeeContext'
@@ -19,7 +19,6 @@ export interface FlowBuilderProps {
   onCanvasChange: (next: CanvasState) => void
   flowName: string
   onFlowNameChange: (next: string) => void
-  flowId: string
   onRequestPreview: () => void
   saveBadge?: { label: string; tone: 'idle' | 'saving' | 'saved' | 'error' }
   locked?: boolean
@@ -30,7 +29,7 @@ export interface FlowBuilderProps {
   onAddCardClose?: () => void
 }
 
-export default function FlowBuilder({ canvas, onCanvasChange, flowName, onFlowNameChange, flowId, onRequestPreview, saveBadge, locked = false, zoom: zoomProp, onZoomChange, addCardOpen: addCardOpenProp, onAddCardToggle, onAddCardClose }: FlowBuilderProps) {
+export default function FlowBuilder({ canvas, onCanvasChange, flowName, onFlowNameChange, onRequestPreview, saveBadge, locked = false, zoom: zoomProp, onZoomChange, addCardOpen: addCardOpenProp, onAddCardToggle, onAddCardClose }: FlowBuilderProps) {
   const { employees } = useEmployees()
   const { status: walletStatus, loadStatus: walletLoadStatus } = useWallet()
   const { profile: companyProfile } = useCompany()
@@ -70,7 +69,7 @@ export default function FlowBuilder({ canvas, onCanvasChange, flowName, onFlowNa
     const jitterY = Math.round((Math.random() - 0.5) * 60)
     const placed = toPlacedCard(template, id)
     const sourceFields = placed.category === 'source' ? { ...(placed.sourceFields ?? { partyId: '' }), partyId: walletPartyId } : placed.sourceFields
-    const title = placed.category === 'source' ? (walletPartyId ? shortPartyId(walletPartyId) : 'Source') : placed.title
+    const title = placed.category === 'source' ? 'Treasury Wallet' : placed.title
     const newCard: CanvasCard = { ...placed, title, ...(sourceFields ? { sourceFields } : {}), x: 360 + jitterX, y: 220 + jitterY, collapsed: false }
     onCanvasChange({ ...canvas, cards: [...canvas.cards, newCard] })
     setSelectedId(id)
@@ -110,7 +109,7 @@ export default function FlowBuilder({ canvas, onCanvasChange, flowName, onFlowNa
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', background: '#f7f7fc' }}>
       <DndContext onDragEnd={handleDragEnd}>
-        <Canvas state={canvas} selectedId={selectedId} connectFrom={connectFrom} editingId={editingId} flowId={flowId} employees={employees} walletReady={walletReady} paymentTemplates={paymentTemplates} locked={locked} onSelectCard={handleSelectCard} onDeleteCard={handleDeleteCard} onToggleCollapse={handleToggleCollapse} onPortClick={handlePortClick} onDeleteConnection={handleDeleteConnection} onCancelConnect={handleCancelConnect} onRequestEdit={handleRequestEdit} onEditCard={handleEditCard} onEditCancel={handleEditCancel} zoom={zoomProp} onZoomChange={onZoomChange} />
+        <Canvas state={canvas} selectedId={selectedId} connectFrom={connectFrom} editingId={editingId} employees={employees} walletReady={walletReady} paymentTemplates={paymentTemplates} locked={locked} onSelectCard={handleSelectCard} onDeleteCard={handleDeleteCard} onToggleCollapse={handleToggleCollapse} onPortClick={handlePortClick} onDeleteConnection={handleDeleteConnection} onCancelConnect={handleCancelConnect} onRequestEdit={handleRequestEdit} onEditCard={handleEditCard} onEditCancel={handleEditCancel} zoom={zoomProp} onZoomChange={onZoomChange} />
       </DndContext>
       {!isControlled && !locked && <CanvasToolbar flowName={flowName} addOpen={addOpen} onToggleAdd={() => setAddOpen(!addOpen)} onRequestPreview={onRequestPreview} onNameChange={onFlowNameChange} />}
       {!locked && <AddCardPopover open={addOpen} hasWallet={walletReady} walletPartyId={walletPartyId} hasEmployees={hasEmployees} employees={employees} paymentTemplates={paymentTemplates} onPick={handleAddTemplate} onClose={onAddCardClose || (() => setAddOpen(false))} />}

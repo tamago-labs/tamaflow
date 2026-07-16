@@ -3,7 +3,7 @@ import { BLUE, BORDER, MUTED, NAVY, monoFont, sansFont } from './theme'
 import type { CanvasCard as CanvasCardType, PayeeFields, PaymentFields, SourceFields } from './types'
 import type { Employee } from '../ai/types'
 import PaymentFieldsForm from './PaymentFieldsForm'
-import LastPaidSection from './LastPaidSection'
+import CheckInSection from './CheckInSection'
 import { useWallet } from '../context/WalletContext'
 import { useCompany } from '../context/CompanyContext'
 import { usePrice } from '../context/PriceContext'
@@ -19,7 +19,6 @@ interface EditFormProps {
   employees: Employee[]
   walletReady: boolean
   paymentTemplate: PaymentTemplate | null
-  flowId: string
   onTitleChange: (v: string) => void
   onPaymentChange: (v: PaymentFields) => void
   onSave: () => void
@@ -45,7 +44,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   )
 }
 
-export default function EditForm({ card, title, source, payee, payment, employees, walletReady, paymentTemplate, flowId, onTitleChange, onPaymentChange, onSave, onCancel, onKeyDown }: EditFormProps) {
+export default function EditForm({ card, title, source, payee, payment, employees, walletReady, paymentTemplate, onTitleChange, onPaymentChange, onSave, onCancel, onKeyDown }: EditFormProps) {
   const titleInputRef = useRef<HTMLInputElement>(null)
   const { profile: companyProfile } = useCompany()
 
@@ -67,7 +66,7 @@ export default function EditForm({ card, title, source, payee, payment, employee
         <button type="button" onClick={onSave} style={primaryButtonStyle}>Save</button>
       </div>
       {card.category === 'source' && <SourceBalanceFooter />}
-      {card.category === 'payee' && card.payeeFields?.employeeId && <LastPaidSection flowId={flowId} employeeId={card.payeeFields.employeeId} />}
+      {card.category === 'payee' && card.payeeFields?.employeeId && <CheckInSection employeeId={card.payeeFields.employeeId} />}
     </div>
   )
 }
@@ -82,9 +81,17 @@ function SourceBalanceFooter() {
 
   if (ccBalance === null) return <div style={{ marginTop: 4, paddingTop: 6, borderTop: '1px dashed ' + BORDER, fontFamily: monoFont, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: MUTED, textAlign: 'center' }}>Balance unavailable</div>
   return (
-    <div style={{ marginTop: 4, paddingTop: 6, borderTop: '1px dashed ' + BORDER, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-      <div style={{ fontFamily: monoFont, fontSize: 11, fontWeight: 700, color: NAVY, letterSpacing: '0.02em' }}>{formatConverted(ccBalance, 'CC')} CC</div>
-      {baseEquivalent !== null && <div style={{ fontFamily: monoFont, fontSize: 10, color: MUTED, letterSpacing: '0.04em' }}>{formatConverted(baseEquivalent, baseCurrency as any)} {baseCurrency}</div>}
+    <div style={{ marginTop: 4, paddingTop: 6, borderTop: '1px dashed ' + BORDER, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+        <div style={{ fontFamily: monoFont, fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED }}>Balance</div>
+        <div style={{ fontFamily: monoFont, fontSize: 11, fontWeight: 700, color: NAVY, letterSpacing: '0.02em' }}>{formatConverted(ccBalance, 'CC')} CC</div>
+      </div>
+      {baseEquivalent !== null && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+          <div style={{ fontFamily: monoFont, fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED }}>≈ {baseCurrency}</div>
+          <div style={{ fontFamily: monoFont, fontSize: 10, color: MUTED, letterSpacing: '0.04em' }}>{formatConverted(baseEquivalent, baseCurrency as any)} {baseCurrency}</div>
+        </div>
+      )}
     </div>
   )
 }
@@ -93,7 +100,7 @@ function SourceFieldsForm({ source, walletReady }: { source: SourceFields; walle
   const hasPartyId = source.partyId.trim().length > 0
   return (
     <>
-      <Field label="Wallet (Canton party id)" hint="snapshotted at creation">
+      <Field label="Wallet Party ID">
         <input type="text" value={source.partyId} readOnly tabIndex={-1} style={{ ...textInputStyle, color: hasPartyId ? NAVY : '#c83030', background: '#f7f7fc', fontFamily: monoFont, fontSize: 10 }} placeholder={walletReady ? 'No wallet selected' : 'No wallet set up yet'} />
       </Field>
       {!walletReady && <div style={{ fontFamily: monoFont, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#c83030', padding: '4px 6px', background: 'rgba(200,48,48,0.06)', borderRadius: 4, border: '1px dashed #c83030', lineHeight: 1.4, whiteSpace: 'normal' }}>No wallet set up. Create one in Assets before running this flow.</div>}

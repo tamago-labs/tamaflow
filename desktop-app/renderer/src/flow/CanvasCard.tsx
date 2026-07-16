@@ -17,7 +17,6 @@ interface CanvasCardProps {
   selected: boolean
   isConnectSource: boolean
   editing: boolean
-  flowId: string
   employees: Employee[]
   walletReady: boolean
   paymentTemplates: PaymentTemplate[]
@@ -36,7 +35,7 @@ const COLLAPSED_HEIGHT = 44
 const EXPANDED_HEIGHTS: Record<CanvasCardType['category'], number> = { source: 110, payee: 120, payment: 110 }
 const EDIT_HEIGHT = 360
 
-const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCard({ card, selected, isConnectSource, editing, flowId, employees, walletReady, paymentTemplates, locked = false, onSelect, onDelete, onToggleCollapse, onPortClick, onRequestEdit, onEdit, onEditCancel }, _ref) {
+const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCard({ card, selected, isConnectSource, editing, employees, walletReady, paymentTemplates, locked = false, onSelect, onDelete, onToggleCollapse, onPortClick, onRequestEdit, onEdit, onEditCancel }, _ref) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: 'card-' + card.placementId, data: { placementId: card.placementId, kind: 'canvas-card' }, disabled: editing || locked })
 
   const [draftTitle, setDraftTitle] = useState(card.title)
@@ -78,7 +77,7 @@ const CanvasCard = forwardRef<HTMLDivElement, CanvasCardProps>(function CanvasCa
   return (
     <div ref={setNodeRef} style={style} onClick={handleBodyClick} onDoubleClick={handleBodyDoubleClick} {...(editing || locked ? {} : listeners)} {...attributes}>
       {editing ? (
-        <EditForm card={card} title={draftTitle} source={draftSource} payee={draftPayee} payment={draftPayment} employees={employees} walletReady={walletReady} paymentTemplate={resolvePaymentTemplate(card, paymentTemplates)} flowId={flowId} onTitleChange={setDraftTitle} onPaymentChange={setDraftPayment} onSave={handleSave} onCancel={() => onEditCancel(card.placementId)} onKeyDown={handleEditKeyDown} />
+        <EditForm card={card} title={draftTitle} source={draftSource} payee={draftPayee} payment={draftPayment} employees={employees} walletReady={walletReady} paymentTemplate={resolvePaymentTemplate(card, paymentTemplates)} onTitleChange={setDraftTitle} onPaymentChange={setDraftPayment} onSave={handleSave} onCancel={() => onEditCancel(card.placementId)} onKeyDown={handleEditKeyDown} />
       ) : (
         <>
           <div style={{ display: 'flex', alignItems: card.collapsed ? 'center' : 'flex-start', justifyContent: 'space-between', gap: 8 }}>
@@ -126,7 +125,7 @@ function CardBody({ card, employees, walletReady, paymentTemplates }: { card: Ca
 function SourceBody({ card, walletReady }: { card: CanvasCardType; walletReady: boolean }) {
   const partyId = card.sourceFields?.partyId?.trim() ?? ''
   if (!partyId) return <div style={{ marginTop: 8 }}><BodyMuted>{walletReady ? 'No wallet set on this card' : 'No wallet set up — create one in Assets'}</BodyMuted></div>
-  return <div style={{ marginTop: 8 }}><BodyField label="Wallet"><BodyMono>{shortPartyId(partyId)}</BodyMono></BodyField></div>
+  return <div style={{ marginTop: 8 }}><BodyField label="Party ID"><BodyMono>{shortPartyId(partyId)}</BodyMono></BodyField></div>
 }
 
 function PayeeBody({ card, employees }: { card: CanvasCardType; employees: Employee[] }) {

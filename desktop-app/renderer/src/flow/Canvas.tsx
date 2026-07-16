@@ -12,7 +12,6 @@ interface CanvasProps {
   selectedId: string | null
   connectFrom: string | null
   editingId: string | null
-  flowId: string
   employees: Employee[]
   walletReady: boolean
   paymentTemplates: PaymentTemplate[]
@@ -34,7 +33,7 @@ const ZOOM_MIN = 0.25
 const ZOOM_MAX = 3
 const ZOOM_STEP = 0.1
 
-export default function Canvas({ state, selectedId, connectFrom, editingId, flowId, employees, walletReady, paymentTemplates, locked = false, zoom: zoomProp, onZoomChange, onSelectCard, onDeleteCard, onToggleCollapse, onPortClick, onDeleteConnection, onCancelConnect, onRequestEdit, onEditCard, onEditCancel }: CanvasProps) {
+export default function Canvas({ state, selectedId, connectFrom, editingId, employees, walletReady, paymentTemplates, locked = false, zoom: zoomProp, onZoomChange, onSelectCard, onDeleteCard, onToggleCollapse, onPortClick, onDeleteConnection, onCancelConnect, onRequestEdit, onEditCard, onEditCancel }: CanvasProps) {
   const surfaceRef = useRef<HTMLDivElement>(null)
   const worldRef = useRef<HTMLDivElement>(null)
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({})
@@ -107,7 +106,7 @@ export default function Canvas({ state, selectedId, connectFrom, editingId, flow
         {state.cards.length === 0 && !connectFrom && <EmptyHint />}
         <CanvasLines connections={state.connections} cards={state.cards} cardRefs={cardRefs.current} onDeleteConnection={onDeleteConnection} />
         {state.cards.map((card) => (
-          <CanvasCard key={card.placementId} card={card} selected={selectedId === card.placementId} isConnectSource={connectFrom === card.placementId} editing={editingId === card.placementId} flowId={flowId} employees={employees} walletReady={walletReady} paymentTemplates={paymentTemplates} locked={locked} onSelect={onSelectCard} onDelete={onDeleteCard} onToggleCollapse={onToggleCollapse} onPortClick={onPortClick} onRequestEdit={onRequestEdit} onEdit={onEditCard} onEditCancel={onEditCancel} ref={(el) => { cardRefs.current[card.placementId] = el }} />
+          <CanvasCard key={card.placementId} card={card} selected={selectedId === card.placementId} isConnectSource={connectFrom === card.placementId} editing={editingId === card.placementId} employees={employees} walletReady={walletReady} paymentTemplates={paymentTemplates} locked={locked} onSelect={onSelectCard} onDelete={onDeleteCard} onToggleCollapse={onToggleCollapse} onPortClick={onPortClick} onRequestEdit={onRequestEdit} onEdit={onEditCard} onEditCancel={onEditCancel} ref={(el) => { cardRefs.current[card.placementId] = el }} />
         ))}
       </div>
       {connectFrom && !locked && <div style={{ position: 'absolute', bottom: 80, left: '50%', transform: 'translateX(-50%)', padding: '0 18px', height: 32, background: 'rgba(26,26,232,0.08)', border: '1px solid ' + BLUE, borderRadius: 16, color: BLUE, fontFamily: monoFont, fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 95, pointerEvents: 'none', whiteSpace: 'nowrap' }}>Click a port to draw a line — Esc to cancel</div>}
