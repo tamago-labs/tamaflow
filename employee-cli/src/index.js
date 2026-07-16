@@ -661,7 +661,38 @@ class EmployeeCLI {
     // ============================================
 
     this.app.get('/api/payslips', (_req, res) => {
-      res.json(this.pear.getPayslips())
+      const payslips = this.pear.getPayslips()
+      // Return payslip metadata (without full HTML body for listing)
+      const listing = payslips.map(p => ({
+        id: p.id,
+        employee: p.employee,
+        period: p.period,
+        grossPay: p.grossPay,
+        netPay: p.netPay,
+        currency: p.currency,
+        companyName: p.companyName,
+        createdAt: p.createdAt,
+        hasHtml: !!(p.html),
+      }))
+      res.json(listing)
+    })
+
+    // Get a single payslip with full HTML body
+    this.app.get('/api/payslips/:id', (req, res) => {
+      const payslips = this.pear.getPayslips()
+      const found = payslips.find(p => p.id === req.params.id)
+      if (!found) return res.status(404).json({ error: 'Payslip not found' })
+      res.json(found)
+    })
+
+    // Get payslip HTML for rendering in sandboxed iframe
+    this.app.get('/api/payslips/:id/html', (req, res) => {
+      const payslips = this.pear.getPayslips()
+      const found = payslips.find(p => p.id === req.params.id)
+      if (!found) return res.status(404).send('Payslip not found')
+      if (!found.html) return res.status(404).send('No HTML content')
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.send(found.html)
     })
 
     this.app.post('/api/payslips', async (req, res) => {

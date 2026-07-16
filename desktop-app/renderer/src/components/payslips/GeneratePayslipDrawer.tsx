@@ -5,6 +5,7 @@ import Drawer from '../Drawer'
 import { useCompany } from '../../context/CompanyContext'
 import { useEmployees } from '../../context/EmployeeContext'
 import { bridge } from '../../lib/bridge'
+import { writeRoom } from '../../lib/room'
 import { DEFAULT_PAYSIP_HTML } from '../../lib/defaultPayslipTemplate'
 import type { RouteSummary, Employee, PaymentTemplate } from '../../ai/types'
 import { Loader2, Send, Check, History } from 'lucide-react'
@@ -153,6 +154,28 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
         sentAt: new Date().toISOString(),
         sendId: driveResult.sendId!,
       })
+
+      // 4. Broadcast via P2P so employee-cli can receive it cross-machine
+      try {
+        await writeRoom({
+          type: 'send-chat',
+          text: `[payslip] ${JSON.stringify({
+            id: driveResult.sendId,
+            type: 'payslip',
+            employee: employee?.displayName ?? '',
+            employeeId: route.employeeId,
+            period: route.completedAt ? formatPeriod(route.completedAt) : route.createdAt.slice(0, 7),
+            grossPay: route.grossPay,
+            netPay: route.netPay ?? route.grossPay,
+            currency: route.payCurrency,
+            html: filledHtml,
+            companyName: companyProfile?.companyName ?? '',
+            createdAt: new Date().toISOString(),
+          })}`
+        })
+      } catch (p2pErr) {
+        console.warn('[GeneratePayslipDrawer] P2P broadcast failed (non-blocking):', p2pErr)
+      }
 
       setSent(true)
       onSent()
