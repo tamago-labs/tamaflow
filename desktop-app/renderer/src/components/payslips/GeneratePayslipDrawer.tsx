@@ -7,8 +7,8 @@ import { useEmployees } from '../../context/EmployeeContext'
 import { useRoom } from '../../hooks/useRoom'
 import { bridge } from '../../lib/bridge'
 import { CONTRACTS } from '../../lib/contracts-ids'
-import { DEFAULT_PAYSIP_HTML } from '../../lib/defaultPayslipTemplate'
-import type { RouteSummary, PaymentTemplate } from '../../ai/types'
+import { DEFAULT_PAYSLIP_HTML } from '../../lib/defaultPayslipTemplate'
+import type { RouteSummary, PayslipTemplate } from '../../ai/types'
 import { Loader2, Send, Check, History } from 'lucide-react'
 
 interface GeneratePayslipDrawerProps {
@@ -48,13 +48,12 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
   const { employees: rosterEmployees } = useEmployees()
   const { payslips: roomPayslips, sendPayslip } = useRoom()
 
-  const templates: PaymentTemplate[] = (companyProfile as any)?.paymentTemplates ?? []
+  const templates: PayslipTemplate[] = (companyProfile as any)?.payslipTemplates ?? []
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('__direct__')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [p2pFailed, setP2pFailed] = useState(false)
 
   // Resolve employee info
   const employee = useMemo(() => {
@@ -71,7 +70,6 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
     setSelectedTemplateId('__direct__')
     setSent(false)
     setError(null)
-    setP2pFailed(false)
   }, [open])
 
   // Get send history from room payslips (filtered by route)
@@ -86,7 +84,7 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
     const template = selectedTemplateId === '__direct__'
       ? null
       : templates.find((t) => t.id === selectedTemplateId)
-    const baseHtml = template?.html || DEFAULT_PAYSIP_HTML
+    const baseHtml = template?.html || DEFAULT_PAYSLIP_HTML
     return fillHtml(baseHtml, {
       companyName: companyProfile?.companyName ?? '',
       period: route.completedAt ? formatPeriod(route.completedAt) : route.createdAt.slice(0, 7),
@@ -108,7 +106,6 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
     if (!route || !employeePartyId) return
     setSending(true)
     setError(null)
-    setP2pFailed(false)
     try {
       // 1. Build the payslip data for the P2P HyperDB collection
       const payslipData = {
@@ -122,6 +119,7 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
         netPay: route.netPay ?? route.grossPay,
         currency: route.payCurrency,
         companyName: companyProfile?.companyName ?? '',
+        templateId: selectedTemplateId !== '__direct__' ? selectedTemplateId : undefined,
         html: filledHtml,
         createdAt: Date.now(),
         sentAt: Date.now(),
@@ -234,11 +232,6 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
           <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#666', textAlign: 'center' }}>
             Saved to employee drive and registered on-ledger
           </div>
-          {p2pFailed && (
-            <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#b45309', textAlign: 'center', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 4, padding: '6px 12px' }}>
-              P2P broadcast failed — employee-cli may not receive this payslip until they reconnect
-            </div>
-          )}
         </div>
       ) : (
         <>
@@ -261,7 +254,7 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
                 background: '#fff',
               }}
             >
-              <option value='__direct__'>Direct Payment — No deductions</option>
+              <option value='__direct__'>Default Template — Simple payslip</option>
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}

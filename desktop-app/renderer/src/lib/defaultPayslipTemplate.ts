@@ -2,7 +2,7 @@
 // Clean professional layout, B&W, no brand colors.
 // Used as the fallback when a payment card has no bound template.
 
-export const DEFAULT_PAYSIP_HTML = `<!DOCTYPE html>
+export const DEFAULT_PAYSLIP_HTML = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>Payslip</title>
 <style>
@@ -32,7 +32,7 @@ export const DEFAULT_PAYSIP_HTML = `<!DOCTYPE html>
 </body>
 </html>`
 
-export const DEFAULT_PAYSIP_PLACEHOLDERS = [
+export const DEFAULT_PAYSLIP_PLACEHOLDERS = [
   '{{companyName}}',
   '{{period}}',
   '{{employeeName}}',

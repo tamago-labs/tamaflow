@@ -224,10 +224,12 @@ export interface BridgeAPI {
     createPayslip(companyContractId: string, employeePartyId: string, payslipId: string, period: string): Promise<unknown>
   }
   payslip: {
-    sendToRecipient(opts: Record<string, unknown>): Promise<{ success: boolean; sendId?: string; error?: string }>
-    getHistoryForEmployee(partyId: string): Promise<{ success: boolean; payslips?: Record<string, unknown>[]; error?: string }>
+    generate(opts: { prompt: string; fields?: string[]; useRealExample?: boolean; currentHtml?: string }): Promise<{ success: boolean; html?: string; error?: string }>
     generateTemplate(opts: Record<string, unknown>): Promise<{ success: boolean; html?: string; error?: string }>
-    buildPayload(opts: Record<string, unknown>): Promise<{ success: boolean; payload?: Record<string, unknown>; error?: string }>
+    onThinking(cb: (data: { text: string }) => void): () => void
+    onToken(cb: (data: { text: string }) => void): () => void
+    onDone(cb: (data: { content: string; thinking: string }) => void): () => void
+    onError(cb: (data: { error: string }) => void): () => void
   }
   contractsConfig: {
     get(): Promise<ContractsConfig>
@@ -478,10 +480,12 @@ const noopBridge: BridgeAPI = {
     onChange: () => () => {},
   },
   payslip: {
-    sendToRecipient: () => Promise.resolve({ success: false }),
-    getHistoryForEmployee: () => Promise.resolve({ success: false, payslips: [] }),
+    generate: () => Promise.resolve({ success: false }),
     generateTemplate: () => Promise.resolve({ success: false }),
-    buildPayload: () => Promise.resolve({ success: false })
+    onThinking: () => () => {},
+    onToken: () => () => {},
+    onDone: () => () => {},
+    onError: () => () => {},
   }
 }
 

@@ -264,6 +264,30 @@ export interface PaymentTemplate {
   updatedAt: string
 }
 
+/** Payslip HTML template — separate from PaymentTemplate (deduction rules). */
+export interface PayslipTemplate {
+  id: string
+  name: string
+  html: string
+  defaultPlaceholders: string[]
+  /** Bound to a payment card template — auto-selects in the send drawer. */
+  paymentTemplateId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** Payslip HTML template — separate from PaymentTemplate (deduction rules). */
+export interface PayslipTemplate {
+  id: string
+  name: string
+  html: string
+  defaultPlaceholders: string[]
+  /** Bound to a payment card template — auto-selects in the send drawer. */
+  paymentTemplateId?: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CompanyProfile {
   companyName: string
   country: CountryCode
@@ -272,6 +296,7 @@ export interface CompanyProfile {
   settlementCurrency: SettlementCurrency
   fiscalYearStart: string
   paymentTemplates?: PaymentTemplate[]
+  payslipTemplates?: PayslipTemplate[]
   directPaymentDefaultMemo?: string
   createdAt: string
   updatedAt: string

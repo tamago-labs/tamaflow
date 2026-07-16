@@ -200,7 +200,28 @@ contextBridge.exposeInMainWorld('bridge', {
     createPayslip: (companyContractId, employeePartyId, payslipId, period) => ipcRenderer.invoke('contracts:createPayslip', companyContractId, employeePartyId, payslipId, period),
   },
   payslip: {
+    generate: (opts) => ipcRenderer.invoke('payslip:generate', opts),
     generateTemplate: (opts) => ipcRenderer.invoke('payslip:generateTemplate', opts),
+    onThinking: (cb) => {
+      const handler = (_evt, data) => cb(data)
+      ipcRenderer.on('payslip:thinking', handler)
+      return () => ipcRenderer.removeListener('payslip:thinking', handler)
+    },
+    onToken: (cb) => {
+      const handler = (_evt, data) => cb(data)
+      ipcRenderer.on('payslip:token', handler)
+      return () => ipcRenderer.removeListener('payslip:token', handler)
+    },
+    onDone: (cb) => {
+      const handler = (_evt, data) => cb(data)
+      ipcRenderer.on('payslip:done', handler)
+      return () => ipcRenderer.removeListener('payslip:done', handler)
+    },
+    onError: (cb) => {
+      const handler = (_evt, data) => cb(data)
+      ipcRenderer.on('payslip:error', handler)
+      return () => ipcRenderer.removeListener('payslip:error', handler)
+    },
   },
   contractsConfig: {
     get: () => ipcRenderer.invoke('contractsConfig:get'),

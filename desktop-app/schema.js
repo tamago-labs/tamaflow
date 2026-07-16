@@ -165,7 +165,8 @@ schema.register({
     { name: 'companyName', type: 'string', required: false },
     { name: 'html', type: 'json', required: true },
     { name: 'createdAt', type: 'int', required: false },
-    { name: 'sentAt', type: 'int', required: false }
+    { name: 'sentAt', type: 'int', required: false },
+    { name: 'templateId', type: 'string', required: false }
   ]
 })
 

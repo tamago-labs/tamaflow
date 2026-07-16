@@ -359,6 +359,12 @@
           "required": false,
           "type": "int",
           "version": 3
+        },
+        {
+          "name": "templateId",
+          "required": false,
+          "type": "string",
+          "version": 3
         }
       ]
     }

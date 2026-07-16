@@ -41,8 +41,9 @@ function validateProfile(input) {
 
   const fiscalYearStart = typeof p.fiscalYearStart === 'string' ? p.fiscalYearStart : '01'
 
-  // Preserve paymentTemplates and directPaymentDefaultMemo
+  // Preserve paymentTemplates, payslipTemplates, and directPaymentDefaultMemo
   const paymentTemplates = Array.isArray(p.paymentTemplates) ? p.paymentTemplates : []
+  const payslipTemplates = Array.isArray(p.payslipTemplates) ? p.payslipTemplates : []
   const directPaymentDefaultMemo = typeof p.directPaymentDefaultMemo === 'string' ? p.directPaymentDefaultMemo : ''
 
   const createdAt = typeof p.createdAt === 'string' ? p.createdAt : ''
@@ -56,6 +57,7 @@ function validateProfile(input) {
     settlementCurrency,
     fiscalYearStart,
     paymentTemplates,
+    payslipTemplates,
     directPaymentDefaultMemo,
     createdAt,
     updatedAt

@@ -24,7 +24,7 @@ import { AIModelModal } from './AIModelModal'
 import { DashboardPage } from './pages/DashboardPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { ChatPage } from './pages/ChatPage'
-import { PayslipsPage } from './pages/PayslipsPage'
+import PayslipManager from './payslips/PayslipManager'
 import { EmployeesPage } from './pages/EmployeesPage'
 import { FlowBuilderPage } from './pages/FlowBuilderPage'
 import PaymentSettingsPage from './pages/PaymentSettingsPage'
@@ -50,7 +50,7 @@ const PAGES: Record<PageId, () => JSX.Element> = {
   dashboard: DashboardPage,
   attendance: AttendancePage,
   chat: ChatPage,
-  payslips: PayslipsPage,
+  payslips: PayslipManager,
   employees: EmployeesPage,
   'flow-builder': FlowBuilderPage,
   'payment-settings': PaymentSettingsPage,

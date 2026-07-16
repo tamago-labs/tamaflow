@@ -22,6 +22,7 @@ export interface Payslip {
   html: string
   createdAt?: number
   sentAt?: number
+  templateId?: string
 }
 
 // Outbound frames the renderer can send to the room worker.

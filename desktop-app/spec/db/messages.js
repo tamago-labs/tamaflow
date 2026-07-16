@@ -294,7 +294,8 @@ const encoding9 = {
       ((version >= 3 && m.currency) ? 32 : 0) |
       ((version >= 3 && m.companyName) ? 64 : 0) |
       ((version >= 3 && m.createdAt) ? 128 : 0) |
-      ((version >= 3 && m.sentAt) ? 256 : 0)
+      ((version >= 3 && m.sentAt) ? 256 : 0) |
+      ((version >= 3 && m.templateId) ? 512 : 0)
 
     c.string.preencode(state, m.id)
     c.string.preencode(state, m.recipient)
@@ -311,6 +312,7 @@ const encoding9 = {
     c.json.preencode(state, m.html)
     if (version >= 3 && m.createdAt) c.int.preencode(state, m.createdAt)
     if (version >= 3 && m.sentAt) c.int.preencode(state, m.sentAt)
+    if (version >= 3 && m.templateId) c.string.preencode(state, m.templateId)
   },
   encode(state, m) {
     const flags =
@@ -322,7 +324,8 @@ const encoding9 = {
       ((version >= 3 && m.currency) ? 32 : 0) |
       ((version >= 3 && m.companyName) ? 64 : 0) |
       ((version >= 3 && m.createdAt) ? 128 : 0) |
-      ((version >= 3 && m.sentAt) ? 256 : 0)
+      ((version >= 3 && m.sentAt) ? 256 : 0) |
+      ((version >= 3 && m.templateId) ? 512 : 0)
 
     c.string.encode(state, m.id)
     c.string.encode(state, m.recipient)
@@ -339,6 +342,7 @@ const encoding9 = {
     c.json.encode(state, m.html)
     if (version >= 3 && m.createdAt) c.int.encode(state, m.createdAt)
     if (version >= 3 && m.sentAt) c.int.encode(state, m.sentAt)
+    if (version >= 3 && m.templateId) c.string.encode(state, m.templateId)
   },
   decode(state) {
     const r0 = c.string.decode(state)
@@ -359,7 +363,8 @@ const encoding9 = {
       companyName: (version >= 3 && (flags & 64) !== 0) ? c.string.decode(state) : null,
       html: c.json.decode(state),
       createdAt: (version >= 3 && (flags & 128) !== 0) ? c.int.decode(state) : 0,
-      sentAt: (version >= 3 && (flags & 256) !== 0) ? c.int.decode(state) : 0
+      sentAt: (version >= 3 && (flags & 256) !== 0) ? c.int.decode(state) : 0,
+      templateId: (version >= 3 && (flags & 512) !== 0) ? c.string.decode(state) : null
     }
   }
 }
@@ -554,7 +559,8 @@ const encoding16 = {
       ((version >= 3 && m.currency) ? 32 : 0) |
       ((version >= 3 && m.companyName) ? 64 : 0) |
       ((version >= 3 && m.createdAt) ? 128 : 0) |
-      ((version >= 3 && m.sentAt) ? 256 : 0)
+      ((version >= 3 && m.sentAt) ? 256 : 0) |
+      ((version >= 3 && m.templateId) ? 512 : 0)
 
     c.string.preencode(state, m.recipient)
     c.string.preencode(state, m.routeId)
@@ -570,6 +576,7 @@ const encoding16 = {
     c.json.preencode(state, m.html)
     if (version >= 3 && m.createdAt) c.int.preencode(state, m.createdAt)
     if (version >= 3 && m.sentAt) c.int.preencode(state, m.sentAt)
+    if (version >= 3 && m.templateId) c.string.preencode(state, m.templateId)
   },
   encode(state, m) {
     const flags =
@@ -581,7 +588,8 @@ const encoding16 = {
       ((version >= 3 && m.currency) ? 32 : 0) |
       ((version >= 3 && m.companyName) ? 64 : 0) |
       ((version >= 3 && m.createdAt) ? 128 : 0) |
-      ((version >= 3 && m.sentAt) ? 256 : 0)
+      ((version >= 3 && m.sentAt) ? 256 : 0) |
+      ((version >= 3 && m.templateId) ? 512 : 0)
 
     c.string.encode(state, m.recipient)
     c.string.encode(state, m.routeId)
@@ -597,6 +605,7 @@ const encoding16 = {
     c.json.encode(state, m.html)
     if (version >= 3 && m.createdAt) c.int.encode(state, m.createdAt)
     if (version >= 3 && m.sentAt) c.int.encode(state, m.sentAt)
+    if (version >= 3 && m.templateId) c.string.encode(state, m.templateId)
   },
   decode(state) {
     const r1 = c.string.decode(state)
@@ -616,7 +625,8 @@ const encoding16 = {
       companyName: (version >= 3 && (flags & 64) !== 0) ? c.string.decode(state) : null,
       html: c.json.decode(state),
       createdAt: (version >= 3 && (flags & 128) !== 0) ? c.int.decode(state) : 0,
-      sentAt: (version >= 3 && (flags & 256) !== 0) ? c.int.decode(state) : 0
+      sentAt: (version >= 3 && (flags & 256) !== 0) ? c.int.decode(state) : 0,
+      templateId: (version >= 3 && (flags & 512) !== 0) ? c.string.decode(state) : null
     }
   }
 }
