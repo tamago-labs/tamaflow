@@ -8,7 +8,7 @@ import { useWallet } from '../context/WalletContext'
 import { useCompany } from '../context/CompanyContext'
 import { usePrice } from '../context/PriceContext'
 
-interface PaymentTemplate { id: string; name: string; withholdingRate: string; defaultMemo: string; createdAt: string; updatedAt: string }
+interface PaymentTemplate { id: string; name: string; withholdingRate: string; defaultMemo: string; html: string; defaultPlaceholders: string[]; createdAt: string; updatedAt: string }
 
 interface EditFormProps {
   card: CanvasCardType

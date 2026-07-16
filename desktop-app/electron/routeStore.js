@@ -160,6 +160,37 @@ class RouteStore {
     fs.renameSync(tmpPath, filePath)
   }
 
+  /**
+   * Record a payslip send on a route. Appends to the payslipSentCount,
+   * payslipSentAt, payslipSendIds, and payslipTemplateId fields, then persists.
+   * @param {string} flowId
+   * @param {string} routeId
+   * @param {{ sentAt: string, sendId: string, templateId?: string }} info
+   * @returns {{ success: boolean, error?: string }}
+   */
+  bumpPayslipSend(flowId, routeId, info) {
+    const dir = flowRoutesDir(flowId)
+    const filePath = path.join(dir, `${routeId}.json`)
+    if (!fs.existsSync(filePath)) {
+      return { success: false, error: `Route file not found: ${routeId}` }
+    }
+    try {
+      const record = this.readOne(flowId, filePath)
+      if (!record) return { success: false, error: `Failed to read route: ${routeId}` }
+      record.payslipSentCount = (record.payslipSentCount ?? 0) + 1
+      if (!Array.isArray(record.payslipSentAt)) record.payslipSentAt = []
+      record.payslipSentAt.push(info.sentAt)
+      if (!Array.isArray(record.payslipSendIds)) record.payslipSendIds = []
+      record.payslipSendIds.push(info.sendId)
+      if (info.templateId) record.payslipTemplateId = info.templateId
+      this.atomicWrite(flowId, filePath, record)
+      return { success: true }
+    } catch (err) {
+      console.error('[RouteStore] bumpPayslipSend failed:', routeId, err)
+      return { success: false, error: err.message }
+    }
+  }
+
   static validate(input, id) {
     if (!input || typeof input !== 'object') {
       throw new Error('Route must be an object')
@@ -234,6 +265,17 @@ class RouteStore {
     }
     if (typeof r.startedAt === 'string') record.startedAt = r.startedAt
     if (typeof r.completedAt === 'string') record.completedAt = r.completedAt
+
+    // Payslip tracking fields — all optional, default to empty/zero
+    record.payslipSentCount = Number.isFinite(Number(r.payslipSentCount)) ? Number(r.payslipSentCount) : 0
+    if (Array.isArray(r.payslipSentAt)) record.payslipSentAt = r.payslipSentAt.filter((v) => typeof v === 'string')
+    else record.payslipSentAt = []
+    if (Array.isArray(r.payslipSendIds)) record.payslipSendIds = r.payslipSendIds.filter((v) => typeof v === 'string')
+    else record.payslipSendIds = []
+    if (typeof r.payslipTemplateId === 'string' && r.payslipTemplateId.trim().length > 0) {
+      record.payslipTemplateId = r.payslipTemplateId.trim()
+    }
+
     return record
   }
 
@@ -272,6 +314,9 @@ function toSummary(record) {
     recipientPartyId,
     memo,
     createdAt,
+    payslipSentCount: record.payslipSentCount ?? 0,
+    payslipSentAt: record.payslipSentAt ?? [],
+    payslipSendIds: record.payslipSendIds ?? [],
   }
   if (record.fxRate) summary.fxRate = record.fxRate
   if (record.withholdingAmount) summary.withholdingAmount = record.withholdingAmount
@@ -282,6 +327,7 @@ function toSummary(record) {
   if (record.txHash) summary.txHash = record.txHash
   if (record.startedAt) summary.startedAt = record.startedAt
   if (record.completedAt) summary.completedAt = record.completedAt
+  if (record.payslipTemplateId) summary.payslipTemplateId = record.payslipTemplateId
   return summary
 }
 

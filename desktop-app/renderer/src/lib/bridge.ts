@@ -223,16 +223,10 @@ export interface BridgeAPI {
     createPayslip(companyContractId: string, employeePartyId: string, payslipId: string, period: string): Promise<unknown>
   }
   payslip: {
-    generate(opts: { settlementData: Record<string, unknown>; companyProfile: Record<string, unknown>; style: string }): Promise<{ success: boolean; markdown?: string; error?: string }>
-    fill(opts: { template: string; settlementData: Record<string, unknown>; companyProfile: Record<string, unknown> }): Promise<{ success: boolean; markdown?: string; error?: string }>
-    buildPayload(opts: { markdown: string; settlementData: Record<string, unknown>; companyProfile: Record<string, unknown>; style: string }): Promise<{ success: boolean; payload?: Record<string, unknown>; error?: string }>
-    listTemplates(): Promise<PayslipTemplate[]>
-    saveTemplate(template: PayslipTemplate): Promise<PayslipTemplate>
-    removeTemplate(id: string): Promise<{ success: boolean }>
-    onThinking(cb: (data: { text: string }) => void): () => void
-    onToken(cb: (data: { text: string }) => void): () => void
-    onDone(cb: (data: { content: string; thinking: string }) => void): () => void
-    onError(cb: (data: { error: string }) => void): () => void
+    sendToRecipient(opts: { routeId: string; employeePartyId: string; employeeName: string; html: string; period: string }): Promise<{ success: boolean; sendId?: string; error?: string }>
+    getHistoryForEmployee(employeePartyId: string): Promise<{ success: boolean; payslips?: Record<string, unknown>[]; error?: string }>
+    generateTemplate(opts: { prompt: string; realDataExample?: Record<string, unknown>; currentHtml?: string }): Promise<{ success: boolean; html?: string; error?: string }>
+    buildPayload(opts: { html: string; settlementData: Record<string, unknown>; companyProfile: Record<string, unknown>; style: string }): Promise<{ success: boolean; payload?: Record<string, unknown>; error?: string }>
   }
   contractsConfig: {
     get(): Promise<ContractsConfig>
@@ -253,16 +247,6 @@ export interface ContractsConfig {
   contracts: {
     company: string
   }
-}
-
-export interface PayslipTemplate {
-  id: string
-  name: string
-  style: string
-  markdown: string
-  companyName?: string
-  createdAt?: string
-  updatedAt?: string
 }
 
 // Canton wallet types — mirror the JSDoc typedefs in

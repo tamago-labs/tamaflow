@@ -12,7 +12,7 @@ import { useEmployees } from '../context/EmployeeContext'
 import { useWallet } from '../context/WalletContext'
 import { useCompany } from '../context/CompanyContext'
 
-type PaymentTemplate = { id: string; name: string; withholdingRate: string; defaultMemo: string; createdAt: string; updatedAt: string }
+type PaymentTemplate = { id: string; name: string; withholdingRate: string; defaultMemo: string; html: string; defaultPlaceholders: string[]; createdAt: string; updatedAt: string }
 
 export interface FlowBuilderProps {
   canvas: CanvasState

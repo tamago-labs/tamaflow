@@ -256,6 +256,10 @@ export interface PaymentTemplate {
   defaultMemo: string
   applyEmployeeTax?: boolean
   applyEmployeeSocialSecurity?: boolean
+  /** HTML template body with {{placeholder}} syntax for payslip rendering. */
+  html: string
+  /** Which {{placeholders}} this template uses — for the AI assist UI. */
+  defaultPlaceholders: string[]
   createdAt: string
   updatedAt: string
 }
@@ -365,6 +369,14 @@ export interface RouteSummary {
   txHash?: string
   startedAt?: string
   completedAt?: string
+  /** Number of times a payslip has been sent for this route. */
+  payslipSentCount: number
+  /** ISO-8601 timestamps — one per payslip send. */
+  payslipSentAt: string[]
+  /** Hyperdrive send ids — one per payslip send. */
+  payslipSendIds: string[]
+  /** Which PaymentTemplate was used for the last send (undefined = Direct Payment). */
+  payslipTemplateId?: string
 }
 
 /** Full route record — persisted on disk; superset of RouteSummary. */

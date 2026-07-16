@@ -325,6 +325,9 @@ export function enumerateRoutes(input: EnumerateInput): EnumerationResult {
       recipientPartyId: employee.cantonPartyId ?? '',
       memo,
       createdAt: new Date().toISOString(),
+      payslipSentCount: 0,
+      payslipSentAt: [],
+      payslipSendIds: [],
     }
     if (computed.fxRateApplied !== undefined) route.fxRate = computed.fxRateApplied
     if (withholdingAmount) route.withholdingAmount = withholdingAmount

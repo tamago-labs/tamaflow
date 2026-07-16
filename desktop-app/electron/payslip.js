@@ -1,15 +1,13 @@
 // Payslip generation via QVAC local AI.
 //
-// Two-phase flow:
-//   1. AI generates a payslip TEMPLATE (markdown with placeholders)
-//   2. User fills in numbers, previews, then sends
-//
-// Streaming: pushes thinking/content events to renderer via IPC.
+// Template generation: AI generates a full HTML payslip document with
+// {{placeholder}} syntax. The renderer fills placeholders at send time.
+// No streaming — a single non-streaming completion call is used.
 
 const { ipcMain, BrowserWindow } = require('electron')
 const { completion } = require('@qvac/sdk')
 const { getActiveModelId, setStreamingNow, mapError } = require('./qvac')
-const { PayslipStore } = require('./payslipStore')
+const { sendToRecipient, getHistoryForEmployee } = require('./payslipDrive')
 
 // ============================================
 // Style prompts (for template generation)
@@ -172,7 +170,7 @@ function buildTemplatePrompt(settlementData, companyProfile) {
 /**
  * Build a payslip payload for P2P transmission.
  */
-function buildPayslipPayload({ markdown, settlementData, companyProfile, style }) {
+function buildPayslipPayload({ html, settlementData, companyProfile, style }) {
   return {
     id: `payslip_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     type: 'payslip',
@@ -183,7 +181,7 @@ function buildPayslipPayload({ markdown, settlementData, companyProfile, style }
     netPay: settlementData.netPay,
     currency: settlementData.payCurrency || companyProfile.settlementCurrency || 'USD',
     style,
-    markdown,
+    html,
     companyName: companyProfile.companyName,
     createdAt: new Date().toISOString()
   }
@@ -204,52 +202,73 @@ module.exports = {
 let payslipStore = null
 
 function registerPayslipIpc() {
-  payslipStore = new PayslipStore()
-
-  // Template management
-  ipcMain.handle('payslip:templates:list', () => {
-    return payslipStore.list()
-  })
-
-  ipcMain.handle('payslip:templates:get', (_e, id) => {
-    return payslipStore.get(id)
-  })
-
-  ipcMain.handle('payslip:templates:save', (_e, template) => {
-    return payslipStore.save(template)
-  })
-
-  ipcMain.handle('payslip:templates:remove', (_e, id) => {
-    payslipStore.remove(id)
-    return { success: true }
-  })
-
-  // Streaming template generation
-  ipcMain.handle('payslip:generate', async (_e, { settlementData, companyProfile, style }) => {
-    const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0]
+  // ── Hyperdrive-based per-employee payslip sending ──────────────
+  ipcMain.handle('payslip:sendToRecipient', (_e, opts) => {
     try {
-      const template = await generateTemplate({ settlementData, companyProfile, style, window: win })
-      return { success: true, markdown: template }
+      return sendToRecipient(opts)
     } catch (err) {
-      console.error('[payslip] Generate failed:', err.message)
+      console.error('[payslip] sendToRecipient failed:', err.message)
       return { success: false, error: err.message }
     }
   })
 
-  // Fill template with actual values
-  ipcMain.handle('payslip:fill', (_e, { template, settlementData, companyProfile }) => {
+  ipcMain.handle('payslip:getHistoryForEmployee', (_e, employeePartyId) => {
     try {
-      const filled = fillTemplate(template, settlementData, companyProfile)
-      return { success: true, markdown: filled }
+      return getHistoryForEmployee(employeePartyId)
     } catch (err) {
+      console.error('[payslip] getHistoryForEmployee failed:', err.message)
       return { success: false, error: err.message }
     }
   })
 
-  // Build payload for P2P
-  ipcMain.handle('payslip:buildPayload', (_e, { markdown, settlementData, companyProfile, style }) => {
+  // ── AI template generation (non-streaming, for the new modal) ──
+  ipcMain.handle('payslip:generateTemplate', async (_e, { prompt, realDataExample, currentHtml }) => {
+    const modelId = getActiveModelId()
+    if (!modelId) return { success: false, error: 'No AI model loaded.' }
+
+    const systemPrompt = `You are a professional payroll assistant. Generate or refine a payslip TEMPLATE as a full HTML document.
+
+Rules:
+1. Output a complete HTML document (<!DOCTYPE html>...<body>...</body>...</html>)
+2. Use {{placeholderName}} syntax for all variable values (e.g. {{employeeName}}, {{grossPay}})
+3. Include standard payslip sections: header with company name, employee info, earnings table, deductions, net pay, footer
+4. Do NOT include any text outside the HTML document
+5. Use inline CSS only — no external stylesheets
+6. Use clean, professional styling: system fonts, light borders, good spacing
+7. Format numbers appropriately for the currency`
+
+    let userMessage = prompt || 'Generate a standard payslip template.'
+    if (realDataExample) {
+      userMessage += `\n\nUse this employee and settlement data as reference for placeholder types and values:\n${JSON.stringify(realDataExample, null, 2)}`
+    }
+    if (currentHtml) {
+      userMessage += `\n\nCurrent template to refine:\n\n${currentHtml}`
+    }
+
     try {
-      const payload = buildPayslipPayload({ markdown, settlementData, companyProfile, style })
+      setStreamingNow(true)
+      const result = await completion({
+        modelId,
+        history: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ],
+        stream: false,
+        captureThinking: false
+      })
+      return { success: true, html: result.text || '' }
+    } catch (err) {
+      console.error('[payslip] generateTemplate failed:', err.message)
+      return { success: false, error: err.message }
+    } finally {
+      setStreamingNow(false)
+    }
+  })
+
+  // ── Legacy: build payload (still used by the drawer) ───────────
+  ipcMain.handle('payslip:buildPayload', (_e, { html, settlementData, companyProfile, style }) => {
+    try {
+      const payload = buildPayslipPayload({ html, settlementData, companyProfile, style })
       return { success: true, payload }
     } catch (err) {
       return { success: false, error: err.message }

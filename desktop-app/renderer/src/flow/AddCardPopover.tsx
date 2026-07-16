@@ -4,7 +4,7 @@ import { CATEGORY_LABELS, CATEGORY_ORDER, PALETTE_CARDS, TONE_COLORS, payeeTempl
 import type { SimCardTemplate } from './types'
 import type { Employee } from '../ai/types'
 
-interface PaymentTemplate { id: string; name: string; withholdingRate: string; defaultMemo: string; createdAt: string; updatedAt: string }
+interface PaymentTemplate { id: string; name: string; withholdingRate: string; defaultMemo: string; html: string; defaultPlaceholders: string[]; createdAt: string; updatedAt: string }
 
 interface AddCardPopoverProps {
   open: boolean

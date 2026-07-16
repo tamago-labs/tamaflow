@@ -5,7 +5,7 @@ import CanvasLines from './CanvasLines'
 import type { CanvasCardEdit, CanvasState } from './types'
 import type { Employee } from '../ai/types'
 
-type PaymentTemplate = { id: string; name: string; withholdingRate: string; defaultMemo: string; createdAt: string; updatedAt: string }
+type PaymentTemplate = { id: string; name: string; withholdingRate: string; defaultMemo: string; html: string; defaultPlaceholders: string[]; createdAt: string; updatedAt: string }
 
 interface CanvasProps {
   state: CanvasState

@@ -1,7 +1,7 @@
 import type { PlacedCard, SimCardTemplate, SimCategory, SimTone } from '../flow/types'
 import type { Employee } from '../ai/types'
 
-type PaymentTemplate = { id: string; name: string; withholdingRate: string; defaultMemo: string; createdAt: string; updatedAt: string }
+type PaymentTemplate = { id: string; name: string; withholdingRate: string; defaultMemo: string; html: string; defaultPlaceholders: string[]; createdAt: string; updatedAt: string }
 
 export const CATEGORY_ORDER: SimCategory[] = ['source', 'payee', 'payment']
 export const CATEGORY_LABELS: Record<SimCategory, string> = { source: 'Source', payee: 'Payee', payment: 'Payment' }

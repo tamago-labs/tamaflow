@@ -8,7 +8,7 @@ import type { CanvasCard as CanvasCardType, CanvasCardEdit, PayeeFields, Payment
 import type { Employee } from '../ai/types'
 import EditForm from './EditForm'
 
-type PaymentTemplate = { id: string; name: string; withholdingRate: string; defaultMemo: string; createdAt: string; updatedAt: string }
+type PaymentTemplate = { id: string; name: string; withholdingRate: string; defaultMemo: string; html: string; defaultPlaceholders: string[]; createdAt: string; updatedAt: string }
 
 export type PortSide = 'in' | 'out'
 
