@@ -200,10 +200,7 @@ contextBridge.exposeInMainWorld('bridge', {
     createPayslip: (companyContractId, employeePartyId, payslipId, period) => ipcRenderer.invoke('contracts:createPayslip', companyContractId, employeePartyId, payslipId, period),
   },
   payslip: {
-    sendToRecipient: (opts) => ipcRenderer.invoke('payslip:sendToRecipient', opts),
-    getHistoryForEmployee: (employeePartyId) => ipcRenderer.invoke('payslip:getHistoryForEmployee', employeePartyId),
     generateTemplate: (opts) => ipcRenderer.invoke('payslip:generateTemplate', opts),
-    buildPayload: (opts) => ipcRenderer.invoke('payslip:buildPayload', opts),
   },
   contractsConfig: {
     get: () => ipcRenderer.invoke('contractsConfig:get'),

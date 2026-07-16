@@ -224,10 +224,10 @@ export interface BridgeAPI {
     createPayslip(companyContractId: string, employeePartyId: string, payslipId: string, period: string): Promise<unknown>
   }
   payslip: {
-    sendToRecipient(opts: { routeId: string; employeePartyId: string; employeeName: string; html: string; period: string }): Promise<{ success: boolean; sendId?: string; error?: string }>
-    getHistoryForEmployee(employeePartyId: string): Promise<{ success: boolean; payslips?: Record<string, unknown>[]; error?: string }>
-    generateTemplate(opts: { prompt: string; realDataExample?: Record<string, unknown>; currentHtml?: string }): Promise<{ success: boolean; html?: string; error?: string }>
-    buildPayload(opts: { html: string; settlementData: Record<string, unknown>; companyProfile: Record<string, unknown>; style: string }): Promise<{ success: boolean; payload?: Record<string, unknown>; error?: string }>
+    sendToRecipient(opts: Record<string, unknown>): Promise<{ success: boolean; sendId?: string; error?: string }>
+    getHistoryForEmployee(partyId: string): Promise<{ success: boolean; payslips?: Record<string, unknown>[]; error?: string }>
+    generateTemplate(opts: Record<string, unknown>): Promise<{ success: boolean; html?: string; error?: string }>
+    buildPayload(opts: Record<string, unknown>): Promise<{ success: boolean; payload?: Record<string, unknown>; error?: string }>
   }
   contractsConfig: {
     get(): Promise<ContractsConfig>
@@ -478,16 +478,10 @@ const noopBridge: BridgeAPI = {
     onChange: () => () => {},
   },
   payslip: {
-    generate: () => Promise.resolve({ success: false, error: 'bridge not available' }),
-    fill: () => Promise.resolve({ success: false, error: 'bridge not available' }),
-    buildPayload: () => Promise.resolve({ success: false, error: 'bridge not available' }),
-    listTemplates: () => Promise.resolve([]),
-    saveTemplate: (t) => Promise.resolve(t),
-    removeTemplate: () => Promise.resolve({ success: false }),
-    onThinking: () => () => {},
-    onToken: () => () => {},
-    onDone: () => () => {},
-    onError: () => () => {},
+    sendToRecipient: () => Promise.resolve({ success: false }),
+    getHistoryForEmployee: () => Promise.resolve({ success: false, payslips: [] }),
+    generateTemplate: () => Promise.resolve({ success: false }),
+    buildPayload: () => Promise.resolve({ success: false })
   }
 }
 

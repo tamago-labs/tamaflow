@@ -3,12 +3,14 @@
 // Records, collections, and dispatch routes for the P2P room worker
 // (`workers/tamaflow-room.js`). The Tamaflow data plane carries:
 //
-//   • invites — BlindPairing invite codes (one per room)
-//   • chat    — group chat messages (P2P-replicated across peers)
+//   • invites  — BlindPairing invite codes (one per room)
+//   • chat     — group chat messages (P2P-replicated across peers)
 //   • ai-state — per-writer model metadata (which model each peer
 //     has loaded, whether it's accepting requests)
-//   • relay   — P2P completion routing (peer A asks peer B to run a
+//   • relay    — P2P completion routing (peer A asks peer B to run a
 //     completion on peer B's local model)
+//   • payslip  — per-employee payslip HTML (employer appends,
+//     employee reads; recipient field enables per-employee filtering)
 //
 // The previous Tamarind codebase also had `board` + `item` collections
 // driving a collaborative canvas. Tamaflow drops the canvas — the
@@ -144,6 +146,29 @@ schema.register({
   ]
 })
 
+// Payslip — per-employee payslip record stored in the P2P HyperDB.
+// Employer appends (via add-payslip dispatch), employee reads.
+// `recipient` is the employee's Canton party id string — used for
+// per-employee filtering in useRoom and employee-cli.
+schema.register({
+  name: 'payslip',
+  fields: [
+    { name: 'id', type: 'string', required: true },
+    { name: 'recipient', type: 'string', required: true },
+    { name: 'routeId', type: 'string', required: true },
+    { name: 'employeeId', type: 'string', required: false },
+    { name: 'employeeName', type: 'string', required: false },
+    { name: 'period', type: 'string', required: false },
+    { name: 'grossPay', type: 'string', required: false },
+    { name: 'netPay', type: 'string', required: false },
+    { name: 'currency', type: 'string', required: false },
+    { name: 'companyName', type: 'string', required: false },
+    { name: 'html', type: 'json', required: true },
+    { name: 'createdAt', type: 'int', required: false },
+    { name: 'sentAt', type: 'int', required: false }
+  ]
+})
+
 Hyperschema.toDisk(hyperSchema)
 
 // ── Collections ─────────────────────────────────────────────────────
@@ -192,6 +217,15 @@ db.collections.register({
   key: ['requestId']
 })
 
+// Payslip collection. Keyed by `id` (unique payslip id).
+// The `recipient` field is an indexable attribute for per-employee
+// filtering on the renderer/CLI side.
+db.collections.register({
+  name: 'payslip',
+  schema: '@tamaflow/payslip',
+  key: ['id']
+})
+
 HyperdbBuilder.toDisk(hyperdb)
 
 // ── Dispatch routes ────────────────────────────────────────────────
@@ -211,5 +245,10 @@ dispatch.register({ name: 'relay-response', requestType: '@tamaflow/relay-respon
 dispatch.register({ name: 'relay-cancel', requestType: '@tamaflow/relay-cancel' })
 
 dispatch.register({ name: 'add-writer', requestType: '@tamaflow/writer' })
+
+// Payslip dispatch. Employer sends this when a payslip is sent to an
+// employee. The worker inserts it into the `@tamaflow/payslip`
+// collection where the Autobase replicates it to all peers.
+dispatch.register({ name: 'add-payslip', requestType: '@tamaflow/payslip' })
 
 Hyperdispatch.toDisk(hyperdispatch)

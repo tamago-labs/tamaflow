@@ -8,6 +8,22 @@
 
 import { bridge, ROOM_WORKER } from './bridge'
 
+export interface Payslip {
+  id: string
+  recipient: string
+  routeId: string
+  employeeId?: string
+  employeeName?: string
+  period?: string
+  grossPay?: string
+  netPay?: string
+  currency?: string
+  companyName?: string
+  html: string
+  createdAt?: number
+  sentAt?: number
+}
+
 // Outbound frames the renderer can send to the room worker.
 export type RoomFrame =
   | { type: 'join-invite'; invite: string }
@@ -15,6 +31,7 @@ export type RoomFrame =
   | { type: 'send-chat'; text: string }
   | { type: 'remove-chats'; ids: string[] }
   | { type: 'rename-self'; name: string }
+  | { type: 'send-payslip'; data: Payslip }
 
 // Inbound frames the worker pushes back. Discriminated by `type`.
 export type RoomEvent =
@@ -34,6 +51,7 @@ export type RoomEvent =
         accepting: boolean
       }>
     }
+  | { type: 'payslips'; payslips: Payslip[] }
 
 export interface BoardScopedChatMessage {
   id: string

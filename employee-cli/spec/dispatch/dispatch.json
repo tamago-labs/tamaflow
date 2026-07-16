@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "offset": 0,
   "schema": [
     {
@@ -49,6 +49,12 @@
       "name": "@tamaflow/add-writer",
       "requestType": "@tamaflow/writer",
       "version": 1
+    },
+    {
+      "id": 8,
+      "name": "@tamaflow/add-payslip",
+      "requestType": "@tamaflow/payslip",
+      "version": 2
     }
   ]
 }

@@ -3,9 +3,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BaseModal } from '../BaseModal'
 import { useCompany } from '../../context/CompanyContext'
-import { useEmployees } from '../../context/EmployeeContext'
-import { useFlows } from '../../context/FlowContext'
-import { useWallet } from '../../context/WalletContext'
 import { bridge } from '../../lib/bridge'
 import { DEFAULT_PAYSIP_HTML, DEFAULT_PAYSIP_PLACEHOLDERS } from '../../lib/defaultPayslipTemplate'
 import { Plus, Trash2, Wand2, Loader2 } from 'lucide-react'
@@ -52,9 +49,6 @@ const monoInputStyle: React.CSSProperties = {
 
 export default function PayslipTemplateModal({ open, onClose }: PayslipTemplateModalProps) {
   const { profile, save: saveProfile } = useCompany()
-  const { employees } = useEmployees()
-  const { flows } = useFlows()
-  const { status: walletStatus } = useWallet()
 
   const templates: PaymentTemplate[] = (profile as any)?.paymentTemplates ?? []
 

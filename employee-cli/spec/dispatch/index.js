@@ -16,8 +16,9 @@ class Router {
     this._handler5 = null
     this._handler6 = null
     this._handler7 = null
+    this._handler8 = null
 
-    this._missing = 8
+    this._missing = 9
   }
 
   add (name, handler) {
@@ -46,6 +47,9 @@ class Router {
       case '@tamaflow/add-writer':
         this._handler7 = handler
         break
+      case '@tamaflow/add-payslip':
+        this._handler8 = handler
+        break
       default:
         throw DispatchError.NONEXISTENT_ROUTE(name)
     }
@@ -61,6 +65,7 @@ class Router {
     assert(this._handler5 !== null, 'Missing handler for "@tamaflow/relay-response"')
     assert(this._handler6 !== null, 'Missing handler for "@tamaflow/relay-cancel"')
     assert(this._handler7 !== null, 'Missing handler for "@tamaflow/add-writer"')
+    assert(this._handler8 !== null, 'Missing handler for "@tamaflow/add-payslip"')
   }
 
   async dispatch (message, context) {
@@ -89,6 +94,8 @@ class Router {
         return this._handler6(op.value, context)
       case 7:
         return this._handler7(op.value, context)
+      case 8:
+        return this._handler8(op.value, context)
       default:
         throw DispatchError.HANDLER_NOT_FOUND_BY_ID(op.id)
     }
@@ -170,6 +177,12 @@ const route7 = {
   enc: getEncoding('@tamaflow/writer')
 }
 
+const route8 = {
+  name: '@tamaflow/add-payslip',
+  id: 8,
+  enc: getEncoding('@tamaflow/payslip')
+}
+
 function getRouteByName (name) {
   switch (name) {
     case '@tamaflow/add-invite':
@@ -188,6 +201,8 @@ function getRouteByName (name) {
       return route6
     case '@tamaflow/add-writer':
       return route7
+    case '@tamaflow/add-payslip':
+      return route8
     default:
       throw DispatchError.ROUTE_NOT_FOUND_BY_NAME(name)
   }
@@ -211,6 +226,8 @@ function getRouteById (id) {
       return route6
     case 7:
       return route7
+    case 8:
+      return route8
     default:
       throw DispatchError.HANDLER_NOT_FOUND_BY_ID(id)
   }

@@ -328,6 +328,13 @@ class TamaflowRoomWorkerTask extends ReadyResource {
           })
         )
         return
+      case 'send-payslip':
+        // Payslip delivery. The renderer sends the full payslip
+        // payload; the worker appends it to the Autobase so all
+        // peers can replicate it.
+        if (!message.data) return
+        await this.room.appendPayslip(message.data)
+        return
       default:
         return
     }
@@ -335,9 +342,10 @@ class TamaflowRoomWorkerTask extends ReadyResource {
 
   async _broadcast() {
     try {
-      const [messages, aiStatesRaw] = await Promise.all([
+      const [messages, aiStatesRaw, payslips] = await Promise.all([
         this.room.getMessages(),
-        this.room.getAiStates()
+        this.room.getAiStates(),
+        this.room.getPayslips()
       ])
       messages.sort((a, b) => {
         const aAt = a.info?.at ?? 0
@@ -359,6 +367,7 @@ class TamaflowRoomWorkerTask extends ReadyResource {
       )
       this.pipe.write(JSON.stringify({ type: 'chat', messages }))
       this.pipe.write(JSON.stringify({ type: 'ai-states', states: aiStates }))
+      this.pipe.write(JSON.stringify({ type: 'payslips', payslips }))
     } catch (err) {
       this.pipe.write(JSON.stringify({ type: 'status', phase: 'error', error: err.message }))
     }

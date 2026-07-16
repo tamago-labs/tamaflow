@@ -260,7 +260,7 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
 
       {/* Routes panel (above bottom edge) */}
       {(flowStatus === 'active' || flowStatus === 'completed') && (
-        <RoutesPanel status={flowStatus} routes={routes} employees={employees} canvas={canvas} />
+        <RoutesPanel status={flowStatus} routes={routes} employees={employees} canvas={canvas} onRefreshRoutes={() => void listRoutes(flowId).then(setRoutes).catch(() => {})} />
       )}
 
       <RoutesPreviewModal open={previewOpen} onClose={() => setPreviewOpen(false)} flowId={flowId} canvas={canvas} employees={employees} companyProfile={companyProfile} />
@@ -270,7 +270,7 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
 
 // ─── Routes Panel ─────────────────────────────────────────────────
 
-function RoutesPanel({ status, routes, employees, canvas }: { status: FlowStatus; routes: RouteSummary[]; employees: any[]; canvas: CanvasState }) {
+function RoutesPanel({ status, routes, employees, canvas, onRefreshRoutes }: { status: FlowStatus; routes: RouteSummary[]; employees: any[]; canvas: CanvasState; onRefreshRoutes: () => void }) {
   const sorted = useMemo(() => [...routes].sort((a, b) => a.payeePlacementId.localeCompare(b.payeePlacementId)), [routes])
   const settledCount = routes.filter((r) => r.status === 'settled').length
   const [sendRoute, setSendRoute] = useState<RouteSummary | null>(null)
@@ -335,7 +335,7 @@ function RoutesPanel({ status, routes, employees, canvas }: { status: FlowStatus
         open={!!sendRoute}
         onClose={() => setSendRoute(null)}
         route={sendRoute}
-        onSent={() => setSendRoute(null)}
+        onSent={() => { setSendRoute(null); onRefreshRoutes() }}
       />
     </div>
   )

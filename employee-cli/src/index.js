@@ -31,13 +31,16 @@ const WALLET_FILE = path.join(__dirname, '..', '.wallet.json')
 const DEFAULT_AMULET_AMOUNT = '1000.0000000000'
 
 class EmployeeCLI {
-  constructor() {
+  constructor(employeePartyId) {
     this.app = express()
     this.token = null
     this.tokenExpiry = 0
     this.sdk = null
     this.wallet = null
     this.pear = new PearP2P()
+    if (employeePartyId) {
+      this.pear.partyId = employeePartyId
+    }
   }
 
   async start(port = 3001) {
@@ -662,27 +665,41 @@ class EmployeeCLI {
 
     this.app.get('/api/payslips', (_req, res) => {
       const payslips = this.pear.getPayslips()
-      // Return payslip metadata (without full HTML body for listing)
+      // Map HyperDB records to the frontend's expected shape
       const listing = payslips.map(p => ({
         id: p.id,
-        employee: p.employee,
+        type: 'payslip',
+        employee: p.employeeName || p.employee || '',
         period: p.period,
         grossPay: p.grossPay,
         netPay: p.netPay,
         currency: p.currency,
+        style: 'standard',
+        markdown: p.html || '',
         companyName: p.companyName,
         createdAt: p.createdAt,
-        hasHtml: !!(p.html),
       }))
       res.json(listing)
     })
 
-    // Get a single payslip with full HTML body
+    // Get a single payslip with full body (mapped to frontend shape)
     this.app.get('/api/payslips/:id', (req, res) => {
       const payslips = this.pear.getPayslips()
       const found = payslips.find(p => p.id === req.params.id)
       if (!found) return res.status(404).json({ error: 'Payslip not found' })
-      res.json(found)
+      res.json({
+        id: found.id,
+        type: 'payslip',
+        employee: found.employeeName || found.employee || '',
+        period: found.period,
+        grossPay: found.grossPay,
+        netPay: found.netPay,
+        currency: found.currency,
+        style: 'standard',
+        markdown: found.html || '',
+        companyName: found.companyName,
+        createdAt: found.createdAt,
+      })
     })
 
     // Get payslip HTML for rendering in sandboxed iframe
@@ -765,6 +782,8 @@ class EmployeeCLI {
 const args = process.argv.slice(2)
 const portIdx = args.indexOf('--port')
 const port = portIdx !== -1 ? parseInt(args[portIdx + 1]) : 3001
+const partyIdIdx = args.indexOf('--party-id')
+const employeePartyId = partyIdIdx !== -1 ? args[partyIdIdx + 1] : null
 
-const cli = new EmployeeCLI()
+const cli = new EmployeeCLI(employeePartyId)
 cli.start(port)

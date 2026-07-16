@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "offset": 0,
   "schema": [
     {
@@ -90,6 +90,21 @@
       "derived": false,
       "key": [
         "requestId"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "payslip",
+      "namespace": "tamaflow",
+      "id": 6,
+      "type": 1,
+      "version": 2,
+      "versionField": null,
+      "indexes": [],
+      "schema": "@tamaflow/payslip",
+      "derived": false,
+      "key": [
+        "id"
       ],
       "trigger": null
     }

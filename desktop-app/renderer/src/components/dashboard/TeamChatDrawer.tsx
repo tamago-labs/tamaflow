@@ -60,7 +60,7 @@ export function TeamChatDrawer({ open, onClose }: TeamChatDrawerProps) {
   const [confirmingClear, setConfirmingClear] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
 
-  const messages = room.chat
+  const messages = room.chat.filter((m: any) => !m.text?.startsWith('[payslip]'))
   const me = room.me
   const groups = useMemo(() => groupMessages(messages), [messages])
 

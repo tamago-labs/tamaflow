@@ -137,6 +137,14 @@ class CliTamaflowRoom extends ReadyResource {
     this.router.add('@tamaflow/relay-request', async () => {})
     this.router.add('@tamaflow/relay-response', async () => {})
     this.router.add('@tamaflow/relay-cancel', async () => {})
+    // Payslip delivery — insert into HyperDB collection.
+    this.router.add('@tamaflow/add-payslip', async (data, context) => {
+      await context.view.insert('@tamaflow/payslip', data)
+      // Notify the PearP2P instance that a new payslip arrived
+      if (typeof this.onPayslip === 'function') {
+        this.onPayslip(data)
+      }
+    })
   }
 
   get view() {
@@ -149,6 +157,10 @@ class CliTamaflowRoom extends ReadyResource {
 
   async getMessages({ reverse = true, limit = 100 } = {}) {
     return await this.view.find('@tamaflow/chat', { reverse, limit }).toArray()
+  }
+
+  async getPayslips() {
+    return await this.view.find('@tamaflow/payslip', {}).toArray()
   }
 
   async addMessage(text, info) {
@@ -176,6 +188,7 @@ class PearP2P {
     this.identity = { name: 'Employee' }
     this.chatMessages = []
     this.payslips = []
+    this.partyId = null  // Canton party id — used to filter payslips addressed to this employee
 
     // Debounced broadcast to update payslips on Autobase changes
     this._debouncedRefresh = debounce(() => this._refreshPayslips(), 500)
@@ -210,20 +223,21 @@ class PearP2P {
     // Create and join the room as guest
     this.room = new CliTamaflowRoom(this.store, this.swarm, inviteCode)
 
-    // Listen for incoming messages (payslips arrive as chat messages)
+    // Listen for incoming chat messages
     this.room.onMessage = (msg) => {
       console.log('[pear] incoming message:', msg.text?.slice(0, 100))
       this.chatMessages.push(msg)
-      // Check if this is a payslip
-      if (msg.text && msg.text.startsWith('[payslip]')) {
-        try {
-          const payload = JSON.parse(msg.text.slice('[payslip]'.length).trim())
-          this.payslips.push(payload)
-          console.log('[pear] received payslip:', payload.id)
-        } catch (e) {
-          console.error('[pear] failed to parse payslip:', e.message)
-        }
+    }
+
+    // Listen for incoming payslips (from @tamaflow/add-payslip HyperDB collection)
+    this.room.onPayslip = (data) => {
+      // Only accept payslips addressed to this employee (if party id is set)
+      if (this.partyId && data.recipient && data.recipient !== this.partyId) {
+        console.log('[pear] ignoring payslip for different employee:', data.recipient)
+        return
       }
+      this.payslips.push(data)
+      console.log('[pear] received payslip:', data.id, 'total payslips:', this.payslips.length)
     }
 
     // Listen for Autobase updates to refresh payslips
@@ -245,18 +259,12 @@ class PearP2P {
     try {
       const messages = await this.room.getMessages({ limit: 200 })
       this.chatMessages = messages
-      // Extract payslips from messages
-      this.payslips = []
-      for (const msg of messages) {
-        if (msg.text && msg.text.startsWith('[payslip]')) {
-          try {
-            const payload = JSON.parse(msg.text.slice('[payslip]'.length).trim())
-            this.payslips.push(payload)
-          } catch (e) {
-            // skip malformed payslips
-          }
-        }
-      }
+      // Read payslips from the HyperDB @tamaflow/payslip collection
+      const allPayslips = await this.room.getPayslips()
+      // Filter by recipient if party id is set
+      this.payslips = this.partyId
+        ? allPayslips.filter((p) => p.recipient === this.partyId)
+        : allPayslips
     } catch (e) {
       console.error('[pear] failed to refresh payslips:', e.message)
     }
@@ -272,8 +280,8 @@ class PearP2P {
   }
 
   async sendPayslip(payslipData) {
-    const payload = `[payslip] ${JSON.stringify(payslipData)}`
-    await this.sendMessage(payload)
+    if (!this.room || !this.connected) throw new Error('Not connected')
+    await this.room.appendPayslip(payslipData)
   }
 
   getStatus() {

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Payments Page — Display received payslips from employer via P2P.
+ * Payslips Page — Display received payslips from employer via P2P.
  * Payslips arrive as chat messages prefixed with [payslip].
  */
 
@@ -19,26 +19,28 @@ interface Payslip {
   netPay: string;
   currency: string;
   style: string;
-  markdown: string;
+  html: string;
   companyName: string;
   createdAt: string;
 }
 
-export default function PaymentsPage() {
+export default function PayslipsPage() {
   const { connected } = useWalletMode();
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"preview" | "source">("preview");
+  const [p2pConnected, setP2pConnected] = useState(false);
 
   const fetchPayslips = useCallback(async () => {
     if (!connected) return;
     setLoading(true);
     try {
-      // Fetch P2P payslips (have markdown content)
+      // Fetch P2P payslips (have html content)
       const p2pResult = await cli.payslips.list();
       const p2pPayslips: Payslip[] = Array.isArray(p2pResult)
         ? p2pResult
-            .filter((p: Record<string, unknown>) => p.type === "payslip" && p.markdown)
+            .filter((p: Record<string, unknown>) => p.type === "payslip" && (p.markdown || p.html))
             .map((p: Record<string, unknown>) => ({
               id: (p.id as string) || "",
               type: "payslip",
@@ -48,7 +50,7 @@ export default function PaymentsPage() {
               netPay: (p.netPay as string) || "0",
               currency: (p.currency as string) || "USD",
               style: (p.style as string) || "standard",
-              markdown: (p.markdown as string) || "",
+              html: (p.html as string) || (p.markdown as string) || "",
               companyName: (p.companyName as string) || "",
               createdAt: (p.createdAt as string) || "",
             }))
@@ -68,7 +70,7 @@ export default function PaymentsPage() {
             netPay: "0",
             currency: "USD",
             style: "standard",
-            markdown: "", // Content is in P2P, not on-chain
+            html: "", // Content is in P2P, not on-chain
             companyName: "",
             createdAt: (r.createdAt as string) || "",
             onChain: true,
@@ -78,7 +80,7 @@ export default function PaymentsPage() {
         // PayslipRecord query may fail if contract not deployed yet
       }
 
-      // Merge: prefer P2P payslips (they have markdown), fill gaps from on-chain
+      // Merge: prefer P2P payslips (they have html), fill gaps from on-chain
       const mergedMap = new Map<string, Payslip>();
       for (const p of onChainPayslips) {
         if (p.id) mergedMap.set(p.id, p);
@@ -92,7 +94,7 @@ export default function PaymentsPage() {
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       );
     } catch (e) {
-      console.error("[Payments] Failed to fetch payslips:", e);
+      console.error("[Payslips] Failed to fetch payslips:", e);
     } finally {
       setLoading(false);
     }
@@ -102,6 +104,10 @@ export default function PaymentsPage() {
     if (connected) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchPayslips();
+      // Check P2P room status
+      cli.room.status().then((status: Record<string, unknown>) => {
+        setP2pConnected(!!status.connected);
+      }).catch(() => {});
     }
   }, [connected]);
 
@@ -120,6 +126,16 @@ export default function PaymentsPage() {
         </button>
       </div>
 
+      {/* P2P connection hint */}
+      {connected && !p2pConnected && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+          <p className="m-0 font-semibold">P2P hyperswarm not connected.</p>
+          <p className="m-0 mt-1">
+            Ensure you have connected to the team room via P2P hyperswarm. If you see payslip metadata but no content, disconnect and reconnect with the correct invite code.
+          </p>
+        </div>
+      )}
+
       {/* Payslip list */}
       {!connected ? (
         <div className="rounded-md border border-gray-200 bg-white py-12 text-center">
@@ -134,7 +150,7 @@ export default function PaymentsPage() {
                 <li key={p.id}>
                   <button
                     type="button"
-                    onClick={() => setExpanded(isExpanded ? null : p.id)}
+                    onClick={() => { setExpanded(isExpanded ? null : p.id); setViewMode("preview"); }}
                     className="flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-gray-50"
                   >
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
@@ -162,9 +178,46 @@ export default function PaymentsPage() {
 
                   {isExpanded && (
                     <div className="border-t border-gray-100 bg-gray-50 px-4 py-4">
-                      <pre className="m-0 whitespace-pre-wrap rounded-md border border-gray-200 bg-white p-4 font-sans text-xs leading-relaxed text-gray-900">
-                        {p.markdown}
-                      </pre>
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">
+                          Payslip
+                        </div>
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setViewMode("preview"); }}
+                            className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                              viewMode === "preview" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"
+                            }`}
+                          >
+                            Preview
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setViewMode("source"); }}
+                            className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${
+                              viewMode === "source" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"
+                            }`}
+                          >
+                            Source
+                          </button>
+                        </div>
+                      </div>
+                      {viewMode === "preview" ? (
+                        <div className="rounded-md border border-gray-200 bg-white overflow-hidden">
+                          <iframe
+                            srcDoc={p.html}
+                            title={`Payslip ${p.id}`}
+                            sandbox="allow-same-origin"
+                            className="w-full"
+                            style={{ height: 600, border: "none" }}
+                          />
+                        </div>
+                      ) : (
+                        <pre className="m-0 max-h-96 overflow-y-auto whitespace-pre-wrap rounded-md border border-gray-200 bg-white p-4 font-mono text-xs leading-relaxed text-gray-900">
+                          {p.html}
+                        </pre>
+                      )}
                     </div>
                   )}
                 </li>

@@ -4,7 +4,7 @@
 const { IndexEncoder, c, b4a } = require('hyperdb/runtime')
 const { version, getEncoding, setVersion } = require('./messages.js')
 
-const versions = { schema: version, db: 1 }
+const versions = { schema: version, db: 2 }
 
 // '@tamaflow/chat' collection key
 const collection0_key = new IndexEncoder([
@@ -420,13 +420,81 @@ const collection5 = {
   decodedVersion: 0
 }
 
+// '@tamaflow/payslip' collection key
+const collection6_key = new IndexEncoder([
+  IndexEncoder.STRING
+], { prefix: 6 })
+
+function collection6_indexify (record) {
+  const a = record.id
+  return a === undefined ? [] : [a]
+}
+
+// '@tamaflow/payslip' value encoding
+const collection6_enc = getEncoding('@tamaflow/payslip/hyperdb#6')
+
+// '@tamaflow/payslip' reconstruction function
+function collection6_reconstruct (schemaVersion, keyBuf, valueBuf) {
+  const key = collection6_key.decode(keyBuf)
+  setVersion(schemaVersion)
+  const state = { start: 0, end: valueBuf.byteLength, buffer: valueBuf }
+  const type = c.uint.decode(state)
+  if (type !== 0) throw new Error('Unknown collection type: ' + type)
+  collection6.decodedVersion = c.uint.decode(state)
+  const record = collection6_enc.decode(state)
+  record.id = key[0]
+  return record
+}
+// '@tamaflow/payslip' key reconstruction function
+function collection6_reconstruct_key (keyBuf) {
+  const key = collection6_key.decode(keyBuf)
+  return {
+    id: key[0]
+  }
+}
+
+// '@tamaflow/payslip'
+const collection6 = {
+  name: '@tamaflow/payslip',
+  id: 6,
+  version: 2,
+  encodeKey (record) {
+    const key = [record.id]
+    return collection6_key.encode(key)
+  },
+  encodeKeyRange ({ gt, lt, gte, lte } = {}) {
+    return collection6_key.encodeRange({
+      gt: gt ? collection6_indexify(gt) : null,
+      lt: lt ? collection6_indexify(lt) : null,
+      gte: gte ? collection6_indexify(gte) : null,
+      lte: lte ? collection6_indexify(lte) : null
+    })
+  },
+  encodeValue (schemaVersion, collectionVersion, record) {
+    setVersion(schemaVersion)
+    const state = { start: 0, end: 2, buffer: null }
+    collection6_enc.preencode(state, record)
+    state.buffer = b4a.allocUnsafe(state.end)
+    state.buffer[state.start++] = 0
+    state.buffer[state.start++] = collectionVersion
+    collection6_enc.encode(state, record)
+    return state.buffer
+  },
+  trigger: null,
+  reconstruct: collection6_reconstruct,
+  reconstructKey: collection6_reconstruct_key,
+  indexes: [],
+  decodedVersion: 0
+}
+
 const collections = [
   collection0,
   collection1,
   collection2,
   collection3,
   collection4,
-  collection5
+  collection5,
+  collection6
 ]
 
 const indexes = [
@@ -442,6 +510,7 @@ function resolveCollection (name) {
     case '@tamaflow/relay-request': return collection3
     case '@tamaflow/relay-response': return collection4
     case '@tamaflow/relay-cancel': return collection5
+    case '@tamaflow/payslip': return collection6
     default: return null
   }
 }

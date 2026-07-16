@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "schema": [
     {
       "name": "invite",
@@ -273,6 +273,92 @@
           "required": true,
           "type": "buffer",
           "version": 2
+        }
+      ]
+    },
+    {
+      "name": "payslip",
+      "namespace": "tamaflow",
+      "compact": false,
+      "flagsPosition": 3,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "version": 3
+        },
+        {
+          "name": "recipient",
+          "required": true,
+          "type": "string",
+          "version": 3
+        },
+        {
+          "name": "routeId",
+          "required": true,
+          "type": "string",
+          "version": 3
+        },
+        {
+          "name": "employeeId",
+          "required": false,
+          "type": "string",
+          "version": 3
+        },
+        {
+          "name": "employeeName",
+          "required": false,
+          "type": "string",
+          "version": 3
+        },
+        {
+          "name": "period",
+          "required": false,
+          "type": "string",
+          "version": 3
+        },
+        {
+          "name": "grossPay",
+          "required": false,
+          "type": "string",
+          "version": 3
+        },
+        {
+          "name": "netPay",
+          "required": false,
+          "type": "string",
+          "version": 3
+        },
+        {
+          "name": "currency",
+          "required": false,
+          "type": "string",
+          "version": 3
+        },
+        {
+          "name": "companyName",
+          "required": false,
+          "type": "string",
+          "version": 3
+        },
+        {
+          "name": "html",
+          "required": true,
+          "type": "json",
+          "version": 3
+        },
+        {
+          "name": "createdAt",
+          "required": false,
+          "type": "int",
+          "version": 3
+        },
+        {
+          "name": "sentAt",
+          "required": false,
+          "type": "int",
+          "version": 3
         }
       ]
     }

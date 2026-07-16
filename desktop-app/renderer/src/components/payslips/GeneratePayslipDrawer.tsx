@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from 'react'
 import Drawer from '../Drawer'
 import { useCompany } from '../../context/CompanyContext'
 import { useEmployees } from '../../context/EmployeeContext'
+import { useRoom } from '../../hooks/useRoom'
 import { bridge } from '../../lib/bridge'
-import { writeRoom } from '../../lib/room'
+import { CONTRACTS } from '../../lib/contracts-ids'
 import { DEFAULT_PAYSIP_HTML } from '../../lib/defaultPayslipTemplate'
-import type { RouteSummary, Employee, PaymentTemplate } from '../../ai/types'
+import type { RouteSummary, PaymentTemplate } from '../../ai/types'
 import { Loader2, Send, Check, History } from 'lucide-react'
 
 interface GeneratePayslipDrawerProps {
@@ -45,6 +46,7 @@ function formatPeriod(completedAt: string): string {
 export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: GeneratePayslipDrawerProps) {
   const { profile: companyProfile } = useCompany()
   const { employees: rosterEmployees } = useEmployees()
+  const { payslips: roomPayslips, sendPayslip } = useRoom()
 
   const templates: PaymentTemplate[] = (companyProfile as any)?.paymentTemplates ?? []
 
@@ -52,8 +54,7 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [sendHistory, setSendHistory] = useState<Record<string, unknown>[]>([])
-  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [p2pFailed, setP2pFailed] = useState(false)
 
   // Resolve employee info
   const employee = useMemo(() => {
@@ -70,30 +71,14 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
     setSelectedTemplateId('__direct__')
     setSent(false)
     setError(null)
-    setSendHistory([])
+    setP2pFailed(false)
   }, [open])
 
-  // Load send history when drawer opens
-  useEffect(() => {
-    if (!open || !employeePartyId) {
-      setSendHistory([])
-      return
-    }
-    let cancelled = false
-    setLoadingHistory(true)
-    bridge.payslip.getHistoryForEmployee(employeePartyId)
-      .then((result) => {
-        if (cancelled) return
-        if (result.success && result.payslips) {
-          // Filter to only sends for this route
-          const forRoute = result.payslips.filter((p: any) => p.routeId === route?.id)
-          setSendHistory(forRoute)
-        }
-      })
-      .catch(() => { /* noop */ })
-      .finally(() => { if (!cancelled) setLoadingHistory(false) })
-    return () => { cancelled = true }
-  }, [open, employeePartyId, route?.id])
+  // Get send history from room payslips (filtered by route)
+  const sendHistory = useMemo(() => {
+    if (!route || !employeePartyId) return []
+    return roomPayslips.filter((p: any) => p.routeId === route.id && p.recipient === employeePartyId)
+  }, [roomPayslips, route?.id, employeePartyId])
 
   // Build the filled HTML for preview
   const filledHtml = useMemo(() => {
@@ -123,59 +108,45 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
     if (!route || !employeePartyId) return
     setSending(true)
     setError(null)
+    setP2pFailed(false)
     try {
-      // 1. Write to per-employee drive
-      const driveResult = await bridge.payslip.sendToRecipient({
+      // 1. Build the payslip data for the P2P HyperDB collection
+      const payslipData = {
+        id: `payslip_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        recipient: employeePartyId,
         routeId: route.id,
-        employeePartyId,
+        employeeId: route.employeeId,
         employeeName: employee?.displayName ?? '',
-        html: filledHtml,
         period: route.completedAt ? formatPeriod(route.completedAt) : route.createdAt.slice(0, 7),
-      })
-      if (!driveResult.success) {
-        throw new Error(driveResult.error || 'Failed to send to drive')
+        grossPay: route.grossPay,
+        netPay: route.netPay ?? route.grossPay,
+        currency: route.payCurrency,
+        companyName: companyProfile?.companyName ?? '',
+        html: filledHtml,
+        createdAt: Date.now(),
+        sentAt: Date.now(),
       }
 
-      // 2. Register on-ledger (existing 4-arg signature)
-      const cantonPartyId = employeePartyId
+      // 2. Send via P2P HyperDB collection (Autobase syncs to all peers)
+      sendPayslip(payslipData)
+
+      // 3. Register on-ledger (existing 4-arg signature)
       try {
         await bridge.contracts.createPayslip(
-          (companyProfile as any)?.contracts?.company ?? '',
-          cantonPartyId,
-          driveResult.sendId!,
+          CONTRACTS.COMPANY,
+          employeePartyId,
+          payslipData.id,
           route.completedAt ? formatPeriod(route.completedAt) : route.createdAt.slice(0, 7),
         )
       } catch (ledgerErr) {
         console.warn('[GeneratePayslipDrawer] On-ledger registration failed (non-blocking):', ledgerErr)
       }
 
-      // 3. Bump the route's payslip count
+      // 4. Bump the route's payslip count
       await bridge.flows.routes.bumpPayslipSend(route.flowId, route.id, {
         sentAt: new Date().toISOString(),
-        sendId: driveResult.sendId!,
+        sendId: payslipData.id,
       })
-
-      // 4. Broadcast via P2P so employee-cli can receive it cross-machine
-      try {
-        await writeRoom({
-          type: 'send-chat',
-          text: `[payslip] ${JSON.stringify({
-            id: driveResult.sendId,
-            type: 'payslip',
-            employee: employee?.displayName ?? '',
-            employeeId: route.employeeId,
-            period: route.completedAt ? formatPeriod(route.completedAt) : route.createdAt.slice(0, 7),
-            grossPay: route.grossPay,
-            netPay: route.netPay ?? route.grossPay,
-            currency: route.payCurrency,
-            html: filledHtml,
-            companyName: companyProfile?.companyName ?? '',
-            createdAt: new Date().toISOString(),
-          })}`
-        })
-      } catch (p2pErr) {
-        console.warn('[GeneratePayslipDrawer] P2P broadcast failed (non-blocking):', p2pErr)
-      }
 
       setSent(true)
       onSent()
@@ -253,7 +224,7 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
       )}
 
       {sent ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '32px 0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '32px 0' }}>
           <div style={{ width: 40, height: 40, borderRadius: 20, background: 'rgba(34,197,94,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Check size={20} color='#16a34a' />
           </div>
@@ -263,6 +234,11 @@ export default function GeneratePayslipDrawer({ open, onClose, route, onSent }: 
           <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#666', textAlign: 'center' }}>
             Saved to employee drive and registered on-ledger
           </div>
+          {p2pFailed && (
+            <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#b45309', textAlign: 'center', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', borderRadius: 4, padding: '6px 12px' }}>
+              P2P broadcast failed — employee-cli may not receive this payslip until they reconnect
+            </div>
+          )}
         </div>
       ) : (
         <>

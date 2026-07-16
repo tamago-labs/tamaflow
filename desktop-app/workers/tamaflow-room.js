@@ -1,11 +1,11 @@
 // TamaflowRoom — the data plane for a Tamaflow P2P session.
 //
-// Wraps an encrypted Autobase with a HyperDB view of four collections
-// (chat, invites, ai-state, relay-*) and BlindPairing for inviting new
-// peers. The previous Tamarind codebase also carried a `board` +
-// `item` collection driving a collaborative canvas; Tamaflow drops
-// the canvas and keeps only the chat + per-writer AI state + P2P
-// completion relay.
+// Wraps an encrypted Autobase with a HyperDB view of five collections
+// (chat, invites, ai-state, relay-*, payslip) and BlindPairing for
+// inviting new peers. The previous Tamarind codebase also carried a
+// `board` + `item` collection driving a collaborative canvas;
+// Tamaflow drops the canvas and keeps chat + per-writer AI state +
+// P2P completion relay + payslip delivery.
 //
 // Lifecycle: ReadyResource — caller awaits `room.ready()` before
 // assuming the Autobase is writable.
@@ -222,6 +222,13 @@ class TamaflowRoom extends ReadyResource {
         this.onRelayCancel(data)
       }
     })
+
+    // Payslip delivery. The employer dispatches `add-payslip` when a
+    // payslip is sent to an employee. The `recipient` field enables
+    // per-employee filtering on the renderer / CLI side.
+    this.router.add('@tamaflow/add-payslip', async (data, context) => {
+      await context.view.insert('@tamaflow/payslip', data)
+    })
   }
 
   get view() {
@@ -343,6 +350,20 @@ class TamaflowRoom extends ReadyResource {
     await this.base.append(
       TamaflowDispatch.encode('@tamaflow/add-chat', { id, text, info })
     )
+  }
+
+  // Payslip delivery. Appends a payslip record to the Autobase.
+  // `data` is the full payslip payload (id, recipient, html, etc.).
+  async appendPayslip(data) {
+    await this.base.append(
+      TamaflowDispatch.encode('@tamaflow/add-payslip', data)
+    )
+  }
+
+  // Read all payslips from the collection. Returns the full list;
+  // consumers filter by `recipient` field for per-employee views.
+  async getPayslips() {
+    return await this.view.find('@tamaflow/payslip', {}).toArray()
   }
 }
 

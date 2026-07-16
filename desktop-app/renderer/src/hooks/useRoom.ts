@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useSyncExternalStore } from 'react'
 import { bridge, ROOM_WORKER } from '../lib/bridge'
-import { onRoomEvent, writeRoom, type RoomEvent } from '../lib/room'
+import { onRoomEvent, writeRoom, type Payslip, type RoomEvent } from '../lib/room'
 import type { ChatMessage } from '../lib/chat'
 
 export type RoomStatus = 'starting' | 'ready' | 'error'
@@ -45,6 +45,7 @@ export interface RoomState {
   me: Me | null
   chat: ChatMessage[]
   peerAiStates: PeerAiState[]
+  payslips: Payslip[]
   error: string | null
 }
 
@@ -57,6 +58,7 @@ const initialState: RoomState = {
   me: null,
   chat: [],
   peerAiStates: [],
+  payslips: [],
   error: null
 }
 
@@ -104,6 +106,9 @@ function apply(event: RoomEvent) {
       break
     case 'ai-states':
       store.peerAiStates = Array.isArray(event.states) ? event.states : []
+      break
+    case 'payslips':
+      store.payslips = Array.isArray(event.payslips) ? event.payslips : []
       break
   }
   bumpAndEmit()
@@ -202,6 +207,7 @@ export function useRoom(): RoomState & {
   joinInvite: (invite: string) => void
   createInvite: () => void
   renameSelf: (name: string) => void
+  sendPayslip: (data: Payslip) => void
 } {
   useEffect(() => {
     let cancelled = false
@@ -279,6 +285,12 @@ export function useRoom(): RoomState & {
     })
   }, [])
 
+  const sendPayslip = useCallback((data: Payslip) => {
+    writeRoom({ type: 'send-payslip', data }).catch((err) => {
+      console.error('[tamaflow] sendPayslip failed:', err)
+    })
+  }, [])
+
   return {
     status: store.status,
     role: store.role,
@@ -288,13 +300,15 @@ export function useRoom(): RoomState & {
     me: store.me,
     chat: store.chat,
     peerAiStates: store.peerAiStates,
+    payslips: store.payslips,
     error: store.error,
     sendChat,
     removeChats,
     clearChat,
     joinInvite,
     createInvite,
-    renameSelf
+    renameSelf,
+    sendPayslip
   }
 }
 
@@ -313,6 +327,7 @@ export function __tamaflowRoomStoreForTest(): {
       me: store.me ? { ...store.me } : null,
       chat: store.chat,
       peerAiStates: store.peerAiStates,
+      payslips: store.payslips,
       error: store.error
     })
   }

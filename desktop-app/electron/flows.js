@@ -148,7 +148,12 @@ function registerFlowIpcHandlers() {
   })
 
   ipcMain.handle('flows:routes:bumpPayslipSend', (_e, flowId, routeId, info) => {
-    return routeStore.bumpPayslipSend(flowId, routeId, info)
+    const result = routeStore.bumpPayslipSend(flowId, routeId, info)
+    if (result.success) {
+      notifyChange(flowStore.listWithRoutes(routeStore))
+      notifyProgress(flowId, routeStore.list(flowId))
+    }
+    return result
   })
 
   ipcMain.handle('flows:exportJson', async (_e, id) => {
