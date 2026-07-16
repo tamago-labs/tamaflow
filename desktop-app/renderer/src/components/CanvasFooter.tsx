@@ -1,7 +1,6 @@
-import { useState } from 'react'
 import { useWorkerStatus, type WorkerStatus } from '../hooks/useWorkerStatus'
 import { useAI } from '../hooks/useAI'
-import { AIModelModal } from './AIModelModal'
+import { useAIModal } from '../context/AIModalContext'
 
 // Global status footer. Rendered once at the AppShell level so it
 // shows on every page (was previously only inside the Flow Builder
@@ -38,7 +37,7 @@ export function CanvasFooter() {
 // loading / idle) but uses the brand palette.
 function AIModelPill() {
   const { isReady, activeModel, progress, error } = useAI()
-  const [open, setOpen] = useState(false)
+  const { openAIModel } = useAIModal()
 
   const meta = isReady
     ? {
@@ -57,19 +56,16 @@ function AIModelPill() {
         : { text: 'AI: not loaded', dot: 'bg-gray-400', textColor: 'text-brand-muted' }
 
   return (
-    <>
-      <button
-        type='button'
-        onClick={() => setOpen(true)}
-        title='Click to manage AI model'
-        aria-label='Manage AI model'
-        className='inline-flex h-6 items-center gap-2 rounded-md px-2 text-xs font-semibold text-brand-navy transition hover:bg-brand-border focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
-      >
-        <span className={`h-2 w-2 rounded-full ${meta.dot}`} aria-hidden='true' />
-        <span className={meta.textColor}>{meta.text}</span>
-      </button>
-      <AIModelModal open={open} onClose={() => setOpen(false)} />
-    </>
+    <button
+      type='button'
+      onClick={openAIModel}
+      title='Click to manage AI model'
+      aria-label='Manage AI model'
+      className='inline-flex h-6 items-center gap-2 rounded-md px-2 text-xs font-semibold text-brand-navy transition hover:bg-brand-border focus:outline-none focus:ring-2 focus:ring-brand-teal/60'
+    >
+      <span className={`h-2 w-2 rounded-full ${meta.dot}`} aria-hidden='true' />
+      <span className={meta.textColor}>{meta.text}</span>
+    </button>
   )
 }
 

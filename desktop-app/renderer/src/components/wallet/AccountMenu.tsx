@@ -6,7 +6,8 @@
 
 import { useEffect, useRef } from 'react'
 import { useWallet } from '../../context/WalletContext'
-import { Droplets, Info, KeyRound } from 'lucide-react'
+import { useAIModal } from '../../context/AIModalContext'
+import { Bot, Droplets, Info, KeyRound } from 'lucide-react'
 
 interface AccountMenuProps {
   open: boolean
@@ -16,6 +17,7 @@ interface AccountMenuProps {
 export function AccountMenu({ open, onClose }: AccountMenuProps) {
   const ref = useRef<HTMLDivElement>(null)
   const { openAccountInfo, openFaucet, openExportKey } = useWallet()
+  const { openAIModel } = useAIModal()
 
   useEffect(() => {
     if (!open) return
@@ -47,6 +49,10 @@ export function AccountMenu({ open, onClose }: AccountMenuProps) {
     openExportKey()
     onClose()
   }
+  const handleAIModel = () => {
+    openAIModel()
+    onClose()
+  }
 
   return (
     <div
@@ -55,6 +61,7 @@ export function AccountMenu({ open, onClose }: AccountMenuProps) {
       aria-label='Wallet menu'
       className='absolute right-0 top-full z-[60] mt-1 w-[220px] rounded-md border border-brand-border bg-white py-1 shadow-lg'
     >
+      
       <button
         type='button'
         role='menuitem'
@@ -73,6 +80,7 @@ export function AccountMenu({ open, onClose }: AccountMenuProps) {
         <Droplets size={14} className='flex-shrink-0 text-brand-muted' />
         Faucet
       </button>
+      
       <button
         type='button'
         role='menuitem'
@@ -81,6 +89,16 @@ export function AccountMenu({ open, onClose }: AccountMenuProps) {
       >
         <KeyRound size={14} className='flex-shrink-0 text-brand-muted' />
         Export Private Key
+      </button>
+
+      <button
+        type='button'
+        role='menuitem'
+        onClick={handleAIModel}
+        className='flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent px-3 py-2 text-left font-sans text-[13px] text-brand-navy hover:bg-brand-light'
+      >
+        <Bot size={14} className='flex-shrink-0 text-brand-muted' />
+        Enable Team AI
       </button>
     </div>
   )

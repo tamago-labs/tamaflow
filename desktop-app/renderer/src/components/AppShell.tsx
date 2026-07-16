@@ -19,6 +19,8 @@ import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { CanvasFooter } from './CanvasFooter'
 import { TeamChatDrawer } from './dashboard/TeamChatDrawer'
+import { AIModalProvider, useAIModal } from '../context/AIModalContext'
+import { AIModelModal } from './AIModelModal'
 import { DashboardPage } from './pages/DashboardPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { ChatPage } from './pages/ChatPage'
@@ -67,22 +69,18 @@ interface AppShellProps {
 export function AppShell({ initialPage = 'dashboard', roomRole, invite, me }: AppShellProps) {
   const [currentPage, setCurrentPage] = useState<PageId>(initialPage)
 
-  const Page = PAGES[currentPage]
-  // FlowBuilderPage renders the existing canvas shell (toolbar +
-  // canvas + right drawer + footer) full-bleed, so we strip the
-  // TopBar/main padding for that page. Every other page gets the
-  // standard padding around the TopBar.
-  const isFlowBuilder = currentPage === 'flow-builder'
-
   return (
-    <FlowViewProvider>
-      <AppShellInner currentPage={currentPage} setCurrentPage={setCurrentPage} roomRole={roomRole} invite={invite} me={me} />
-    </FlowViewProvider>
+    <AIModalProvider>
+      <FlowViewProvider>
+        <AppShellInner currentPage={currentPage} setCurrentPage={setCurrentPage} roomRole={roomRole} invite={invite} me={me} />
+      </FlowViewProvider>
+    </AIModalProvider>
   )
 }
 
 function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { currentPage: PageId; setCurrentPage: (p: PageId) => void; roomRole: any; invite: string | null; me: { name: string } | null }) {
   const { view } = useFlowView()
+  const { aiModalOpen, closeAIModel } = useAIModal()
   const Page = PAGES[currentPage]
   const isFlowBuilder = currentPage === 'flow-builder'
   const isCanvasView = isFlowBuilder && view === 'canvas'
@@ -130,15 +128,17 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
               </div>
             </div>
 
-            {/* Floating team chat button */}
-            <button
-              type="button"
-              onClick={() => setTeamChatOpen(!teamChatOpen)}
-              className="fixed right-6 bottom-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors cursor-pointer"
-              title="Team Chat"
-            >
-              <MessageCircle size={20} />
-            </button>
+            {/* Floating team chat button — hidden in full-canvas view */}
+            {!isCanvasView && (
+              <button
+                type="button"
+                onClick={() => setTeamChatOpen(!teamChatOpen)}
+                className="fixed right-6 bottom-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors cursor-pointer"
+                title="Team Chat"
+              >
+                <MessageCircle size={20} />
+              </button>
+            )}
 
             <TeamChatDrawer open={teamChatOpen} onClose={() => setTeamChatOpen(false)} />
 
@@ -154,6 +154,7 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
             <ConfirmDestroyModal />
             <FaucetModal />
             <SendModal />
+            <AIModelModal open={aiModalOpen} onClose={closeAIModel} />
           </div>
         </ContractsProvider>
       </WalletProvider>

@@ -166,6 +166,34 @@ export function AIModelModal({ open, onClose }: AIModelModalProps) {
             </div>
           )}
 
+          {/* ── Download status banner ────────────────────────────── */}
+          {isLoading && ai.progress && (
+            <div className='rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5'>
+              <div className='flex items-center gap-2'>
+                <span className='relative inline-flex h-2 w-2 flex-shrink-0'>
+                  <span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75' />
+                  <span className='relative inline-flex h-2 w-2 rounded-full bg-amber-500' />
+                </span>
+                <span className='text-xs font-semibold text-amber-800'>
+                  {ai.progress.phase === 'downloading'
+                    ? `Downloading model… ${Math.round(ai.progress.percentage)}%`
+                    : `Loading into memory… ${Math.round(ai.progress.percentage)}%`}
+                </span>
+              </div>
+              <div className='mt-2 h-1.5 w-full overflow-hidden rounded-full bg-amber-200'>
+                <div
+                  className='h-full rounded-full bg-amber-500 transition-all'
+                  style={{ width: `${Math.round(ai.progress.percentage)}%` }}
+                />
+              </div>
+              {ai.progress.phase === 'downloading' && (
+                <p className='mt-2 text-[11px] text-amber-700/80 italic'>
+                  First-time download can take 5–10 minutes depending on your connection.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* ── Model picker (Recommended + Custom + Add custom) ───
               Hidden when a model is fully loaded and the user hasn't
               clicked "Switch model" — the loaded card with Unload +
@@ -247,9 +275,9 @@ export function AIModelModal({ open, onClose }: AIModelModalProps) {
           <SelectionBar
             model={selectedModel}
             isActive={isSelectedActive}
-            isLoading={isSelectedLoading}
+            isLoading={isLoading}
             pending={pendingLoad}
-            progress={isSelectedLoading ? ai.progress : null}
+            progress={isLoading ? ai.progress : null}
             onLoad={() => void handleLoad()}
             onUnload={() => void handleUnload()}
             onCancel={() => void ai.cancel(true)}
@@ -377,21 +405,6 @@ function SelectionBar({
           </div>
           {meta.length > 0 && (
             <p className='mt-0.5 text-[10px] text-gray-500'>{meta.join(' · ')}</p>
-          )}
-          {isLoading && progress && (
-            <div className='mt-2'>
-              <div className='h-1.5 w-full overflow-hidden rounded-full bg-gray-200'>
-                <div
-                  className='h-full rounded-full bg-brand-blue transition-all'
-                  style={{ width: `${Math.round(progress.percentage)}%` }}
-                />
-              </div>
-              <p className='mt-1 text-[10px] text-gray-500'>
-                {progress.phase === 'downloading'
-                  ? `Downloading… ${Math.round(progress.percentage)}%`
-                  : `Loading into memory… ${Math.round(progress.percentage)}%`}
-              </p>
-            </div>
           )}
           {pending && !isLoading && <p className='mt-1 text-[10px] text-gray-500'>Starting…</p>}
         </div>
@@ -587,19 +600,6 @@ function ModelRow({
           </div>
           {model.description && (
             <p className='mt-0.5 text-[10px] text-gray-500'>{model.description}</p>
-          )}
-          {isLoading && progress && (
-            <div className='mt-1.5 flex items-center gap-2'>
-              <div className='h-1 flex-1 overflow-hidden rounded-full bg-gray-200'>
-                <div
-                  className='h-full rounded-full bg-brand-blue transition-all'
-                  style={{ width: `${Math.round(progress.percentage)}%` }}
-                />
-              </div>
-              <span className='font-mono text-[10px] text-gray-500'>
-                {Math.round(progress.percentage)}%
-              </span>
-            </div>
           )}
         </div>
       </button>
