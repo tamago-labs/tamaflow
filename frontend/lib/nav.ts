@@ -13,7 +13,7 @@ import {
 /* Layout in the Sidebar (top → bottom):                                      */
 /*                                                                             */
 /*   1. topItems      — top-level items, no category label                     */
-/*                     (Dashboard · Assets · Payments · Rewards Hub)           */
+/*                     (Dashboard · Assets · Payslips · Rewards Hub)           */
 /*   2. navCategories — items grouped under a mono label                       */
 /*                     (Account)                                              */
 /*   3. bottomLink    — single utility link at the very bottom                 */
@@ -43,7 +43,7 @@ export const topItems: NavItem[] = [
   { path: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
   { path: "/app/assets", label: "Assets", icon: Wallet },
   { path: "/app/attendance", label: "Attendance", icon: Clock },
-  { path: "/app/payments", label: "Payments", icon: ArrowRightLeft },
+  { path: "/app/payslips", label: "Payslips", icon: ArrowRightLeft },
   { path: "/app/rewards", label: "Rewards Hub", icon: Gift },
 ];
 
@@ -61,7 +61,7 @@ export const bottomLink: { href: string; label: string } = {
 export const routeLabels: Record<string, string> = {
   app: "Dashboard",
   assets: "Assets",
-  payments: "Payments",
+  payslips: "Payslips",
   rewards: "Rewards Hub",
   attendance: "Attendance",
   identification: "Identification",

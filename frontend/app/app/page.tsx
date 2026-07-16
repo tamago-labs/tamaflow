@@ -271,7 +271,7 @@ export default function DashboardPage() {
             Recent Activity
           </p>
           <Link
-            href="/app/payments"
+            href="/app/payslips"
             className="font-mono text-[10px] font-bold tracking-wider2 text-brand-blue uppercase no-underline hover:text-brand-navy"
           >
             View all →
