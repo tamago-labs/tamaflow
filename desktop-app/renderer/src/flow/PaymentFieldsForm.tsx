@@ -41,6 +41,22 @@ export default function PaymentFieldsForm({ payment, paymentTemplate, hasStaleTe
           <div style={{ fontFamily: monoFont, fontSize: 9, letterSpacing: '0.04em', color: MUTED, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={paymentTemplate ? paymentTemplateSubtitle(paymentTemplate) : 'No deductions applied — built-in card.'}>
             {paymentTemplate ? paymentTemplateSubtitle(paymentTemplate) : 'No deductions · built-in card'}
           </div>
+          {paymentTemplate?.html && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                const win = window.open('', '_blank', 'noopener,noreferrer')
+                if (win) {
+                  win.document.write(paymentTemplate.html)
+                  win.document.close()
+                }
+              }}
+              style={{ marginTop: 2, padding: 0, background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: monoFont, fontSize: 9, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#1A1AE8', textAlign: 'left' }}
+            >
+              Preview template
+            </button>
+          )}
         </div>
       )}
       <Field label="Memo" hint="baked into the transfer">

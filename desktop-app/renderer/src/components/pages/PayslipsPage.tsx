@@ -9,10 +9,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ChevronDown, ChevronRight, Send, FileText, Loader2, Check, Wand2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Send, FileText, Loader2, Check, Wand2, Settings } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import Drawer from '../Drawer'
+import PayslipTemplateModal from '../payslips/PayslipTemplateModal'
 import { useFlows } from '../../context/FlowContext'
 import { useEmployees } from '../../context/EmployeeContext'
 import { useCompany } from '../../context/CompanyContext'
@@ -36,6 +37,7 @@ export function PayslipsPage() {
   const [expandedEmployee, setExpandedEmployee] = useState<string | null>(null)
   const [selectedRoutes, setSelectedRoutes] = useState<Set<string>>(new Set())
   const [payslipStyle, setPayslipStyle] = useState('standard')
+  const [templateModalOpen, setTemplateModalOpen] = useState(false)
 
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -287,6 +289,14 @@ export function PayslipsPage() {
       <div className="mb-6 flex items-center justify-between">
         <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Payslips</h1>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setTemplateModalOpen(true)}
+            className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-wider2 text-gray-700 hover:bg-gray-50 transition"
+          >
+            <Settings size={12} />
+            Templates
+          </button>
           <select
             value={payslipStyle}
             onChange={(e) => setPayslipStyle(e.target.value)}
@@ -566,6 +576,7 @@ export function PayslipsPage() {
           )}
         </div>
       </Drawer>
+      <PayslipTemplateModal open={templateModalOpen} onClose={() => setTemplateModalOpen(false)} />
     </div>
   )
 }
