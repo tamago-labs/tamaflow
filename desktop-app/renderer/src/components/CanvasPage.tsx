@@ -3,6 +3,7 @@ import { ArrowLeft, Plus, Play, Square, Trash2, Minus, RotateCcw, Eye } from 'lu
 import FlowBuilder from '../flow/FlowBuilder'
 import RoutesPreviewModal from '../flow/RoutesPreviewModal'
 import RouteStatusPill from './RouteStatusPill'
+import GeneratePayslipDrawer from './payslips/GeneratePayslipDrawer'
 import { useFlows } from '../context/FlowContext'
 import { useEmployees } from '../context/EmployeeContext'
 import { useCompany } from '../context/CompanyContext'
@@ -272,6 +273,7 @@ export function CanvasPage({ onViewChange }: { onViewChange?: (view: 'list' | 'c
 function RoutesPanel({ status, routes, employees, canvas }: { status: FlowStatus; routes: RouteSummary[]; employees: any[]; canvas: CanvasState }) {
   const sorted = useMemo(() => [...routes].sort((a, b) => a.payeePlacementId.localeCompare(b.payeePlacementId)), [routes])
   const settledCount = routes.filter((r) => r.status === 'settled').length
+  const [sendRoute, setSendRoute] = useState<RouteSummary | null>(null)
   const failedCount = routes.filter((r) => r.status === 'failed').length
   const settled = settledCount + failedCount
   const total = routes.length
@@ -299,6 +301,7 @@ function RoutesPanel({ status, routes, employees, canvas }: { status: FlowStatus
               <th style={{ padding: '6px 12px', textAlign: 'right', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9999bb', fontWeight: 700, borderBottom: '1px solid #e5e7eb' }}>SS</th>
               <th style={{ padding: '6px 12px', textAlign: 'right', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9999bb', fontWeight: 700, borderBottom: '1px solid #e5e7eb' }}>CC</th>
               <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9999bb', fontWeight: 700, borderBottom: '1px solid #e5e7eb' }}>Tx / Error</th>
+              <th style={{ padding: '6px 12px', textAlign: 'left', fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9999bb', fontWeight: 700, borderBottom: '1px solid #e5e7eb' }}>Payslip</th>
             </tr></thead>
             <tbody>
               {sorted.map((r) => { const employee = employees.find((e: any) => e.id === r.employeeId); const payeeCard = canvas.cards.find((c) => c.placementId === r.payeePlacementId); return (
@@ -311,12 +314,29 @@ function RoutesPanel({ status, routes, employees, canvas }: { status: FlowStatus
                   <td style={{ padding: '6px 12px', textAlign: 'right' }}><span className="font-mono text-xs" style={{ color: r.socialSecurityAmount ? '#b45309' : '#999' }}>{r.socialSecurityAmount || '—'}</span></td>
                   <td style={{ padding: '6px 12px', textAlign: 'right' }}><span className="font-mono text-xs font-bold text-gray-900">{r.amountCC}</span><span className="font-mono text-[10px] text-gray-400 ml-1">CC</span></td>
                   <td style={{ padding: '6px 12px' }}>{r.txHash ? <span className="font-mono text-[10px] text-blue-600" title={r.txHash}>{r.txHash.slice(0, 10)}…</span> : r.error ? <span className="font-mono text-[10px] text-red-500">{r.error}</span> : <span className="font-mono text-[10px] text-gray-400">—</span>}</td>
+                  <td style={{ padding: '6px 12px' }}>
+                    {r.status === 'settled' ? (
+                      <button
+                        type="button"
+                        onClick={() => setSendRoute(r)}
+                        className="font-mono text-[10px] text-blue-600 hover:text-blue-800 cursor-pointer border-0 bg-transparent p-0"
+                      >
+                        {r.payslipSentCount > 0 ? `${r.payslipSentCount} sent` : 'Send'}
+                      </button>
+                    ) : <span className="font-mono text-[10px] text-gray-400">—</span>}
+                  </td>
                 </tr>
               )})}
             </tbody>
           </table>
         )}
       </div>
+      <GeneratePayslipDrawer
+        open={!!sendRoute}
+        onClose={() => setSendRoute(null)}
+        route={sendRoute}
+        onSent={() => setSendRoute(null)}
+      />
     </div>
   )
 }

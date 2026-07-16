@@ -174,7 +174,8 @@ contextBridge.exposeInMainWorld('bridge', {
       list: (flowId) => ipcRenderer.invoke('flows:routes:list', flowId),
       listAll: () => ipcRenderer.invoke('flows:routes:listAll'),
       get: (flowId, routeId) => ipcRenderer.invoke('flows:routes:get', flowId, routeId),
-      retryFailed: (flowId) => ipcRenderer.invoke('flows:routes:retryFailed', flowId)
+      retryFailed: (flowId) => ipcRenderer.invoke('flows:routes:retryFailed', flowId),
+      bumpPayslipSend: (flowId, routeId, info) => ipcRenderer.invoke('flows:routes:bumpPayslipSend', flowId, routeId, info)
     },
     exportJson: (id) => ipcRenderer.invoke('flows:exportJson', id),
     importJson: () => ipcRenderer.invoke('flows:importJson'),

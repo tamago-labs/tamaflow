@@ -147,6 +147,10 @@ function registerFlowIpcHandlers() {
     return { retried: failed.length }
   })
 
+  ipcMain.handle('flows:routes:bumpPayslipSend', (_e, flowId, routeId, info) => {
+    return routeStore.bumpPayslipSend(flowId, routeId, info)
+  })
+
   ipcMain.handle('flows:exportJson', async (_e, id) => {
     const cur = BrowserWindow.getFocusedWindow()
     if (!cur) return { success: false, error: 'No focused window' }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Search, Loader2 } from 'lucide-react'
 import RouteStatusPill from '../RouteStatusPill'
+import GeneratePayslipDrawer from '../payslips/GeneratePayslipDrawer'
 import { useFlows } from '../../context/FlowContext'
 import { useEmployees } from '../../context/EmployeeContext'
 import type { Employee, RouteSummary } from '../../ai/types'
@@ -46,6 +47,7 @@ export default function SettlementsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [search, setSearch] = useState('')
+  const [sendRoute, setSendRoute] = useState<RouteSummary | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -162,7 +164,7 @@ export default function SettlementsPage() {
 
         {/* Column header */}
         {hasAny && (
-          <div className="grid gap-4 border-b border-gray-200 bg-white px-4 py-2.5" style={{ gridTemplateColumns: '1.1fr 1.1fr 1.4fr 1fr 1fr 1fr 1fr auto 1.4fr' }}>
+          <div className="grid gap-4 border-b border-gray-200 bg-white px-4 py-2.5" style={{ gridTemplateColumns: '1.1fr 1.1fr 1.4fr 1fr 1fr 1fr 1fr auto 1.4fr 1fr' }}>
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Time</span>
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Flow</span>
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Recipient</span>
@@ -172,6 +174,7 @@ export default function SettlementsPage() {
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">SS</span>
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Status</span>
             <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Result</span>
+            <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Payslip</span>
           </div>
         )}
 
@@ -215,7 +218,7 @@ export default function SettlementsPage() {
               const shortHash = truncateTxHash(r.txHash)
               const isFailed = r.status === 'failed'
               return (
-                <li key={r.id} className="grid gap-4 py-3 px-4 transition-colors hover:bg-gray-50 items-start" style={{ gridTemplateColumns: '1.1fr 1.1fr 1.4fr 1fr 1fr 1fr 1fr auto 1.4fr' }}>
+                <li key={r.id} className="grid gap-4 py-3 px-4 transition-colors hover:bg-gray-50 items-start" style={{ gridTemplateColumns: '1.1fr 1.1fr 1.4fr 1fr 1fr 1fr 1fr auto 1.4fr 1fr' }}>
                   <span className="font-mono text-[11px] text-gray-900">{time}</span>
                   <span className="font-sans text-sm text-gray-900 truncate" title={flowName}>{flowName}</span>
                   <div className="min-w-0">
@@ -243,6 +246,17 @@ export default function SettlementsPage() {
                       <span className="font-mono text-[11px] text-blue-600">{shortHash}</span>
                     )}
                   </div>
+                  <div>
+                    {r.status === 'settled' ? (
+                      <button
+                        type="button"
+                        onClick={() => setSendRoute(r)}
+                        className="font-mono text-[10px] text-blue-600 hover:text-blue-800 cursor-pointer border-0 bg-transparent p-0"
+                      >
+                        {r.payslipSentCount > 0 ? `${r.payslipSentCount} sent` : 'Send'}
+                      </button>
+                    ) : <span className="font-mono text-[10px] text-gray-400">—</span>}
+                  </div>
                 </li>
               )
             })}
@@ -256,6 +270,12 @@ export default function SettlementsPage() {
           </div>
         )}
       </div>
+      <GeneratePayslipDrawer
+        open={!!sendRoute}
+        onClose={() => setSendRoute(null)}
+        route={sendRoute}
+        onSent={reload}
+      />
     </div>
   )
 }

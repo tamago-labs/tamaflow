@@ -10,14 +10,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ChevronDown, ChevronRight, Send, FileText, Loader2, Check, Wand2, Settings } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import Drawer from '../Drawer'
 import PayslipTemplateModal from '../payslips/PayslipTemplateModal'
 import { useFlows } from '../../context/FlowContext'
 import { useEmployees } from '../../context/EmployeeContext'
 import { useCompany } from '../../context/CompanyContext'
-import { writeRoom } from '../../lib/room'
 import { bridge } from '../../lib/bridge'
 import type { RouteSummary } from '../../ai/types'
 
@@ -39,58 +36,14 @@ export function PayslipsPage() {
   const [payslipStyle, setPayslipStyle] = useState('standard')
   const [templateModalOpen, setTemplateModalOpen] = useState(false)
 
-  // Drawer state
+  // Legacy drawer state — kept for backward compat, will be removed in a follow-up
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerStyle, setDrawerStyle] = useState('standard')
   const [filledTemplate, setFilledTemplate] = useState<string | null>(null)
-  const [streamingContent, setStreamingContent] = useState('')
-  const [streamingThinking, setStreamingThinking] = useState('')
-  const [isStreaming, setIsStreaming] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const offDoneRef = useRef<(() => void) | null>(null)
-  const offErrorRef = useRef<(() => void) | null>(null)
-
-  // Subscribe to streaming events
-  useEffect(() => {
-    const offThinking = bridge.payslip.onThinking((data) => {
-      setStreamingThinking((prev) => prev + data.text)
-    })
-    const offToken = bridge.payslip.onToken((data) => {
-      setStreamingContent((prev) => prev + data.text)
-    })
-    offDoneRef.current = bridge.payslip.onDone((data) => {
-      // Auto-fill template with settlement data
-      const settlement = aggregateSettlement()
-      if (settlement && data.content) {
-        bridge.payslip.fill({
-          template: data.content,
-          settlementData: settlement as unknown as Record<string, unknown>,
-          companyProfile: companyProfile as unknown as Record<string, unknown>
-        }).then((fillResult) => {
-          if (fillResult.success && fillResult.markdown) {
-            setFilledTemplate(fillResult.markdown)
-          }
-        })
-      }
-      setIsStreaming(false)
-      setGenerating(false)
-    })
-    offErrorRef.current = bridge.payslip.onError((data) => {
-      setError(data.error)
-      setIsStreaming(false)
-      setGenerating(false)
-    })
-
-    return () => {
-      offThinking()
-      offToken()
-      offDoneRef.current?.()
-      offErrorRef.current?.()
-    }
-  }, [])
 
   // Load routes
   useEffect(() => {
@@ -182,97 +135,15 @@ export function PayslipsPage() {
     }
   }, [selectedRoutes, expandedRoutes, expandedEmployee, employeeById])
 
-  // Generate template via AI (streaming)
+  // Legacy handlers — stubbed out (old streaming flow removed)
+  // The per-route send flow now lives in GeneratePayslipDrawer
   const handleGenerate = useCallback(async () => {
-    const settlement = aggregateSettlement()
-    if (!settlement || !companyProfile) return
+    // No-op: old streaming generation removed
+  }, [])
 
-    setGenerating(true)
-    setStreamingContent('')
-    setStreamingThinking('')
-    setIsStreaming(true)
-    setError(null)
-    setFilledTemplate(null)
-
-    try {
-      const result = await bridge.payslip.generate({
-        settlementData: settlement as unknown as Record<string, unknown>,
-        companyProfile: companyProfile as unknown as Record<string, unknown>,
-        style: drawerStyle
-      })
-
-      if (result.success && result.markdown) {
-        // Auto-fill with settlement data
-        const fillResult = await bridge.payslip.fill({
-          template: result.markdown,
-          settlementData: settlement as unknown as Record<string, unknown>,
-          companyProfile: companyProfile as unknown as Record<string, unknown>
-        })
-        if (fillResult.success && fillResult.markdown) {
-          setFilledTemplate(fillResult.markdown)
-        }
-      } else {
-        setError(result.error || 'Generation failed')
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Generation failed')
-    } finally {
-      setGenerating(false)
-      setIsStreaming(false)
-    }
-  }, [aggregateSettlement, companyProfile, drawerStyle])
-
-  // Send payslip via P2P + on-ledger
   const handleSend = useCallback(async () => {
-    if (!filledTemplate || !expandedEmployee || !companyProfile) return
-    const settlement = aggregateSettlement()
-    if (!settlement) return
-
-    setSending(true)
-    setError(null)
-    try {
-      // Build payload
-      const payloadResult = await bridge.payslip.buildPayload({
-        markdown: filledTemplate,
-        settlementData: settlement as unknown as Record<string, unknown>,
-        companyProfile: companyProfile as unknown as Record<string, unknown>,
-        style: drawerStyle
-      })
-
-      if (payloadResult.success && payloadResult.payload) {
-        // Send via P2P using writeRoom (correct IPC channel)
-        await writeRoom({
-          type: 'send-chat',
-          text: `[payslip] ${JSON.stringify(payloadResult.payload)}`
-        })
-
-        // Register on-ledger
-        try {
-          const { CONTRACTS } = await import('../../lib/contracts-ids')
-          const emp = employeeById.get(expandedEmployee)
-          const cantonPartyId = emp?.cantonPartyId
-          if (cantonPartyId) {
-            await bridge.contracts.createPayslip(
-              CONTRACTS.COMPANY,
-              cantonPartyId,
-              payloadResult.payload.id as string,
-              settlement.period || new Date().toISOString().slice(0, 7)
-            )
-          } else {
-            console.warn('[PayslipsPage] Employee has no Canton party ID, skipping on-ledger registration')
-          }
-        } catch (ledgerErr) {
-          console.error('[PayslipsPage] Failed to register on-ledger:', ledgerErr)
-        }
-
-        setSent(true)
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Send failed')
-    } finally {
-      setSending(false)
-    }
-  }, [filledTemplate, expandedEmployee, companyProfile, aggregateSettlement, drawerStyle])
+    // No-op: old P2P send removed. Per-route send is in GeneratePayslipDrawer.
+  }, [])
 
   const openDrawer = () => {
     setDrawerStyle(payslipStyle)
@@ -536,10 +407,13 @@ export function PayslipsPage() {
                   Filled Payslip
                 </span>
               </div>
-              <div className="rounded-md border border-gray-200 bg-white p-4 max-h-96 overflow-y-auto">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {filledTemplate}
-                </ReactMarkdown>
+              <div className="rounded-md border border-gray-200 bg-white overflow-hidden" style={{ height: 400 }}>
+                <iframe
+                  srcDoc={filledTemplate ?? ''}
+                  title='Payslip preview'
+                  sandbox='allow-same-origin'
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                />
               </div>
             </div>
           )}

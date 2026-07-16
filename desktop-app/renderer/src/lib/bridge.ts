@@ -207,6 +207,7 @@ export interface BridgeAPI {
       list(flowId: string): Promise<RouteSummary[]>
       listAll(): Promise<RouteSummary[]>
       retryFailed(flowId: string): Promise<{ retried: number }>
+      bumpPayslipSend(flowId: string, routeId: string, info: { sentAt: string; sendId: string }): Promise<{ success: boolean; error?: string }>
     }
     exportJson(id: string): Promise<{ success: boolean; canceled?: boolean; path?: string; error?: string }>
     importJson(): Promise<{ success: boolean; canceled?: boolean; file?: FlowFile; error?: string }>
@@ -453,7 +454,8 @@ const noopBridge: BridgeAPI = {
     routes: {
       list: () => Promise.resolve([]),
       listAll: () => Promise.resolve([]),
-      retryFailed: () => Promise.resolve({ retried: 0 })
+      retryFailed: () => Promise.resolve({ retried: 0 }),
+      bumpPayslipSend: () => Promise.resolve({ success: false })
     },
     exportJson: () => Promise.resolve({ success: false, error: 'bridge not available' }),
     importJson: () => Promise.resolve({ success: false, error: 'bridge not available' }),
