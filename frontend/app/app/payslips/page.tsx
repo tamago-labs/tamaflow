@@ -126,15 +126,11 @@ export default function PayslipsPage() {
         </button>
       </div>
 
-      {/* P2P connection hint */}
-      {connected && !p2pConnected && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
-          <p className="m-0 font-semibold">P2P hyperswarm not connected.</p>
+      <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700"> 
           <p className="m-0 mt-1">
             Ensure you have connected to the team room via P2P hyperswarm. If you see payslip metadata but no content, disconnect and reconnect with the correct invite code.
           </p>
         </div>
-      )}
 
       {/* Payslip list */}
       {!connected ? (
