@@ -2,11 +2,12 @@
 
 /**
  * Payslips Page — Display received payslips from employer via P2P.
- * Payslips arrive as chat messages prefixed with [payslip].
+ * Rich summary cards with full HTML preview on expand.
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { FileText, ChevronDown, ChevronRight, RefreshCw, AlertTriangle } from "lucide-react";
+import { FileText, ChevronDown, ChevronRight, RefreshCw, AlertTriangle, Loader2 } from "lucide-react";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { cli } from "@/lib/cli";
 import { useWalletMode } from "@/lib/wallet/useWalletMode";
 
@@ -29,14 +30,11 @@ export default function PayslipsPage() {
   const [payslips, setPayslips] = useState<Payslip[]>([]);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"preview" | "source">("preview");
-  const [p2pConnected, setP2pConnected] = useState(false);
 
   const fetchPayslips = useCallback(async () => {
     if (!connected) return;
     setLoading(true);
     try {
-      // Fetch P2P payslips (have html content)
       const p2pResult = await cli.payslips.list();
       const p2pPayslips: Payslip[] = Array.isArray(p2pResult)
         ? p2pResult
@@ -56,7 +54,6 @@ export default function PayslipsPage() {
             }))
         : [];
 
-      // Fetch on-ledger PayslipRecord contracts
       let onChainPayslips: Payslip[] = [];
       try {
         const records = await cli.payslipRecords.list();
@@ -70,7 +67,7 @@ export default function PayslipsPage() {
             netPay: "0",
             currency: "USD",
             style: "standard",
-            html: "", // Content is in P2P, not on-chain
+            html: "",
             companyName: "",
             createdAt: (r.createdAt as string) || "",
             onChain: true,
@@ -80,7 +77,6 @@ export default function PayslipsPage() {
         // PayslipRecord query may fail if contract not deployed yet
       }
 
-      // Merge: prefer P2P payslips (they have html), fill gaps from on-chain
       const mergedMap = new Map<string, Payslip>();
       for (const p of onChainPayslips) {
         if (p.id) mergedMap.set(p.id, p);
@@ -102,14 +98,9 @@ export default function PayslipsPage() {
 
   useEffect(() => {
     if (connected) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchPayslips();
-      // Check P2P room status
-      cli.room.status().then((status: Record<string, unknown>) => {
-        setP2pConnected(!!status.connected);
-      }).catch(() => {});
     }
-  }, [connected]);
+  }, [connected, fetchPayslips]);
 
   return (
     <div className="space-y-6">
@@ -137,70 +128,85 @@ export default function PayslipsPage() {
       )}
 
       {/* Payslip list */}
-      {payslips.length > 0 ? (
-        <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
-          <ul className="divide-y divide-gray-200">
-            {payslips.map((p) => {
-              const isExpanded = expanded === p.id;
-              return (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    onClick={() => { setExpanded(isExpanded ? null : p.id); setViewMode("preview"); }}
-                    className="flex w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-gray-50"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                      <FileText size={14} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="m-0 text-sm font-medium text-gray-900">{p.companyName}</p>
-                      <p className="m-0 text-xs text-gray-500">{p.period}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="m-0 text-sm font-medium text-gray-900">
-                        {p.currency} {parseFloat(p.grossPay).toLocaleString()}
-                      </p>
-                      <p className="m-0 text-xs text-gray-500">
-                        Net: {p.currency} {parseFloat(p.netPay).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="m-0 text-[10px] text-gray-400">
-                        {new Date(p.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                      </p>
-                    </div>
-                    {isExpanded ? <ChevronDown size={14} className="text-gray-400" /> : <ChevronRight size={14} className="text-gray-400" />}
-                  </button>
+      {loading ? (
+        <div className="rounded-md border border-gray-200 bg-white py-12 text-center">
+          <div className="mb-3 flex justify-center">
+            <Loader2 size={20} className="text-brand-blue animate-spin" />
+          </div>
+          <p className="m-0 text-sm text-brand-muted">Loading payslips…</p>
+        </div>
+      ) : payslips.length > 0 ? (
+        <div className="space-y-3">
+          {payslips.map((p, i) => {
+            const isExpanded = expanded === p.id;
+            const hasContent = !!p.html;
+            return (
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05, duration: 0.3, ease: "easeOut" }}
+                className="rounded-md border border-gray-200 bg-white overflow-hidden"
+              >
+                {/* Collapsed header — single row summary */}
+                <button
+                  type="button"
+                  onClick={() => setExpanded(isExpanded ? null : p.id)}
+                  className="w-full text-left px-5 py-3.5 flex items-center gap-6 transition-colors hover:bg-gray-50/50"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="m-0 text-sm font-semibold text-brand-navy truncate">
+                      {p.companyName ? `From ${p.companyName}` : "Unknown Payslip"}
+                    </p>
+                    <p className="m-0 text-[11px] text-brand-muted font-mono uppercase tracking-wider">
+                      {p.period}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="m-0 text-sm font-mono font-semibold text-brand-navy">
+                      Gross {p.currency} {parseFloat(p.grossPay).toLocaleString()}
+                    </p>
+                    <p className="m-0 text-[11px] font-mono text-brand-muted">
+                      Net {p.currency} {parseFloat(p.netPay).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0 hidden sm:block">
+                    <p className="m-0 text-[11px] font-mono text-brand-muted">
+                      {p.createdAt
+                        ? new Date(p.createdAt).toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })
+                        : "—"}
+                    </p>
+                    <p className="m-0 text-[11px] font-mono">
+                      {hasContent ? (
+                        <span className="text-brand-ok font-semibold">Attachment available</span>
+                      ) : (
+                        <span className="text-brand-muted">No attachment</span>
+                      )}
+                    </p>
+                  </div>
+                  {isExpanded ? (
+                    <ChevronDown size={16} className="text-gray-400 flex-shrink-0" />
+                  ) : (
+                    <ChevronRight size={16} className="text-gray-400 flex-shrink-0" />
+                  )}
+                </button>
 
-                  {isExpanded && (
-                    <div className="border-t border-gray-100 bg-gray-50 px-4 py-4">
-                      <div className="mb-2 flex items-center justify-between">
-                        <div className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">
-                          Payslip
-                        </div>
-                        <div className="flex gap-1">
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); setViewMode("preview"); }}
-                            className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                              viewMode === "preview" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"
-                            }`}
-                          >
-                            Preview
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); setViewMode("source"); }}
-                            className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                              viewMode === "source" ? "bg-blue-100 text-blue-700" : "text-gray-500 hover:text-gray-700"
-                            }`}
-                          >
-                            Source
-                          </button>
-                        </div>
-                      </div>
-                      {viewMode === "preview" ? (
-                        <div className="rounded-md border border-gray-200 bg-white overflow-hidden">
+                {/* Expanded — full HTML preview */}
+                <AnimatePresence>
+                  {isExpanded && hasContent && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="border-t border-brand-border px-5 py-4">
+                        <div className="rounded-md border border-brand-border bg-white overflow-hidden">
                           <iframe
                             srcDoc={p.html}
                             title={`Payslip ${p.id}`}
@@ -209,17 +215,13 @@ export default function PayslipsPage() {
                             style={{ height: 600, border: "none" }}
                           />
                         </div>
-                      ) : (
-                        <pre className="m-0 max-h-96 overflow-y-auto whitespace-pre-wrap rounded-md border border-gray-200 bg-white p-4 font-mono text-xs leading-relaxed text-gray-900">
-                          {p.html}
-                        </pre>
-                      )}
-                    </div>
+                      </div>
+                    </motion.div>
                   )}
-                </li>
-              );
-            })}
-          </ul>
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
         </div>
       ) : !loading ? (
         <div className="rounded-md border border-gray-200 bg-white py-12 text-center">
