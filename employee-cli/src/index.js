@@ -3,6 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const { SDK } = require('@canton-network/wallet-sdk')
 const PearP2P = require('./pear')
+const { buildTransferCommand } = require('./transfer')
 
 // Prevent crashes from unhandled errors
 process.on('uncaughtException', (err) => {
@@ -336,6 +337,66 @@ class EmployeeCLI {
       } catch (err) {
         console.error('[faucet] Error:', err.message)
         console.error('[faucet] Stack:', err.stack)
+        res.status(500).json({ error: err.message })
+      }
+    })
+
+    // ============================================
+    // Transfer (send CC to another party)
+    // ============================================
+
+    this.app.post('/api/transfer', async (req, res) => {
+      try {
+        if (!this.wallet) return res.status(400).json({ error: 'No wallet' })
+        const { recipient, amount, memo } = req.body || {}
+        if (!recipient || !amount) {
+          return res.status(400).json({ error: 'recipient and amount are required' })
+        }
+
+        console.log('[transfer] Starting transfer from', this.wallet.partyId, 'to', recipient, 'amount:', amount)
+
+        const token = await this.getToken()
+        const dsoParty = await (require('./transfer').getAmuletDsoParty)(token, DEVNET.validatorUrl)
+        console.log('[transfer] DSO party:', dsoParty)
+
+        const [transferCommand, disclosedContracts] = await buildTransferCommand(
+          token,
+          DEVNET.validatorUrl,
+          DEVNET.ledgerClientUrl,
+          {
+            sender: this.wallet.partyId,
+            recipient,
+            amount,
+            dsoParty
+          }
+        )
+        console.log('[transfer] Command built, disclosed contracts:', disclosedContracts.length)
+
+        const sdk = await SDK.create({
+          auth: { method: 'static', token },
+          ledgerClientUrl: DEVNET.ledgerClientUrl
+        })
+
+        const result = await sdk.ledger
+          .prepare({
+            partyId: this.wallet.partyId,
+            commands: transferCommand,
+            disclosedContracts
+          })
+          .sign(this.wallet.privateKey)
+          .execute({ partyId: this.wallet.partyId })
+
+        console.log('[transfer] SUCCESS! updateId:', result.updateId)
+
+        res.json({
+          success: true,
+          updateId: result.updateId,
+          amount,
+          recipient
+        })
+      } catch (err) {
+        console.error('[transfer] Error:', err.message)
+        console.error('[transfer] Stack:', err.stack)
         res.status(500).json({ error: err.message })
       }
     })

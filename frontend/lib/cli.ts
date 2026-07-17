@@ -80,6 +80,12 @@ export const cli = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contractId }),
       }),
+    transfer: (params: { recipient: string; amount: string; memo?: string }) =>
+      fetchJson(`${CLI_URL}/api/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      }),
   },
 
   payslips: {

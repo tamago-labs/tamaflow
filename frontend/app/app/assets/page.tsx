@@ -6,10 +6,11 @@
  */
 
 import { useCallback, useContext, useEffect, useState } from "react";
-import { RefreshCw, Check, X, ArrowDownLeft } from "lucide-react";
+import { RefreshCw, Check, X, ArrowDownLeft, Send } from "lucide-react";
 import { useWalletMode } from "@/lib/wallet/useWalletMode";
 import { PriceContext, formatChange } from "@/lib/price/PriceContext";
 import { cli } from "@/lib/cli";
+import SendModal from "@/components/app/SendModal";
 
 interface Holding {
   symbol: string;
@@ -73,6 +74,7 @@ export default function AssetsPage() {
   const [loading, setLoading] = useState(false);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
   const prices = useContext(PriceContext);
 
   const fetchHoldings = useCallback(async () => {
@@ -246,12 +248,13 @@ export default function AssetsPage() {
               <th className="px-4 py-3 text-right font-mono text-[10px] font-semibold uppercase tracking-wider text-gray-400">Balance</th>
               <th className="px-4 py-3 text-right font-mono text-[10px] font-semibold uppercase tracking-wider text-gray-400">USD Value</th>
               <th className="px-4 py-3 text-right font-mono text-[10px] font-semibold uppercase tracking-wider text-gray-400">24h</th>
+              <th className="px-4 py-3 text-right font-mono text-[10px] font-semibold uppercase tracking-wider text-gray-400">Action</th>
             </tr>
           </thead>
           <tbody>
             {holdings.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-12 text-center text-sm text-gray-400">
+                <td colSpan={5} className="px-4 py-12 text-center text-sm text-gray-400">
                   {loading ? "Loading..." : "No holdings yet"}
                 </td>
               </tr>
@@ -284,6 +287,15 @@ export default function AssetsPage() {
                         {formatChange(h.change24h)}
                       </span>
                     </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => setSendOpen(true)}
+                        className="inline-flex items-center gap-1 rounded bg-brand-blue px-2.5 py-1 text-[10px] font-bold text-white hover:opacity-90"
+                      >
+                        <Send size={10} />
+                        Send
+                      </button>
+                    </td>
                   </tr>
                 );
               })
@@ -291,6 +303,15 @@ export default function AssetsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Send Modal */}
+      <SendModal
+        open={sendOpen}
+        onClose={() => setSendOpen(false)}
+        onSent={() => { fetchHoldings(); fetchPendingTransfers(); }}
+        balance={holdings.find((h) => h.symbol === "CC")?.amount?.toString() || "0"}
+        symbol="CC"
+      />
     </div>
   );
 }
