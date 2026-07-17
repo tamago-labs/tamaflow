@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { FileText, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { FileText, ChevronDown, ChevronRight, RefreshCw, AlertTriangle } from "lucide-react";
 import { cli } from "@/lib/cli";
 import { useWalletMode } from "@/lib/wallet/useWalletMode";
 
@@ -126,18 +126,18 @@ export default function PayslipsPage() {
         </button>
       </div>
 
-      <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700"> 
-          <p className="m-0 mt-1">
-            Ensure you have connected to the team room via P2P hyperswarm. If you see payslip metadata but no content, disconnect and reconnect with the correct invite code.
+      {/* Warning when wallet not connected */}
+      {!connected && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-md px-4 py-3">
+          <AlertTriangle size={16} className="text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="font-sans text-sm text-amber-800 m-0">
+            Wallet not connected. Connect your wallet to view payslips.
           </p>
         </div>
+      )}
 
       {/* Payslip list */}
-      {!connected ? (
-        <div className="rounded-md border border-gray-200 bg-white py-12 text-center">
-          <p className="m-0 text-sm text-gray-400">Connect your CLI wallet to view payslips.</p>
-        </div>
-      ) : payslips.length > 0 ? (
+      {payslips.length > 0 ? (
         <div className="overflow-hidden rounded-md border border-gray-200 bg-white">
           <ul className="divide-y divide-gray-200">
             {payslips.map((p) => {

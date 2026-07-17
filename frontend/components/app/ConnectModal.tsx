@@ -70,7 +70,7 @@ export default function ConnectModal({ open, onClose }: ConnectModalProps) {
             id="connect-modal-title"
             className="text-2xl font-light text-brand-navy leading-tight m-0"
           >
-            CLI Wallet
+            Connect Your Team
           </h2>
           <p className="mt-2 text-sm text-brand-navy/70 leading-relaxed m-0">
             Follow these steps to connect your CLI wallet:
