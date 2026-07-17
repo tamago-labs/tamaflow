@@ -1,7 +1,6 @@
-# TamaFlow - AI Auto-Payroll on Canton for Global Teams
+# TamaFlow - AI Payroll on Canton for Global Teams
 
-
-> **Legal, regulatory-compliant crypto payroll with withholding tax, social security, and local AI — ready for accountants in Japan, Thailand, and beyond.**
+> **Automate compliant payroll with withholding tax, localized payslips, and private salary settlement on Canton.**
 
 <img width="953" height="499" alt="Screenshot 2026-06-29 115350" src="https://github.com/user-attachments/assets/3b88dd84-b61e-4806-9d8a-bcaacc618446" />
 
