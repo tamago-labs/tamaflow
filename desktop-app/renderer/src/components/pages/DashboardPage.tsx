@@ -143,7 +143,7 @@ export function DashboardPage({ invite, onNavigate }: DashboardPageProps) {
       )}
 
       {/* Row 1: Stat cards */}
-      <StatCards employeeCount={employees.length} settledCount={settledCount} totalCheckInHours={totalCheckInHours} />
+      <StatCards employeeCount={employees.length} settledCount={settledCount} totalCheckInHours={totalCheckInHours} payslipTemplateCount={(profile as any)?.payslipTemplates?.length ?? 0} />
 
       {/* Row 2: Heatmap + Country chart */}
       <div className="grid grid-cols-2 gap-4 mb-4">
