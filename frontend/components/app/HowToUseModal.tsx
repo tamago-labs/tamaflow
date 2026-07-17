@@ -76,7 +76,7 @@ export default function HowToUseModal({ open, onClose }: HowToUseModalProps) {
             className="inline-flex items-center justify-center gap-2 flex-1 py-3 px-6 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity shadow-[0_4px_18px_-6px_rgba(26,26,232,0.45)]"
           >
             <Download size={14} />
-            Download CLI Wallet
+            Download Now
           </motion.a>
           <button
             type="button"

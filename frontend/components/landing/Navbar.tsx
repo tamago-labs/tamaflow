@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, ChevronDown, ArrowRight } from "lucide-react";
 import Wordmark from "@/components/shared/Wordmark";
 import { marketingNav, marketingMore } from "@/lib/nav";
 
@@ -134,9 +134,10 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-3">
           <Link
             href="/app"
-            className="inline-flex items-center gap-1.5 py-2 px-4 bg-brand-blue text-white rounded-md font-mono text-xs font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-1.5 py-2 px-4 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity"
           > 
             Employee Portal 
+            <ArrowRight size={14} />
           </Link>
         </div>
 

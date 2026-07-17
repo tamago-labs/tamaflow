@@ -159,7 +159,7 @@ export default function TopBar() {
           <button
             type="button"
             onClick={() => setConnectModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-md border border-brand-blue bg-white px-3 py-1.5 text-xs font-semibold text-brand-blue hover:bg-brand-light cursor-pointer"
+            className="flex items-center gap-1.5 rounded-md border border-brand-blue bg-white px-3 py-1.5 text-[11px] font-bold uppercase text-brand-blue tracking-wider2  hover:bg-brand-light cursor-pointer font-mono"
           >
             <LogIn size={12} />
             Connect

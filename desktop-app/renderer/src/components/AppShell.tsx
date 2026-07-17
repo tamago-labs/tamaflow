@@ -133,7 +133,7 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
               <button
                 type="button"
                 onClick={() => setTeamChatOpen(!teamChatOpen)}
-                className="fixed right-6 bottom-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 transition-colors cursor-pointer"
+                className="fixed right-6 bottom-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-brand-blue text-white shadow-lg hover:bg-blue-700 transition-colors cursor-pointer"
                 title="Team Chat"
               >
                 <MessageCircle size={20} />

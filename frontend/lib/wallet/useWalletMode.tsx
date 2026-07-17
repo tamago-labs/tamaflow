@@ -16,7 +16,6 @@ interface WalletModeValue {
   p2pConnected: boolean;
   connect: (inviteCode?: string) => Promise<void>;
   disconnect: () => void;
-  checking: boolean;
 }
 
 const WalletModeContext = createContext<WalletModeValue | null>(null);
@@ -25,32 +24,32 @@ export function WalletModeProvider({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(false);
   const [cliPartyId, setCliPartyId] = useState<string | null>(null);
   const [p2pConnected, setP2pConnected] = useState(false);
-  const [checking, setChecking] = useState(true);
+  // const [checking, setChecking] = useState(true);
 
   // Check CLI availability on mount
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        await cli.health();
-        const status = await cli.wallet.status();
-        if (!cancelled && status.exists && status.partyId) {
-          setConnected(true);
-          setCliPartyId(status.partyId);
-          // Check P2P status
-          const roomStatus = await cli.room.status();
-          if (!cancelled && roomStatus.connected) {
-            setP2pConnected(true);
-          }
-        }
-      } catch {
-        // CLI not reachable
-      } finally {
-        if (!cancelled) setChecking(false);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  // useEffect(() => {
+  //   let cancelled = false;
+  //   (async () => {
+  //     try {
+  //       await cli.health();
+  //       const status = await cli.wallet.status();
+  //       if (!cancelled && status.exists && status.partyId) {
+  //         setConnected(true);
+  //         setCliPartyId(status.partyId);
+  //         // Check P2P status
+  //         const roomStatus = await cli.room.status();
+  //         if (!cancelled && roomStatus.connected) {
+  //           setP2pConnected(true);
+  //         }
+  //       }
+  //     } catch {
+  //       // CLI not reachable
+  //     } finally {
+  //       if (!cancelled) setChecking(false);
+  //     }
+  //   })();
+  //   return () => { cancelled = true; };
+  // }, []);
 
   const connect = useCallback(async (inviteCode?: string) => {
     await cli.health();
@@ -81,7 +80,7 @@ export function WalletModeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <WalletModeContext.Provider value={{ connected, cliPartyId, p2pConnected, connect, disconnect, checking }}>
+    <WalletModeContext.Provider value={{ connected, cliPartyId, p2pConnected, connect, disconnect }}>
       {children}
     </WalletModeContext.Provider>
   );
