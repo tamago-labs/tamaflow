@@ -1,14 +1,12 @@
 import {
-  Boxes,
   CircleDollarSign,
   FileBox,
-  FileText,
   CalendarCheck,
-  LayoutDashboard,
-  Percent,
+  LayoutDashboard, 
   Users,
-  Wallet,
-  Workflow
+  Banknote,
+  Workflow,
+  NotebookPen
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -43,7 +41,7 @@ export const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
-      { id: 'payslips', label: 'Payslips', icon: FileText }
+      { id: 'payslips', label: 'Payslips', icon: NotebookPen }
     ]
   },
   {
@@ -52,8 +50,8 @@ export const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { id: 'employees', label: 'Employees', icon: Users },
       { id: 'flow-builder', label: 'Flow Builder', icon: Workflow },
-      { id: 'payment-settings', label: 'Payment Settings', icon: Percent },
-      { id: 'settlements', label: 'Settlements', icon: Boxes },
+      { id: 'payment-settings', label: 'Payment Settings', icon: Banknote },
+      // { id: 'settlements', label: 'Settlements', icon: Boxes },
       { id: 'assets', label: 'Assets', icon: CircleDollarSign }
     ]
   }

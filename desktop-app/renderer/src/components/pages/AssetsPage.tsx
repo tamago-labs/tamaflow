@@ -15,18 +15,12 @@
 // Plus a <PendingTransfersCard> above the table for incoming CC
 // offers the recipient needs to accept.
 
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useMemo } from 'react'
 import { useWallet } from '../../context/WalletContext'
 import { usePrice } from '../../context/PriceContext'
 import { useContracts } from '../../context/ContractsContext'
 import {
-  ChevronDown,
-  Repeat2,
   Send,
-  Wallet,
-  Workflow,
-  Boxes,
   Loader2
 } from 'lucide-react'
 import { TokenAvatar } from '../TokenAvatar'
@@ -76,7 +70,7 @@ function formatAmount(value: string | number | undefined): string {
   return n.toLocaleString('en-US', { maximumFractionDigits: 6 })
 }
 
-export function AssetsPage({ onNavigate }: { onNavigate?: (page: string) => void }) {
+export function AssetsPage() {
   const {
     status,
     holdings,
@@ -182,7 +176,7 @@ export function AssetsPage({ onNavigate }: { onNavigate?: (page: string) => void
             )}
 
             {/* JPYC Row - Live balance from Canton Testnet */}
-            {walletPresent && (
+            { (sortedHoldings.length > 0 && walletPresent) && (
               <div className='border-t border-brand-border'>
                 <JPYCRow balance={jpycBalance} loading={contractsLoading} />
               </div>
@@ -274,116 +268,11 @@ function ActionCell({ symbol, onSend }: { symbol: string; onSend: () => void }) 
         <Send size={11} />
         Send
       </button>
-      <MoreDropdown symbol={symbol} />
     </div>
   )
 }
 
-function MoreDropdown({ symbol }: { symbol: string }) {
-  const [open, setOpen] = useState(false)
-  const triggerRef = useRef<HTMLButtonElement | null>(null)
-  const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
 
-  const recompute = () => {
-    const el = triggerRef.current
-    if (!el) return
-    const r = el.getBoundingClientRect()
-    setPos({
-      top: r.bottom + 4,
-      right: window.innerWidth - r.right
-    })
-  }
-
-  useEffect(() => {
-    if (!open) {
-      setPos(null)
-      return
-    }
-    recompute()
-    const onScroll = () => recompute()
-    const onResize = () => recompute()
-    window.addEventListener('scroll', onScroll, true)
-    window.addEventListener('resize', onResize)
-    return () => {
-      window.removeEventListener('scroll', onScroll, true)
-      window.removeEventListener('resize', onResize)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    const onMouseDown = (e: MouseEvent) => {
-      const target = e.target as Node
-      if (triggerRef.current && triggerRef.current.contains(target)) return
-      const menu = document.querySelector('[data-assets-more-menu]')
-      if (menu && menu.contains(target)) return
-      setOpen(false)
-    }
-    document.addEventListener('mousedown', onMouseDown)
-    return () => document.removeEventListener('mousedown', onMouseDown)
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
-
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        type='button'
-        aria-haspopup='menu'
-        aria-expanded={open}
-        aria-label={`More actions for ${symbol}`}
-        onClick={() => setOpen((v) => !v)}
-        className='inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-brand-border bg-white text-brand-muted transition-colors hover:bg-brand-light hover:text-brand-navy'
-      >
-        <ChevronDown size={12} />
-      </button>
-
-      {open &&
-        pos &&
-        createPortal(
-          <div
-            data-assets-more-menu
-            role='menu'
-            style={{ position: 'fixed', top: pos.top, right: pos.right }}
-            className='z-50 w-44 overflow-hidden rounded-md border border-brand-border bg-white shadow-[0_18px_50px_-12px_rgba(10,10,92,0.25)]'
-          >
-            <button
-              type='button'
-              role='menuitem'
-              disabled
-              className='flex w-full cursor-not-allowed items-center gap-2 border-0 bg-transparent px-3 py-2 text-left opacity-50 transition-colors hover:bg-brand-light'
-            >
-              <Repeat2 size={12} className='text-brand-muted' />
-              <span className='font-mono text-[11px] font-bold uppercase tracking-wider2 text-brand-navy'>
-                Swap
-              </span>
-            </button>
-            <button
-              type='button'
-              role='menuitem'
-              disabled
-              className='flex w-full cursor-not-allowed items-center gap-2 border-0 bg-transparent px-3 py-2 text-left opacity-50 transition-colors hover:bg-brand-light'
-            >
-              <Workflow size={12} className='text-brand-muted' />
-              <span className='font-mono text-[11px] font-bold uppercase tracking-wider2 text-brand-navy'>
-                Bridge
-              </span>
-            </button>
-          </div>,
-          document.body
-        )}
-    </>
-  )
-}
 
 function JPYCRow({ balance, loading }: { balance: number; loading: boolean }) {
   const { convert } = usePrice()
@@ -405,10 +294,7 @@ function JPYCRow({ balance, loading }: { balance: number; loading: boolean }) {
           <div className='flex items-center gap-2'>
             <p className='m-0 truncate font-mono text-sm font-bold text-brand-navy'>
               JPYC
-            </p>
-            <span className='inline-flex items-center rounded-sm border border-amber-200 bg-amber-50 px-1.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider2 text-amber-700'>
-              Mint via Seaport
-            </span>
+            </p> 
           </div>
         </div>
       </div>
@@ -451,14 +337,6 @@ function JPYCRow({ balance, loading }: { balance: number; loading: boolean }) {
           >
             <Send size={11} />
             Send
-          </button>
-          <button
-            type='button'
-            disabled
-            title='More actions'
-            className='inline-flex h-6 w-6 cursor-not-allowed items-center justify-center rounded-md border border-brand-border bg-white text-brand-muted opacity-50'
-          >
-            <ChevronDown size={12} />
           </button>
         </div>
       </div>

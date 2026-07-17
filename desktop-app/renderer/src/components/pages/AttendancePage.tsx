@@ -107,9 +107,9 @@ export function AttendancePage() {
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-[#1A1AE8] px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90"
+            className="flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-[#1A1AE8] px-3 py-2 text-xs font-bold text-white hover:opacity-90"
           >
-            <Plus size={12} />
+            <Plus size={14} />
             Add Employee
           </button>
         </div>

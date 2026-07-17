@@ -82,7 +82,7 @@ export function TeamChatDrawer({ open, onClose }: TeamChatDrawerProps) {
   }
 
   return (
-    <Drawer open={open} onClose={onClose} title="Team Chat" subtitle="Sending encrypted messages through P2P Hyperswarm" width="480px">
+    <Drawer open={open} onClose={onClose} title="Team Chat" width="480px">
       <div className="flex flex-col h-full">
         {/* Messages */}
         <div ref={listRef} className="flex-1 overflow-y-auto -mx-6 -my-5 px-6 py-4">

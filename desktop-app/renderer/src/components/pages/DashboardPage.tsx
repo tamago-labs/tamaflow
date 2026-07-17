@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MessageSquare, Bot, Copy, Check, AlertTriangle, Share2 } from 'lucide-react'
+import { MessageSquare, Bot, Copy, Check, AlertTriangle } from 'lucide-react'
 import { useEmployees } from '../../context/EmployeeContext'
 import { useFlows } from '../../context/FlowContext'
 import { useCompany } from '../../context/CompanyContext'
@@ -16,9 +16,9 @@ import type { RoomRole } from '../../hooks/useRoom'
 
 interface DashboardPageProps {
   roomRole: RoomRole | null
-  invite: string | null
-  me: { name: string } | null
-  onNavigate?: (page: string) => void
+  invite?: string | null
+  me?: { name: string } | null
+  onNavigate?: (page: any) => void
 }
 
 // Format fiscal year start (MM-DD) to show period like "Jan 2025 - Dec 2025"
@@ -39,7 +39,7 @@ function formatFiscalYear(fiscalYearStart: string): string {
   return `${startMonth} ${currentYear} – ${endMonth} ${currentYear + 1}`
 }
 
-export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPageProps) {
+export function DashboardPage({ invite, onNavigate }: DashboardPageProps) {
   const { employees } = useEmployees()
   const { flows } = useFlows()
   const { profile } = useCompany()
@@ -107,7 +107,9 @@ export function DashboardPage({ roomRole, invite, me, onNavigate }: DashboardPag
           </div>
           {invite && (
             <div className="flex items-center gap-2">
-              <Share2 size={12} className="text-gray-400" />
+              <span className="font-medium text-sm text-gray-900">
+                Invite code
+              </span> 
               <code className="text-xs text-gray-500 truncate max-w-[120px]" title={invite}>{invite}</code>
               <button onClick={handleCopyInvite} className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition" title="Copy invite code">
                 {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}

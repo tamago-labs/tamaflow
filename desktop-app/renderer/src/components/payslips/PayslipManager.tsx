@@ -16,8 +16,7 @@ import { bridge } from '../../lib/bridge'
 import { DEFAULT_PAYSLIP_HTML, DEFAULT_PAYSLIP_PLACEHOLDERS } from '../../lib/defaultPayslipTemplate'
 import { fillHtml } from '../../lib/fillHtml'
 import type { PayslipTemplate, PaymentTemplate } from '../../ai/types'
-
-const B = '#e0e0f0'
+ 
 const NAVY = '#0a0a5c'
 const MUTED = '#888'
 
@@ -295,7 +294,7 @@ export default function PayslipManager() {
           </div>
         )}
         {saveError && <div style={{ padding: '4px 12px', background: 'rgba(200,48,48,0.06)', borderTop: `1px solid ${B2}`, fontFamily: 'ui-monospace, monospace', fontSize: 10, color: '#c83030' }}>{saveError}</div>}
-        <div style={{ padding: '8px 12px', borderTop: `1px solid ${B2}`, display: 'flex', justifyContent: 'flex-end', gap: 8, background: '#fafafa' }}>
+        <div style={{ padding: '8px 12px', marginBottom :"40px" , borderTop: `1px solid ${B2}`, display: 'flex', justifyContent: 'flex-end', gap: 8, background: '#fafafa' }}>
           <button type='button' onClick={() => { setIsEditing(false); if (isCreating) { setIsCreating(false); setSelectedId(null) } }} style={{ padding: '5px 12px', background: '#fff', color: NAVY, border: `1px solid ${B2}`, borderRadius: 4, fontFamily: 'ui-monospace, monospace', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>Cancel</button>
           <button type='button' onClick={handleSave} disabled={!draftName.trim()} style={{ padding: '5px 12px', background: draftName.trim() ? '#1A1AE8' : '#ccc', color: '#fff', border: 'none', borderRadius: 4, fontFamily: 'ui-monospace, monospace', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: draftName.trim() ? 'pointer' : 'not-allowed' }}>Save</button>
         </div>
@@ -304,7 +303,7 @@ export default function PayslipManager() {
   }
 
   return (
-    <div style={{ display: 'flex', gap: 0, height: 'calc(100vh - 64px)', background: '#fff' }}>
+    <div style={{ display: 'flex', gap: 0, height: 'calc(100vh - 64px)', width:"100%", background: '#fff' }}>
       {/* ─── Left: Sidebar ──────────────────────────────────── */}
       <div style={{ width: 240, borderRight: `1px solid ${B2}`, background: '#fafafa', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
         <div style={{ padding: '10px 12px', borderBottom: `1px solid ${B2}` }}>

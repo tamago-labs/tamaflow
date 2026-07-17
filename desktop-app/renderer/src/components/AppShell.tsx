@@ -46,7 +46,7 @@ import type { PageId } from '../lib/nav'
 
 // Page → component map. `null` entries (none right now) would render
 // the placeholder. The FlowBuilderPage renders the real canvas.
-const PAGES: Record<PageId, () => JSX.Element> = {
+const PAGES: Record<PageId, any> = {
   dashboard: DashboardPage,
   attendance: AttendancePage,
   chat: ChatPage,
@@ -78,11 +78,12 @@ export function AppShell({ initialPage = 'dashboard', roomRole, invite, me }: Ap
   )
 }
 
-function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { currentPage: PageId; setCurrentPage: (p: PageId) => void; roomRole: any; invite: string | null; me: { name: string } | null }) {
+function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { currentPage: PageId; setCurrentPage: (p: PageId) => void; roomRole: any; invite: any; me: any }) {
   const { view } = useFlowView()
   const { aiModalOpen, closeAIModel } = useAIModal()
   const Page = PAGES[currentPage]
   const isFlowBuilder = currentPage === 'flow-builder'
+  const isFullView = currentPage === 'payslips'
   const isCanvasView = isFlowBuilder && view === 'canvas'
   const [teamChatOpen, setTeamChatOpen] = useState(false)
 
@@ -105,7 +106,7 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
                 )}
                 <main
                   className={
-                    isCanvasView
+                    (isCanvasView || isFullView)
                       ? 'flex min-h-0 flex-1 overflow-hidden w-full'
                       : 'flex-1 overflow-y-auto p-8'
                   }
@@ -113,23 +114,17 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
                   {currentPage === 'dashboard' ? (
                     <DashboardPage roomRole={roomRole} invite={invite} me={me} onNavigate={setCurrentPage} />
                   ) : currentPage === 'assets' ? (
-                    <AssetsPage onNavigate={setCurrentPage} />
+                    <AssetsPage/>
                   ) : (
                     <Page />
                   )}
                 </main>
-                {/* Global status footer — AI model pill (left) + worker
-                   status pill (right). Lives INSIDE the `ml-[200px]`
-                   offset wrapper so it lines up with the TopBar instead
-                   of sliding under the sidebar. Renders on every page so
-                   the employer always has a glance-able view of "is the
-                   local model ready + is the P2P worker online". */}
                 <CanvasFooter />
               </div>
             </div>
 
             {/* Floating team chat button — hidden in full-canvas view */}
-            {!isCanvasView && (
+            {(!isCanvasView&&!isFullView) && (
               <button
                 type="button"
                 onClick={() => setTeamChatOpen(!teamChatOpen)}
@@ -142,11 +137,6 @@ function AppShellInner({ currentPage, setCurrentPage, roomRole, invite, me }: { 
 
             <TeamChatDrawer open={teamChatOpen} onClose={() => setTeamChatOpen(false)} />
 
-            {/* Canton wallet modals — mounted at the AppShell level so
-               any page (TopBar chip, AccountMenu, Settings page) can
-               open them via the WalletContext. The modals render null
-               when their own `open` flag is false, so there's no DOM
-               cost when closed. */}
             <SetupWalletModal />
             <RestoreWalletModal />
             <AccountInfoModal />
