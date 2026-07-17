@@ -89,20 +89,20 @@ export default function PaymentSettingsPage() {
         </div>
 
         {/* Header */}
-        <div className="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 border-b border-gray-200 bg-white px-4 py-2.5">
+        <div className="grid grid-cols-[2fr_2fr_1fr_auto] gap-4 border-b border-gray-200 bg-white px-4 py-2.5">
           <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Name</span>
-          <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Withholding</span>
+          <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Deductions</span>
           <span className="font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Default Memo</span>
           <span className="text-right font-mono text-[10px] font-semibold uppercase tracking-wider2 text-gray-400">Actions</span>
         </div>
 
         {/* Direct Payment row */}
-        <div className="grid grid-cols-[2fr_1fr_1fr_auto] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 items-center">
+        <div className="grid grid-cols-[2fr_2fr_1fr_auto] gap-4 px-4 py-3 bg-gray-50 border-b border-gray-200 items-center">
           <div>
             <span className="font-sans text-sm font-medium text-gray-900">Direct Payment</span>
             <span className="ml-2 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded bg-gray-200 text-gray-500">Built-in</span>
           </div>
-          <span className="font-mono text-xs text-gray-400">—</span>
+          <span className="font-mono text-xs text-gray-400">No deductions</span>
           <span className="font-mono text-xs text-gray-400">—</span>
           <span className="font-mono text-[10px] text-gray-400">Always available</span>
         </div>
@@ -120,12 +120,25 @@ export default function PaymentSettingsPage() {
         {filtered.length > 0 && (
           <ul className="divide-y divide-gray-200">
             {filtered.map((t) => (
-              <li key={t.id} className="grid grid-cols-[2fr_1fr_1fr_auto] items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors">
+              <li key={t.id} className="grid grid-cols-[2fr_2fr_1fr_auto] items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors">
                 <div className="min-w-0">
                   <div className="font-sans text-sm font-medium text-gray-900 truncate">{t.name}</div>
                 </div>
-                <div className="font-mono text-xs text-gray-600">
-                  {t.withholdingRate ? `${(Number(t.withholdingRate) * 100).toFixed(1)}%` : '—'}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {t.withholdingRate ? (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-blue-50 text-blue-700">
+                      Withholding {(Number(t.withholdingRate) * 100).toFixed(1)}%
+                    </span>
+                  ) : null}
+                  {t.applyEmployeeTax && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-50 text-amber-700">Tax</span>
+                  )}
+                  {t.applyEmployeeSocialSecurity && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-purple-50 text-purple-700">SS</span>
+                  )}
+                  {!t.withholdingRate && !t.applyEmployeeTax && !t.applyEmployeeSocialSecurity && (
+                    <span className="font-mono text-xs text-gray-400">—</span>
+                  )}
                 </div>
                 <div className="font-mono text-xs text-gray-600 truncate" title={t.defaultMemo}>{t.defaultMemo || '—'}</div>
                 <div className="flex items-center justify-end gap-1">

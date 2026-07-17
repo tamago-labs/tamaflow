@@ -212,6 +212,31 @@ export default function PayslipManager() {
 
   // ── Right column ──────────────────────────────────────────
   function renderRightPanel() {
+    // Edit saved template: Preview + Save/Cancel
+    if (isEditing && !isCreating) {
+      return (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ padding: '10px 12px', borderBottom: `1px solid ${B2}` }}>
+            <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED, fontWeight: 600 }}>Preview</span>
+          </div>
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            {previewHtml ? (
+              <div style={{ flex: 1, border: `1px solid ${B2}`, margin: 8, borderRadius: 4, overflow: 'hidden' }}>
+                <iframe srcDoc={previewHtml} title='Template preview' style={{ width: '100%', height: '100%', border: 'none' }} />
+              </div>
+            ) : (
+              <div style={{ padding: '20px 0', textAlign: 'center', fontFamily: 'ui-monospace, monospace', fontSize: 10, color: MUTED }}>No HTML content</div>
+            )}
+          </div>
+          {saveError && <div style={{ padding: '4px 12px', background: 'rgba(200,48,48,0.06)', borderTop: `1px solid ${B2}`, fontFamily: 'ui-monospace, monospace', fontSize: 10, color: '#c83030' }}>{saveError}</div>}
+          <div style={{ padding: '8px 12px', marginBottom :"40px", borderTop: `1px solid ${B2}`, display: 'flex', justifyContent: 'flex-end', gap: 8, background: '#fafafa' }}>
+            <button type='button' onClick={() => { setIsEditing(false) }} style={{ padding: '5px 12px', background: '#fff', color: NAVY, border: `1px solid ${B2}`, borderRadius: 4, fontFamily: 'ui-monospace, monospace', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>Cancel</button>
+            <button type='button' onClick={handleSave} disabled={!draftName.trim()} style={{ padding: '5px 12px', background: draftName.trim() ? '#1A1AE8' : '#ccc', color: '#fff', border: 'none', borderRadius: 4, fontFamily: 'ui-monospace, monospace', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: draftName.trim() ? 'pointer' : 'not-allowed' }}>Save</button>
+          </div>
+        </div>
+      )
+    }
+
     // View mode: show sent payslips
     if (!isCreating) {
       return (<>
@@ -358,74 +383,95 @@ export default function PayslipManager() {
               </div>
             </div>
 
-            {/* AI Assist — full height in center */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <div style={{ padding: '10px 16px', borderBottom: `1px solid ${B2}`, background: '#fafafa', flexShrink: 0 }}>
-                <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED, marginBottom: 6 }}>AI Assist</div>
-                {aiError && <div style={{ marginBottom: 4, padding: '4px 8px', background: 'rgba(200,48,48,0.06)', border: '1px dashed #c83030', borderRadius: 4, fontFamily: 'ui-monospace, monospace', fontSize: 10, color: '#c83030' }}>{aiError}</div>}
+            {isCreating ? (
+              /* ── New template: AI Assist ────────────────────── */
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ padding: '10px 16px', borderBottom: `1px solid ${B2}`, background: '#fafafa', flexShrink: 0 }}>
+                  <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED, marginBottom: 6 }}>AI Assist</div>
+                  {aiError && <div style={{ marginBottom: 4, padding: '4px 8px', background: 'rgba(200,48,48,0.06)', border: '1px dashed #c83030', borderRadius: 4, fontFamily: 'ui-monospace, monospace', fontSize: 10, color: '#c83030' }}>{aiError}</div>}
 
-                {/* Preset buttons */}
-                <div style={{ display: 'flex', gap: 4, marginBottom: 6, opacity: ai.isReady ? 1 : 0.5 }}>
-                  {AI_PRESETS.map((preset) => (
-                    <button key={preset.label} type='button' onClick={() => setAiPrompt(preset.prompt)} disabled={!ai.isReady} style={{ padding: '3px 8px', background: aiPrompt === preset.prompt ? '#eef2ff' : '#fff', border: `1px solid ${aiPrompt === preset.prompt ? '#1A1AE8' : B2}`, borderRadius: 3, fontFamily: 'ui-monospace, monospace', fontSize: 9, color: aiPrompt === preset.prompt ? '#1A1AE8' : MUTED, cursor: ai.isReady ? 'pointer' : 'not-allowed' }}>
-                      {preset.label}
+                  {/* Preset buttons */}
+                  <div style={{ display: 'flex', gap: 4, marginBottom: 6, opacity: ai.isReady ? 1 : 0.5 }}>
+                    {AI_PRESETS.map((preset) => (
+                      <button key={preset.label} type='button' onClick={() => setAiPrompt(preset.prompt)} disabled={!ai.isReady} style={{ padding: '3px 8px', background: aiPrompt === preset.prompt ? '#eef2ff' : '#fff', border: `1px solid ${aiPrompt === preset.prompt ? '#1A1AE8' : B2}`, borderRadius: 3, fontFamily: 'ui-monospace, monospace', fontSize: 9, color: aiPrompt === preset.prompt ? '#1A1AE8' : MUTED, cursor: ai.isReady ? 'pointer' : 'not-allowed' }}>
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Available fields config */}
+                  <div style={{ marginBottom: 6, opacity: ai.isReady ? 1 : 0.5 }}>
+                    <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 4 }}>Available fields — select what to include</div>
+                    {(['info', 'pay', 'deduction', 'extra'] as const).map((cat) => (
+                      <div key={cat} style={{ display: 'flex', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
+                        {PAYSLIP_FIELDS.filter((f) => f.category === cat).map((f) => (
+                          <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'ui-monospace, monospace', fontSize: 9, color: NAVY, cursor: ai.isReady ? 'pointer' : 'not-allowed' }}>
+                            <input type='checkbox' checked={aiSelectedFields.has(f.key)} disabled={!ai.isReady} onChange={(e) => { const next = new Set(aiSelectedFields); if (e.target.checked) next.add(f.key); else next.delete(f.key); setAiSelectedFields(next) }} style={{ margin: 0, width: 10, height: 10 }} />
+                            {f.label}
+                          </label>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Prompt + Generate */}
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input type='text' value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !isStreaming && ai.isReady) handleAiGenerate() }} placeholder='Describe what to generate or refine' disabled={isStreaming || !ai.isReady} style={{ ...inputS, flex: 1, fontSize: 11, opacity: ai.isReady ? 1 : 0.5 }} />
+                    <button type='button' onClick={handleAiGenerate} disabled={isStreaming || !aiPrompt.trim() || !ai.isReady} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 12px', background: isStreaming || !ai.isReady ? '#999' : '#1A1AE8', color: '#fff', border: 'none', borderRadius: 4, cursor: isStreaming || !ai.isReady ? 'not-allowed' : 'pointer', fontFamily: 'ui-monospace, monospace', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0, opacity: ai.isReady ? 1 : 0.6 }}>
+                      {isStreaming ? <Loader2 size={12} className='animate-spin' /> : <Wand2 size={12} />}
+                      {isStreaming ? 'Generating…' : 'Generate'}
                     </button>
-                  ))}
+                  </div>
                 </div>
 
-                {/* Available fields config */}
-                <div style={{ marginBottom: 6, opacity: ai.isReady ? 1 : 0.5 }}>
-                  <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 4 }}>Available fields — select what to include</div>
-                  {(['info', 'pay', 'deduction', 'extra'] as const).map((cat) => (
-                    <div key={cat} style={{ display: 'flex', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
-                      {PAYSLIP_FIELDS.filter((f) => f.category === cat).map((f) => (
-                        <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'ui-monospace, monospace', fontSize: 9, color: NAVY, cursor: ai.isReady ? 'pointer' : 'not-allowed' }}>
-                          <input type='checkbox' checked={aiSelectedFields.has(f.key)} disabled={!ai.isReady} onChange={(e) => { const next = new Set(aiSelectedFields); if (e.target.checked) next.add(f.key); else next.delete(f.key); setAiSelectedFields(next) }} style={{ margin: 0, width: 10, height: 10 }} />
-                          {f.label}
-                        </label>
-                      ))}
+                {/* Streaming status — below AI panel, takes remaining space */}
+                <div style={{ flex: 1, overflow: 'auto', padding: '12px 16px' }}>
+                  {streamStatus ? (
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <span className='animate-pulse' style={{ width: 6, height: 6, borderRadius: '50%', background: '#1A1AE8' }} />
+                        <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#1A1AE8', fontWeight: 600 }}>{streamStatus}</span>
+                      </div>
+                      {streamingThinking && (
+                        <div style={{ padding: '8px 10px', background: 'rgba(26,26,232,0.04)', border: `1px solid ${B2}`, borderRadius: 4, fontFamily: 'ui-monospace, monospace', fontSize: 10, color: NAVY, lineHeight: 1.5, maxHeight: 200, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
+                          {streamingThinking}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-
-                {/* Prompt + Generate */}
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <input type='text' value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !isStreaming && ai.isReady) handleAiGenerate() }} placeholder='Describe what to generate or refine' disabled={isStreaming || !ai.isReady} style={{ ...inputS, flex: 1, fontSize: 11, opacity: ai.isReady ? 1 : 0.5 }} />
-                  <button type='button' onClick={handleAiGenerate} disabled={isStreaming || !aiPrompt.trim() || !ai.isReady} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '0 12px', background: isStreaming || !ai.isReady ? '#999' : '#1A1AE8', color: '#fff', border: 'none', borderRadius: 4, cursor: isStreaming || !ai.isReady ? 'not-allowed' : 'pointer', fontFamily: 'ui-monospace, monospace', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', flexShrink: 0, opacity: ai.isReady ? 1 : 0.6 }}>
-                    {isStreaming ? <Loader2 size={12} className='animate-spin' /> : <Wand2 size={12} />}
-                    {isStreaming ? 'Generating…' : 'Generate'}
-                  </button>
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                      {!ai.isReady ? (
+                        <div style={{ fontFamily: 'ui-sans-serif, sans-serif', fontSize: 12, color: '#c83030' }}>
+                          <div style={{ fontWeight: 600, marginBottom: 4 }}>No AI model loaded</div>
+                          <div style={{ fontSize: 11, color: MUTED }}>Load a model from Settings → AI to enable generation</div>
+                        </div>
+                      ) : (
+                        <div style={{ fontFamily: 'ui-sans-serif, sans-serif', fontSize: 13, color: MUTED }}>Configure AI options above and click Generate</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* Streaming status — below AI panel, takes remaining space */}
-              <div style={{ flex: 1, overflow: 'auto', padding: '12px 16px' }}>
-                {streamStatus ? (
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <span className='animate-pulse' style={{ width: 6, height: 6, borderRadius: '50%', background: '#1A1AE8' }} />
-                      <span style={{ fontFamily: 'ui-monospace, monospace', fontSize: 11, color: '#1A1AE8', fontWeight: 600 }}>{streamStatus}</span>
-                    </div>
-                    {streamingThinking && (
-                      <div style={{ padding: '8px 10px', background: 'rgba(26,26,232,0.04)', border: `1px solid ${B2}`, borderRadius: 4, fontFamily: 'ui-monospace, monospace', fontSize: 10, color: NAVY, lineHeight: 1.5, maxHeight: 200, overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
-                        {streamingThinking}
-                      </div>
-                    )}
+            ) : (
+              /* ── Edit saved template: Source editor ─────────── */
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {/* Available placeholders info */}
+                <div style={{ padding: '8px 16px', borderBottom: `1px solid ${B2}`, background: '#fafafa', flexShrink: 0 }}>
+                  <div style={{ fontFamily: 'ui-monospace, monospace', fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginBottom: 4 }}>Available placeholders</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {PAYSLIP_FIELDS.map((f) => (
+                      <span key={f.key} style={{ fontFamily: 'ui-monospace, monospace', fontSize: 9, color: NAVY, background: '#fff', border: `1px solid ${B2}`, borderRadius: 3, padding: '2px 6px' }}>
+                        {`{{${f.key}}}`}
+                      </span>
+                    ))}
                   </div>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    {!ai.isReady ? (
-                      <div style={{ fontFamily: 'ui-sans-serif, sans-serif', fontSize: 12, color: '#c83030' }}>
-                        <div style={{ fontWeight: 600, marginBottom: 4 }}>No AI model loaded</div>
-                        <div style={{ fontSize: 11, color: MUTED }}>Load a model from Settings → AI to enable generation</div>
-                      </div>
-                    ) : (
-                      <div style={{ fontFamily: 'ui-sans-serif, sans-serif', fontSize: 13, color: MUTED }}>Configure AI options above and click Generate</div>
-                    )}
-                  </div>
-                )}
+                </div>
+                {/* Source editor */}
+                <div style={{ flex: 1, padding: '12px 16px', overflow: 'hidden' }}>
+                  <textarea value={draftHtml} onChange={(e) => setDraftHtml(e.target.value)} style={{ width: '100%', height: '100%', padding: '10px 12px', border: `1px solid ${B2}`, borderRadius: 4, fontFamily: 'ui-monospace, monospace', fontSize: 12, lineHeight: 1.6, resize: 'none', color: NAVY, outline: 'none', boxSizing: 'border-box' as const, tabSize: 2, whiteSpace: 'pre' as const }} spellCheck={false} />
+                </div>
               </div>
-            </div>
+            )}
           </>
         ) : (
           /* ── View mode ─────────────────────────────────────── */

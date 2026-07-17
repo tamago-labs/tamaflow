@@ -28,9 +28,9 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { key: 'company', label: 'Company', icon: <Building2 size={12} /> },
-  { key: 'p2p', label: 'Hyperswarm', icon: <Users size={12} /> },
+  { key: 'contracts', label: 'Contracts', icon: <FileCode size={12} /> },
   { key: 'wallet', label: 'Wallet', icon: <Wallet size={12} /> },
-  { key: 'contracts', label: 'Contracts', icon: <FileCode size={12} /> }
+  { key: 'p2p', label: 'Hyperswarm', icon: <Users size={12} /> }
 ]
 
 export function SettingsPage() {
@@ -111,7 +111,7 @@ export function SettingsPage() {
             key={t.key}
             type='button'
             onClick={() => setTab(t.key)}
-            className={`flex cursor-pointer items-center gap-1.5 border-0 bg-transparent px-4 py-2.5 text-xs font-semibold uppercase tracking-wider2 ${
+            className={`flex cursor-pointer items-center gap-1.5 border-0 bg-transparent px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-wider2 ${
               tab === t.key
                 ? 'border-b-2 border-brand-blue font-semibold text-brand-navy'
                 : 'font-normal text-brand-muted hover:text-brand-navy'
