@@ -74,23 +74,23 @@ export function EmployeesPage() {
             type='button'
             onClick={handleExport}
             disabled={!hasAny}
-            className='flex cursor-pointer items-center gap-1.5 rounded-md border border-brand-border bg-white px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-navy hover:bg-brand-light disabled:cursor-not-allowed disabled:opacity-40'
+            className='flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition disabled:cursor-not-allowed disabled:opacity-40'
           >
-            <Download size={11} />
+            <Download size={14} />
             Export
           </button>
           <button
             type='button'
             onClick={handleImport}
-            className='flex cursor-pointer items-center gap-1.5 rounded-md border border-brand-border bg-white px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-wider2 text-brand-navy hover:bg-brand-light'
+            className='flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 transition'
           >
-            <Upload size={11} />
+            <Upload size={14} />
             Import
           </button>
           <button
             type='button'
             onClick={() => setAddOpen(true)}
-            className='flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-brand-blue px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90'
+            className='flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-[#1A1AE8] rounded-md hover:bg-[#1515c0] transition'
           >
             <Plus size={12} />
             Add Employee

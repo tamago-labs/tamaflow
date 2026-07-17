@@ -74,8 +74,8 @@ export default function PaymentSettingsPage() {
         <div>
           <h1 className="m-0 text-2xl font-light tracking-tight text-[#0a0a5c]">Payment Settings</h1>
         </div>
-        <button type="button" onClick={() => { setEditTarget(null); setDrawerOpen(true) }} className="flex cursor-pointer items-center gap-1.5 rounded-md border-0 bg-[#1A1AE8] px-4 py-2 font-mono text-[11px] font-bold uppercase tracking-wider2 text-white hover:opacity-90">
-          <Plus size={12} />New Template
+        <button type="button" onClick={() => { setEditTarget(null); setDrawerOpen(true) }} className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white bg-[#1A1AE8] rounded-md hover:bg-[#1515c0] transition">
+          <Plus size={14} />New Settings
         </button>
       </div>
 
@@ -190,7 +190,7 @@ function TemplateDrawer({ open, onClose, initial, onSave, saving }: TemplateDraw
     && (withholdingRate === '' || (/^\d+(\.\d+)?$/.test(withholdingRate) && Number(withholdingRate) >= 0 && Number(withholdingRate) <= 1))
 
   return (
-    <Drawer open={open} onClose={onClose} title={initial ? 'Edit Template' : 'New Template'} subtitle={initial?.name ?? 'Payment template configuration'}>
+    <Drawer open={open} onClose={onClose} title={initial ? 'Edit Settings' : 'New Settings'} subtitle={initial?.name ?? 'Payment settings configuration'}>
       <div className="space-y-5">
         <Field label="Name" error={name.trim().length === 0 ? 'Name is required' : undefined}>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="US payroll deductions" maxLength={60} className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md font-sans text-sm text-gray-900 focus:outline-none focus:border-blue-500" />
