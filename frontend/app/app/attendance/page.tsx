@@ -310,21 +310,21 @@ export default function AttendancePage() {
                 const isSelected = selectedHours.has(h) && !existing;
 
                 return (
-                  <div key={h} className={`flex items-center gap-2 border-b border-r border-gray-100 last:border-r-0 px-3 py-2 ${existing ? "bg-green-50" : isSelected ? "bg-blue-50" : ""}`}>
+                  <div key={h} className={`flex items-center gap-2 border-b border-r border-gray-100 last:border-r-0 px-3 py-2 ${existing ? "bg-slate-50" : isSelected ? "bg-blue-50" : ""}`}>
                     <button
                       onClick={() => toggleSlot(h)}
                       disabled={!!existing}
                       className="flex h-5 w-5 items-center justify-center flex-shrink-0"
                     >
                       {existing ? (
-                        <CheckCircle2 size={16} className="text-green-600" />
+                        <CheckCircle2 size={16} className="text-slate-400" />
                       ) : isSelected ? (
                         <CheckCircle2 size={16} className="text-blue-600" />
                       ) : (
                         <Circle size={16} className="text-gray-300 hover:text-gray-400" />
                       )}
                     </button>
-                    <span className={`text-xs ${existing ? "font-medium text-green-800" : isSelected ? "font-medium text-blue-800" : "text-gray-600"}`}>
+                    <span className={`text-xs ${existing ? "font-medium text-slate-700" : isSelected ? "font-medium text-blue-800" : "text-gray-600"}`}>
                       {formatHour(h)}
                     </span>
                     {existing && (
