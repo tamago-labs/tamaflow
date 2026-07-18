@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, LogIn, LogOut, User, Droplets, PenLine } from "lucide-react";
+import { ChevronDown, ChevronRight, LogIn, LogOut, User, Droplets, PenLine, TestTube2 } from "lucide-react";
 import { routeLabels } from "@/lib/nav";
 import { useWalletMode } from "@/lib/wallet/useWalletMode";
 import ConnectModal from "./ConnectModal";
+import DemoConnectModal from "./DemoConnectModal";
 import AccountInfoModal from "./AccountInfoModal";
 import FaucetModal from "./FaucetModal";
 import UsernameModal from "./UsernameModal";
@@ -44,6 +45,7 @@ export default function TopBar() {
   const crumbs = buildCrumbs(pathname);
   const { connected, cliPartyId, p2pConnected, disconnect } = useWalletMode();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
+  const [demoModalOpen, setDemoModalOpen] = useState(false);
   const [accountInfoOpen, setAccountInfoOpen] = useState(false);
   const [faucetModalOpen, setFaucetModalOpen] = useState(false);
   const [usernameModalOpen, setUsernameModalOpen] = useState(false);
@@ -156,20 +158,34 @@ export default function TopBar() {
             )}
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setConnectModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-md border border-brand-blue bg-white px-3 py-1.5 text-[11px] font-bold uppercase text-brand-blue tracking-wider2  hover:bg-brand-light cursor-pointer font-mono"
-          >
-            <LogIn size={12} />
-            Connect
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDemoModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-md border border-brand-teal bg-white px-3 py-1.5 text-[11px] font-bold uppercase text-brand-teal tracking-wider2 hover:bg-brand-light cursor-pointer font-mono"
+            >
+              <TestTube2 size={12} />
+              Demo
+            </button>
+            <button
+              type="button"
+              onClick={() => setConnectModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-md border border-brand-blue bg-white px-3 py-1.5 text-[11px] font-bold uppercase text-brand-blue tracking-wider2  hover:bg-brand-light cursor-pointer font-mono"
+            >
+              <LogIn size={12} />
+              Connect
+            </button>
+          </div>
         )}
       </div>
 
       <ConnectModal
         open={connectModalOpen}
         onClose={() => setConnectModalOpen(false)}
+      />
+      <DemoConnectModal
+        open={demoModalOpen}
+        onClose={() => setDemoModalOpen(false)}
       />
       <AccountInfoModal
         open={accountInfoOpen}

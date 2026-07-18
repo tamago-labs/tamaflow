@@ -1,7 +1,11 @@
 // CLI API client for TamaFlow Employee CLI
 // Connects to localhost:3001 (employee-cli)
 
-const CLI_URL = 'http://localhost:3001'
+let CLI_URL = 'http://localhost:3001'
+
+export function setCliUrl(url: string) {
+  CLI_URL = url;
+}
 
 async function fetchJson(url: string, options?: RequestInit) {
   const res = await fetch(url, options)
