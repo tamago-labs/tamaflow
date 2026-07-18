@@ -46,18 +46,11 @@ export const topItems: NavItem[] = [
   { path: "/app/attendance", label: "Attendance", icon: Clock },
   { path: "/app/payslips", label: "Payslips", icon: ArrowRightLeft },
   { path: "/app/rewards", label: "Rewards Hub", icon: Gift },
+  { path: "/app/knowledge", label: "Knowledge Base", icon: BookOpen },
 ];
 
 /** Categories grouped under a label. */
-export const navCategories: NavCategory[] = [
-  {
-    key: "teamspace",
-    label: "Teamspace",
-    items: [
-      { path: "/app/knowledge", label: "Knowledge Base", icon: BookOpen },
-    ],
-  },
-];
+export const navCategories: NavCategory[] = [];
 
 /** Single utility button rendered at the very bottom of the Sidebar.
  *  Opens the HowToUseModal rather than navigating.

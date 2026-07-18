@@ -27,11 +27,19 @@ export default function KnowledgePage() {
       const result = await cli.rag.search({ query: query.trim(), topK: 5 });
       if (result.success) {
         setResults(result.results || []);
+        if (!result.results || result.results.length === 0) {
+          setError("No results found. Employer host may not be available or no documents match your query.");
+        }
       } else {
         setError(result.error || "Search failed");
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Search failed");
+      const msg = e instanceof Error ? e.message : "Search failed";
+      if (msg.includes("timeout") || msg.includes("ECONNREFUSED") || msg.includes("500")) {
+        setError("Employer host may not be available. Please try again later.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setSearching(false);
     }
@@ -42,7 +50,7 @@ export default function KnowledgePage() {
       <div className="mb-6">
         <h1 className="text-2xl font-light tracking-tight text-[#0a0a5c]">Knowledge Base</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Search company documents and knowledge base via P2P.
+          Search knowledge base of your company via P2P hyperswarm.
         </p>
       </div>
 
