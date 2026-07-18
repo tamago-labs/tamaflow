@@ -1,21 +1,24 @@
-# TamaFlow - AI Payroll on Canton for Global Teams
+# TamaFlow - Private Payroll for Global Teams
 
-> **Automate compliant payroll with withholding tax, localized payslips, and private salary settlement on Canton.**
+> **Paying salaries is easy. Running compliant payroll is not**
 
-<img width="953" height="499" alt="Screenshot 2026-06-29 115350" src="https://github.com/user-attachments/assets/3b88dd84-b61e-4806-9d8a-bcaacc618446" />
+<img width="808" height="413" alt="Screenshot 2026-07-18 112651" src="https://github.com/user-attachments/assets/d1ca7194-3c5e-4f4c-aeca-9c082a890ca6" />
 
 ---
 
 ## What is TamaFlow?
 
-TamaFlow is an **AI-powered payroll platform** built for global teams operating on Canton. Unlike other crypto payroll solutions that simply send salary, TamaFlow handles **withholding tax, social security, and legal/regulatory compliance** — ready for accountants in Japan, Thailand, and other countries.
+TamaFlow combines **Local AI**, **Hyperswarm**, and **Canton** to modernize payroll for global teams.
 
-TamaFlow uses **local AI** to generate payslips, automates payroll workflows, and settles atomically on Canton. Employees receive their payslips via P2P Hyperswarm and can chat with AI about their compensation through a shared knowledge base.
+- **Local AI** generates localized payslips and powers a private knowledge base without exposing sensitive data.
+- **Hyperswarm** securely delivers payslips, shares company knowledge, and enables peer-to-peer collaboration.
+- **Canton** provides private, atomic, and auditable payroll settlement.
 
-- **Employer Client** — Electron desktop app for payroll management, local AI, and Canton settlements.
-- **Employee CLI** — Node.js CLI for P2P Hyperswarm connectivity, Canton wallet, and employee self-service.
-- **Employee Portal** — Next.js web app for viewing assets, payslips, attendance, and rewards.
-- **Settlement** — Canton Network (FiveNorth Seaport Validator DevNet).
+### Applications
+
+- **Employer Desktop** — Payroll management, local AI, and Canton settlement.
+- **Employee Portal** — Payroll self-service, payslips, assets, and knowledge search.
+- **Employee CLI Wallet** — Canton wallet with Hyperswarm connectivity.
 
 ---
 
