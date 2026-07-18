@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HelpCircle } from "lucide-react";
-import { topItems } from "@/lib/nav";
+import { topItems, navCategories } from "@/lib/nav";
 import BrandLockup from "@/components/shared/BrandLockup";
 import HowToUseModal from "./HowToUseModal";
 
@@ -47,6 +47,33 @@ export default function Sidebar() {
               </Link>
             );
           })}
+
+          {/* Categories */}
+          {navCategories.map((cat) => (
+            <div key={cat.key} className="mt-4">
+              <p className="px-3 mb-1 font-mono text-[9px] font-semibold uppercase tracking-wider text-brand-muted">
+                {cat.label}
+              </p>
+              {cat.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.path || pathname.startsWith(item.path + "/");
+                return (
+                  <Link
+                    key={item.path}
+                    href={item.path}
+                    className={`flex items-center gap-2.5 py-2 px-3 rounded-md no-underline text-[13px] transition-colors ${
+                      isActive
+                        ? "bg-brand-blue text-white font-medium"
+                        : "text-brand-navy font-normal hover:bg-brand-light"
+                    }`}
+                  >
+                    <Icon size={16} className="flex-shrink-0" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Bottom utility button — What's New */}

@@ -4,6 +4,7 @@ import {
   ArrowRightLeft,
   Gift,
   Clock,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -47,6 +48,17 @@ export const topItems: NavItem[] = [
   { path: "/app/rewards", label: "Rewards Hub", icon: Gift },
 ];
 
+/** Categories grouped under a label. */
+export const navCategories: NavCategory[] = [
+  {
+    key: "teamspace",
+    label: "Teamspace",
+    items: [
+      { path: "/app/knowledge", label: "Knowledge Base", icon: BookOpen },
+    ],
+  },
+];
+
 /** Single utility button rendered at the very bottom of the Sidebar.
  *  Opens the HowToUseModal rather than navigating.
  *  Keep the label short so it fits on a single line in the 200px sidebar. */
@@ -68,6 +80,7 @@ export const routeLabels: Record<string, string> = {
   security: "Security",
   statement: "Statements",
   settings: "Settings",
+  knowledge: "Knowledge Base",
 };
 
 /* -------------------------------------------------------------------------- */

@@ -232,5 +232,15 @@ contextBridge.exposeInMainWorld('bridge', {
       ipcRenderer.on('contractsConfig:onChange', handler)
       return () => ipcRenderer.removeListener('contractsConfig:onChange', handler)
     }
+  },
+  rag: {
+    loadModel: () => ipcRenderer.invoke('rag:model:load'),
+    unloadModel: () => ipcRenderer.invoke('rag:model:unload'),
+    modelStatus: () => ipcRenderer.invoke('rag:model:status'),
+    ingest: (opts) => ipcRenderer.invoke('rag:ingest', opts),
+    search: (opts) => ipcRenderer.invoke('rag:search', opts),
+    list: () => ipcRenderer.invoke('rag:list'),
+    delete: (opts) => ipcRenderer.invoke('rag:delete', opts),
+    fetchUrl: (opts) => ipcRenderer.invoke('rag:fetch-url', opts),
   }
 })

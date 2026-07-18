@@ -31,6 +31,7 @@ import PaymentSettingsPage from './pages/PaymentSettingsPage'
 import SettlementsPage from './pages/SettlementsPage'
 import { AssetsPage } from './pages/AssetsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import KnowledgePage from './pages/KnowledgePage'
 import { WalletProvider } from '../context/WalletContext'
 import { PriceProvider } from '../context/PriceContext'
 import { ContractsProvider } from '../context/ContractsContext'
@@ -56,7 +57,8 @@ const PAGES: Record<PageId, any> = {
   'payment-settings': PaymentSettingsPage,
   settlements: SettlementsPage,
   assets: AssetsPage,
-  settings: SettingsPage
+  settings: SettingsPage,
+  knowledge: KnowledgePage
 }
 
 interface AppShellProps {

@@ -102,6 +102,15 @@ export const cli = {
     list: () => fetchJson(`${CLI_URL}/api/payslip-records`),
   },
 
+  rag: {
+    search: (params: { query: string; topK?: number }) =>
+      fetchJson(`${CLI_URL}/api/rag/search`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      }),
+  },
+
   username: {
     set: (name: string) =>
       fetchJson(`${CLI_URL}/api/username`, {

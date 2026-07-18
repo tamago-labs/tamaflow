@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 4,
   "offset": 0,
   "schema": [
     {
@@ -105,6 +105,36 @@
       "derived": false,
       "key": [
         "id"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "rag-search",
+      "namespace": "tamaflow",
+      "id": 7,
+      "type": 1,
+      "version": 3,
+      "versionField": null,
+      "indexes": [],
+      "schema": "@tamaflow/rag-search",
+      "derived": false,
+      "key": [
+        "requestId"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "rag-search-result",
+      "namespace": "tamaflow",
+      "id": 8,
+      "type": 1,
+      "version": 4,
+      "versionField": null,
+      "indexes": [],
+      "schema": "@tamaflow/rag-search-result",
+      "derived": false,
+      "key": [
+        "requestId"
       ],
       "trigger": null
     }

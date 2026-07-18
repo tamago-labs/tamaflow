@@ -22,6 +22,7 @@ const sessions = require('./sessions')
 const { registerWalletIpcHandlers } = require('./wallet')
 const { registerContractIpcHandlers } = require('./contracts')
 const { registerPayslipIpc } = require('./payslip')
+const ragStore = require('./ragStore')
 const { EmployeeStore } = require('./employeeStore')
 const { CompanyStore } = require('./companyStore')
 const { registerFlowIpcHandlers, getFlowStore, getRouteStore } = require('./flows')
@@ -166,6 +167,11 @@ function getWorker(specifier) {
             return
           } else if (frame.type === 'relay-cancel') {
             handleRelayCancel(frame)
+            return
+          } else if (frame.type === 'rag-run') {
+            handleRagRun(frame).catch((err) => {
+              console.error('[main] handleRagRun failed:', err)
+            })
             return
           } else if (frame.type === 'ai-states') {
             setLastPeerAiStates(frame.states)
@@ -821,6 +827,45 @@ function handleRelayCancel({ requestId }) {
   relayHandlers.delete(requestId)
 }
 
+async function handleRagRun({ requestId, fromKey, query, topK }) {
+  console.log(
+    '[main] rag: handleRagRun',
+    JSON.stringify({
+      requestId,
+      fromKey: (fromKey || '').slice(0, 8),
+      query: (query || '').slice(0, 50),
+      topK
+    }).slice(0, 200)
+  )
+
+  const pipe = workers.get(roomWorkerSpecifier)?.pipe
+  if (!pipe) {
+    console.error('[main] rag: no room worker pipe')
+    return
+  }
+
+  try {
+    const result = await ragStore.searchDocuments(query, topK || 5)
+    console.log('[main] rag: search result', result.success ? `${result.results?.length || 0} results` : result.error)
+
+    // Send results back to the worker via pipe
+    pipe.write(JSON.stringify({
+      type: 'rag-results',
+      requestId,
+      results: result.success ? (result.results || []) : [],
+      error: result.success ? null : result.error
+    }))
+  } catch (err) {
+    console.error('[main] rag: search failed:', err.message)
+    pipe.write(JSON.stringify({
+      type: 'rag-results',
+      requestId,
+      results: [],
+      error: err.message
+    }))
+  }
+}
+
 let lastPeerAiStates = []
 
 function setLastPeerAiStates(states) {
@@ -1022,6 +1067,38 @@ if (!lock) {
     registerFlowIpcHandlers()
     registerContractIpcHandlers()
     registerPayslipIpc()
+
+    // ── Knowledge Base (RAG) IPC handlers ──
+    ipcMain.handle('rag:model:load', async () => {
+      try {
+        await ragStore.ensureEmbeddingModel()
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: err.message }
+      }
+    })
+    ipcMain.handle('rag:model:unload', async () => {
+      await ragStore.unloadEmbeddingModel()
+      return { success: true }
+    })
+    ipcMain.handle('rag:model:status', () => {
+      return ragStore.getModelStatus()
+    })
+    ipcMain.handle('rag:ingest', async (_e, { name, content, source }) => {
+      return await ragStore.ingestDocument(name, content, source)
+    })
+    ipcMain.handle('rag:search', async (_e, { query, topK }) => {
+      return await ragStore.searchDocuments(query, topK)
+    })
+    ipcMain.handle('rag:list', () => {
+      return ragStore.listDocuments()
+    })
+    ipcMain.handle('rag:delete', async (_e, { id }) => {
+      return await ragStore.deleteDocument(id)
+    })
+    ipcMain.handle('rag:fetch-url', async (_e, { url }) => {
+      return await ragStore.fetchUrlContent(url)
+    })
     flowWorker.start(
       { flowStore: getFlowStore(), routeStore: getRouteStore() },
       require('./wallet')

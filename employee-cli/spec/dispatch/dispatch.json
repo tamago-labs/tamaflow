@@ -55,6 +55,18 @@
       "name": "@tamaflow/add-payslip",
       "requestType": "@tamaflow/payslip",
       "version": 2
+    },
+    {
+      "id": 9,
+      "name": "@tamaflow/rag-search",
+      "requestType": "@tamaflow/rag-search",
+      "version": 1
+    },
+    {
+      "id": 10,
+      "name": "@tamaflow/rag-search-result",
+      "requestType": "@tamaflow/rag-search-result",
+      "version": 1
     }
   ]
 }

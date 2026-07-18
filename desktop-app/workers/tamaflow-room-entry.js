@@ -189,6 +189,35 @@ class TamaflowRoomWorkerTask extends ReadyResource {
           .catch((err) => console.error('[tamaflow-room] appendRelayCancel failed:', err))
         return
       }
+      // RAG search — employee sends a search query via the room.
+      // Forward to main for processing.
+      if (message && message.type === 'rag-search') {
+        console.log(
+          '[tamaflow-room] rag: appendRagSearch',
+          JSON.stringify({ requestId: message.requestId, query: (message.query || '').slice(0, 50) }).slice(0, 200)
+        )
+        this.room
+          .appendRagSearch(message)
+          .catch((err) => console.error('[tamaflow-room] appendRagSearch failed:', err))
+        return
+      }
+      // RAG results — main sends search results back to the worker.
+      // Append to Autobase so the employee-cli can read them.
+      if (message && message.type === 'rag-results') {
+        console.log(
+          '[tamaflow-room] rag: received results, appending to Autobase',
+          JSON.stringify({ requestId: message.requestId, count: (message.results || []).length }).slice(0, 200)
+        )
+        // Append results to Autobase so the employee-cli can read them
+        this.room.appendRagSearchResult({
+          requestId: message.requestId,
+          fromKey: z32.encode(this.localBase.key),
+          toKey: message.fromKey || z32.encode(this.localBase.key),
+          results: message.results || [],
+          error: message.error || null
+        }).catch((err) => console.error('[tamaflow-room] appendRagSearchResult failed:', err))
+        return
+      }
       this._onFrame(message).catch((err) => {
         console.error('[tamaflow-room] _onFrame threw:', err)
         this.pipe.write(JSON.stringify({ type: 'status', phase: 'error', error: err.message }))
@@ -272,6 +301,24 @@ class TamaflowRoomWorkerTask extends ReadyResource {
         JSON.stringify({ requestId: data.requestId }).slice(0, 200)
       )
       this.pipe.write(JSON.stringify({ type: 'relay-cancel', requestId: data.requestId }))
+    }
+
+    // RAG search handler. The employer always processes RAG search
+    // requests from employees (there's only one employer in the room).
+    this.room.onRagSearch = (data) => {
+      console.log(
+        '[tamaflow-room] rag: onRagSearch received',
+        JSON.stringify({ requestId: data.requestId, query: (data.query || '').slice(0, 50) }).slice(0, 200)
+      )
+      this.pipe.write(
+        JSON.stringify({
+          type: 'rag-run',
+          requestId: data.requestId,
+          fromKey: z32.encode(data.fromKey),
+          query: data.query,
+          topK: data.topK
+        })
+      )
     }
 
     await this._broadcast()

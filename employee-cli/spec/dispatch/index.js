@@ -17,8 +17,10 @@ class Router {
     this._handler6 = null
     this._handler7 = null
     this._handler8 = null
+    this._handler9 = null
+    this._handler10 = null
 
-    this._missing = 9
+    this._missing = 11
   }
 
   add (name, handler) {
@@ -49,6 +51,12 @@ class Router {
         break
       case '@tamaflow/add-payslip':
         this._handler8 = handler
+        break
+      case '@tamaflow/rag-search':
+        this._handler9 = handler
+        break
+      case '@tamaflow/rag-search-result':
+        this._handler10 = handler
         break
       default:
         throw DispatchError.NONEXISTENT_ROUTE(name)
@@ -96,6 +104,10 @@ class Router {
         return this._handler7(op.value, context)
       case 8:
         return this._handler8(op.value, context)
+      case 9:
+        return this._handler9(op.value, context)
+      case 10:
+        return this._handler10(op.value, context)
       default:
         throw DispatchError.HANDLER_NOT_FOUND_BY_ID(op.id)
     }
@@ -183,6 +195,18 @@ const route8 = {
   enc: getEncoding('@tamaflow/payslip')
 }
 
+const route9 = {
+  name: '@tamaflow/rag-search',
+  id: 9,
+  enc: getEncoding('@tamaflow/rag-search')
+}
+
+const route10 = {
+  name: '@tamaflow/rag-search-result',
+  id: 10,
+  enc: getEncoding('@tamaflow/rag-search-result')
+}
+
 function getRouteByName (name) {
   switch (name) {
     case '@tamaflow/add-invite':
@@ -203,6 +227,10 @@ function getRouteByName (name) {
       return route7
     case '@tamaflow/add-payslip':
       return route8
+    case '@tamaflow/rag-search':
+      return route9
+    case '@tamaflow/rag-search-result':
+      return route10
     default:
       throw DispatchError.ROUTE_NOT_FOUND_BY_NAME(name)
   }
@@ -228,6 +256,10 @@ function getRouteById (id) {
       return route7
     case 8:
       return route8
+    case 9:
+      return route9
+    case 10:
+      return route10
     default:
       throw DispatchError.HANDLER_NOT_FOUND_BY_ID(id)
   }

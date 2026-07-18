@@ -145,6 +145,18 @@ class CliTamaflowRoom extends ReadyResource {
         this.onPayslip(data)
       }
     })
+
+    // RAG search result — employer sends results back to the employee.
+    // Skip Autobase insert to avoid needing the collection schema in
+    // the employee's local db. The callback is enough for the relay.
+    this.router.add('@tamaflow/rag-search-result', async (data) => {
+      if (typeof this.onRagSearchResult === 'function') {
+        this.onRagSearchResult(data)
+      }
+    })
+
+    // RAG search — employee sends this (we're the sender, not receiver)
+    this.router.add('@tamaflow/rag-search', async () => {})
   }
 
   get view() {
@@ -189,6 +201,8 @@ class PearP2P {
     this.chatMessages = []
     this.payslips = []
     this.partyId = null  // Canton party id — used to filter payslips addressed to this employee
+    this._ragSearchCallbacks = new Map()
+    this._employerKey = null  // Employer's writer key for RAG search relay
 
     // Debounced broadcast to update payslips on Autobase changes
     this._debouncedRefresh = debounce(() => this._refreshPayslips(), 500)
@@ -240,6 +254,15 @@ class PearP2P {
       console.log('[pear] received payslip:', data.id, 'total payslips:', this.payslips.length)
     }
 
+    // Listen for RAG search results
+    this.room.onRagSearchResult = (data) => {
+      console.log('[pear] received RAG search result:', data.requestId)
+      const callback = this._ragSearchCallbacks.get(data.requestId)
+      if (callback) {
+        callback(data.results || [])
+      }
+    }
+
     // Listen for Autobase updates to refresh payslips
     this.room.on('update', this._debouncedRefresh)
 
@@ -282,6 +305,48 @@ class PearP2P {
   async sendPayslip(payslipData) {
     if (!this.room || !this.connected) throw new Error('Not connected')
     await this.room.appendPayslip(payslipData)
+  }
+
+  async relayRagSearch(query, topK = 5, requestId) {
+    if (!this.room || !this.connected) throw new Error('Not connected')
+
+    const rid = requestId || `rag_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
+
+    console.log('[pear] RAG search relay:', rid, 'query:', query.slice(0, 50))
+
+    // For now, we'll store results in a local map and poll
+    // TODO: Implement proper async response handling
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        this._ragSearchCallbacks.delete(rid)
+        console.log('[pear] RAG search timed out:', rid)
+        resolve([])
+      }, 10000) // 10 second timeout
+
+      this._ragSearchCallbacks.set(rid, (results) => {
+        clearTimeout(timeout)
+        this._ragSearchCallbacks.delete(rid)
+        resolve(results)
+      })
+
+      // Send the search request via the room's base
+      const myKey = this.room.localBase.key
+      this.room.base.append(
+        TamaflowDispatch.encode('@tamaflow/rag-search', {
+          requestId: rid,
+          fromKey: myKey,
+          toKey: this._employerKey || myKey,
+          query,
+          topK: topK ?? 5,
+          createdAt: Date.now()
+        })
+      ).catch((err) => {
+        clearTimeout(timeout)
+        this._ragSearchCallbacks.delete(rid)
+        console.error('[pear] RAG search send failed:', err.message)
+        resolve([])
+      })
+    })
   }
 
   getStatus() {

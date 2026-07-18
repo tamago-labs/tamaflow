@@ -170,6 +170,32 @@ schema.register({
   ]
 })
 
+// RAG search request — employee queries the employer's knowledge base.
+schema.register({
+  name: 'rag-search',
+  fields: [
+    { name: 'requestId', type: 'string', required: true },
+    { name: 'fromKey', type: 'buffer', required: true },
+    { name: 'toKey', type: 'buffer', required: true },
+    { name: 'query', type: 'string', required: true },
+    { name: 'topK', type: 'int', required: false },
+    { name: 'createdAt', type: 'int', required: false }
+  ]
+})
+
+// RAG search result — employer sends results back to the employee.
+schema.register({
+  name: 'rag-search-result',
+  fields: [
+    { name: 'requestId', type: 'string', required: true },
+    { name: 'fromKey', type: 'buffer', required: true },
+    { name: 'toKey', type: 'buffer', required: true },
+    { name: 'results', type: 'json', required: true },
+    { name: 'error', type: 'string', required: false },
+    { name: 'createdAt', type: 'int', required: false }
+  ]
+})
+
 Hyperschema.toDisk(hyperSchema)
 
 // ── Collections ─────────────────────────────────────────────────────
@@ -227,6 +253,19 @@ db.collections.register({
   key: ['id']
 })
 
+// RAG search requests — keyed by requestId for relay tracking.
+db.collections.register({
+  name: 'rag-search',
+  schema: '@tamaflow/rag-search',
+  key: ['requestId']
+})
+
+db.collections.register({
+  name: 'rag-search-result',
+  schema: '@tamaflow/rag-search-result',
+  key: ['requestId']
+})
+
 HyperdbBuilder.toDisk(hyperdb)
 
 // ── Dispatch routes ────────────────────────────────────────────────
@@ -251,5 +290,12 @@ dispatch.register({ name: 'add-writer', requestType: '@tamaflow/writer' })
 // employee. The worker inserts it into the `@tamaflow/payslip`
 // collection where the Autobase replicates it to all peers.
 dispatch.register({ name: 'add-payslip', requestType: '@tamaflow/payslip' })
+
+// RAG search relay. Employee sends a search query; employer processes
+// it and returns results via the same Autobase.
+dispatch.register({ name: 'rag-search', requestType: '@tamaflow/rag-search' })
+
+// RAG search result. Employer sends results back to the employee.
+dispatch.register({ name: 'rag-search-result', requestType: '@tamaflow/rag-search-result' })
 
 Hyperdispatch.toDisk(hyperdispatch)

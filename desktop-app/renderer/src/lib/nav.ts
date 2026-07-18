@@ -6,7 +6,8 @@ import {
   Users,
   Banknote,
   Workflow,
-  NotebookPen
+  NotebookPen,
+  BookOpen
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -21,6 +22,7 @@ export type PageId =
   | 'settlements'
   | 'assets'
   | 'settings'
+  | 'knowledge'
 
 export interface NavItem {
   id: PageId
@@ -41,7 +43,8 @@ export const NAV_CATEGORIES: NavCategory[] = [
     items: [
       { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
       { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
-      { id: 'payslips', label: 'Payslips', icon: NotebookPen }
+      { id: 'payslips', label: 'Payslips', icon: NotebookPen },
+      { id: 'knowledge', label: 'Knowledge Base', icon: BookOpen }
     ]
   },
   {

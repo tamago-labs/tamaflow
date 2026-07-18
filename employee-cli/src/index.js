@@ -836,6 +836,34 @@ class EmployeeCLI {
         res.status(500).json({ error: err.message })
       }
     })
+
+    // ============================================
+    // Knowledge Base search (relay to employer via P2P)
+    // ============================================
+
+    this.app.post('/api/rag/search', async (req, res) => {
+      try {
+        if (!this.pear.connected) {
+          return res.status(400).json({ error: 'Not connected to room' })
+        }
+        const { query, topK = 5 } = req.body || {}
+        if (!query || !query.trim()) {
+          return res.status(400).json({ error: 'query is required' })
+        }
+
+        console.log('[rag] Search request:', query, 'topK:', topK)
+
+        // Send search request via P2P room and wait for response
+        const requestId = `rag_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`
+        const results = await this.pear.relayRagSearch(query, topK, requestId)
+
+        console.log('[rag] Search results:', results?.length || 0)
+        res.json({ success: true, results: results || [] })
+      } catch (err) {
+        console.error('[rag] Search failed:', err.message)
+        res.status(500).json({ error: err.message })
+      }
+    })
   }
 }
 

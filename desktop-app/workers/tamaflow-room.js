@@ -229,6 +229,24 @@ class TamaflowRoom extends ReadyResource {
     this.router.add('@tamaflow/add-payslip', async (data, context) => {
       await context.view.insert('@tamaflow/payslip', data)
     })
+
+    // RAG search relay. Employee sends a search query; the employer's
+    // worker forwards it to main via `onRagSearch`, which executes the
+    // search and sends results back.
+    this.router.add('@tamaflow/rag-search', async (data, context) => {
+      await context.view.insert('@tamaflow/rag-search', data)
+      if (typeof this.onRagSearch === 'function') {
+        this.onRagSearch(data)
+      }
+    })
+
+    // RAG search result. Employer sends results back to the employee.
+    this.router.add('@tamaflow/rag-search-result', async (data, context) => {
+      await context.view.insert('@tamaflow/rag-search-result', data)
+      if (typeof this.onRagSearchResult === 'function') {
+        this.onRagSearchResult(data)
+      }
+    })
   }
 
   get view() {
@@ -358,6 +376,41 @@ class TamaflowRoom extends ReadyResource {
     await this.base.append(
       TamaflowDispatch.encode('@tamaflow/add-payslip', data)
     )
+  }
+
+  // RAG search relay. Appends a search request to the Autobase.
+  // The employer's worker will forward this to main for processing.
+  async appendRagSearch({ requestId, fromKey, toKey, query, topK }) {
+    await this.base.append(
+      TamaflowDispatch.encode('@tamaflow/rag-search', {
+        requestId,
+        fromKey: this._resolveKey(fromKey),
+        toKey: this._resolveKey(toKey),
+        query,
+        topK: topK ?? 5,
+        createdAt: Date.now()
+      })
+    )
+  }
+
+  // RAG search result. Employer sends results back to the employee.
+  async appendRagSearchResult({ requestId, fromKey, toKey, results, error }) {
+    await this.base.append(
+      TamaflowDispatch.encode('@tamaflow/rag-search-result', {
+        requestId,
+        fromKey: this._resolveKey(fromKey),
+        toKey: this._resolveKey(toKey),
+        results: results || [],
+        error: error || null,
+        createdAt: Date.now()
+      })
+    )
+  }
+
+  _resolveKey(key) {
+    if (Buffer.isBuffer(key)) return key
+    if (typeof key === 'string') return z32.decode(key)
+    return key
   }
 
   // Read all payslips from the collection. Returns the full list;
