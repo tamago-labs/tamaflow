@@ -1,7 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { X, CheckCircle2, Download } from "lucide-react";
+import { X, CheckCircle2 } from "lucide-react";
 import Modal from "@/components/shared/Modal";
 
 const FEATURES = [
@@ -64,31 +63,25 @@ export default function HowToUseModal({ open, onClose }: HowToUseModalProps) {
           ))}
         </ul>
 
-        {/* Button row — Download + Close */}
-        <div className="flex items-center gap-2 mt-2">
-          <motion.a
+        {/* Close button */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center justify-center w-full py-3 px-6 bg-white border border-brand-border rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase text-brand-navy hover:bg-brand-light transition-colors mt-2"
+        >
+          Close
+        </button>
+
+        <p className="mt-3 text-center text-[11px] text-brand-muted m-0">
+          Get the{" "}
+          <a
             href="https://github.com/tamago-labs/tamaflow"
             target="_blank"
             rel="noreferrer"
-            whileHover={{ y: -1 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 400, damping: 28 }}
-            className="inline-flex items-center justify-center gap-2 flex-1 py-3 px-6 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:opacity-90 transition-opacity shadow-[0_4px_18px_-6px_rgba(26,26,232,0.45)]"
+            className="text-brand-blue hover:underline"
           >
-            <Download size={14} />
-            Download Now
-          </motion.a>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex items-center justify-center py-3 px-5 bg-white border border-brand-border rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase text-brand-navy hover:bg-brand-light transition-colors"
-          >
-            Close
-          </button>
-        </div>
-
-        <p className="mt-3 text-center text-[11px] text-brand-muted m-0">
-          Get the Employer Client to distribute salary with local AI and Canton.
+            Employer Client / CLI Wallet
+          </a>
         </p>
       </div>
     </Modal>

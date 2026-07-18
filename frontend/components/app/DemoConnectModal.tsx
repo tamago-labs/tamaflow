@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { X, Loader2, CheckCircle2, AlertTriangle, TestTube2 } from "lucide-react";
+import { X, Loader2, CheckCircle2, Rocket } from "lucide-react";
 import Modal from "@/components/shared/Modal";
 import { useWalletMode } from "@/lib/wallet/useWalletMode";
 import { setCliUrl } from "@/lib/cli";
@@ -62,8 +62,7 @@ export default function DemoConnectModal({ open, onClose }: DemoConnectModalProp
       <div className="p-6 lg:p-8">
         {/* Header */}
         <div className="mb-5">
-          <div className="flex items-center gap-2 mb-2">
-            <TestTube2 size={16} className="text-brand-teal" />
+          <div className="flex items-center gap-2 mb-2"> 
             <p className="font-mono text-[10px] tracking-wider2 text-brand-teal uppercase font-semibold">
               Demo Account
             </p>
@@ -79,13 +78,17 @@ export default function DemoConnectModal({ open, onClose }: DemoConnectModalProp
           </p>
         </div>
 
-        {/* Warning */}
-        <div className="mb-5 flex items-start gap-2.5 rounded-md border border-amber-200 bg-amber-50 p-3">
-          <AlertTriangle size={14} className="text-amber-600 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-800 m-0 leading-relaxed">
-            This is a <strong>shared demo account</strong> — all data is visible to other
-            testers. Do not enter sensitive or personal information.
-          </p>
+        {/* Server URL */}
+        <div className="mb-5">
+          <label className="block font-mono text-[10px] uppercase tracking-wider2 text-gray-400 mb-1.5">
+            Server URL
+          </label>
+          <input
+            type="text"
+            value={DEMO_CONFIG.cliUrl}
+            readOnly
+            className="w-full rounded-md border border-gray-200 bg-gray-50 py-2 px-3 text-xs text-gray-500 font-mono cursor-not-allowed"
+          />
         </div>
 
         {/* Invite code (locked) */}
@@ -138,8 +141,8 @@ export default function DemoConnectModal({ open, onClose }: DemoConnectModalProp
               </>
             ) : (
               <>
-                <TestTube2 size={14} />
-                Connect to Demo
+                <Rocket size={14} />
+                Connect to Demo Wallet
               </>
             )}
           </motion.button>

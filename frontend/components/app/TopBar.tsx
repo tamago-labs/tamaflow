@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronRight, LogIn, LogOut, User, Droplets, PenLine, TestTube2 } from "lucide-react";
+import { ChevronDown, ChevronRight, LogIn, LogOut, User, Droplets, PenLine, Rocket } from "lucide-react";
 import { routeLabels } from "@/lib/nav";
 import { useWalletMode } from "@/lib/wallet/useWalletMode";
 import ConnectModal from "./ConnectModal";
@@ -162,10 +162,10 @@ export default function TopBar() {
             <button
               type="button"
               onClick={() => setDemoModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-md border border-brand-teal bg-white px-3 py-1.5 text-[11px] font-bold uppercase text-brand-teal tracking-wider2 hover:bg-brand-light cursor-pointer font-mono"
+              className="flex items-center gap-1.5 rounded-md border border-brand-blue bg-white px-3 py-1.5 text-[11px] font-bold uppercase text-brand-blue tracking-wider2 hover:bg-brand-light cursor-pointer font-mono"
             >
-              <TestTube2 size={12} />
-              Demo
+              <Rocket size={12} />
+              Try Demo
             </button>
             <button
               type="button"
