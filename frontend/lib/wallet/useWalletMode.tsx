@@ -70,6 +70,16 @@ export function WalletModeProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         console.error("[useWalletMode] P2P connect failed:", e);
       }
+    } else {
+      // Check if already connected to a room
+      try {
+        const roomStatus = await cli.room.status();
+        if (roomStatus.connected) {
+          setP2pConnected(true);
+        }
+      } catch {
+        // Room not available
+      }
     }
   }, []);
 

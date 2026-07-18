@@ -45,8 +45,8 @@ export const topItems: NavItem[] = [
   { path: "/app/assets", label: "Assets", icon: Wallet },
   { path: "/app/attendance", label: "Attendance", icon: Clock },
   { path: "/app/payslips", label: "Payslips", icon: ArrowRightLeft },
-  { path: "/app/rewards", label: "Rewards Hub", icon: Gift },
   { path: "/app/knowledge", label: "Knowledge Base", icon: BookOpen },
+  { path: "/app/rewards", label: "Rewards Hub", icon: Gift },
 ];
 
 /** Categories grouped under a label. */

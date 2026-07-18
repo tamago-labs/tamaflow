@@ -62,12 +62,15 @@ export default function KnowledgePage() {
 
   const handleStartModel = async () => {
     setLoading(true)
+    setModelStatus('loading')
+    setModelProgress(null)
     try {
       await bridge.rag.loadModel()
       setModelStatus('ready')
       setModelProgress(null)
     } catch (e) {
       console.error('[Knowledge] Failed to load model:', e)
+      setModelStatus('unloaded')
     } finally {
       setLoading(false)
     }
@@ -204,8 +207,12 @@ export default function KnowledgePage() {
           <span className="text-sm font-medium text-gray-900">
             {modelStatus === 'ready' ? 'Embedding model ready' : modelStatus === 'loading' ? 'Loading embedding model…' : 'Embedding model stopped'}
           </span>
+          <span className="ml-2 text-xs text-gray-400 font-mono">GTE-Large FP16</span>
           {modelProgress !== null && (
             <span className="ml-2 text-xs text-gray-500">{Math.round(modelProgress)}%</span>
+          )}
+          {modelStatus === 'loading' && (
+            <p className="mt-1 text-xs text-amber-600">First-time loading may take 5–10 minutes depending on your connection.</p>
           )}
         </div>
       </div>

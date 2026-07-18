@@ -50,7 +50,7 @@ export default function KnowledgePage() {
       <div className="mb-6">
         <h1 className="text-2xl font-light tracking-tight text-[#0a0a5c]">Knowledge Base</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Search knowledge base of your company via P2P hyperswarm.
+          Search knowledge base with your company AI via P2P hyperswarm.
         </p>
       </div>
 
