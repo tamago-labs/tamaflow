@@ -2,7 +2,7 @@
 
 > **Automate compliant payroll with withholding tax, localized payslips, and private salary settlement on Canton.**
 
-<img width="953" height="499" alt="Screenshot 2026-06-29 115350" src="https://github.com/user-attachments/assets/3b88dd84-b61e-4806-9d8a-bcaacc618446" />
+<img width="810" height="463" alt="Screenshot 2026-07-19 091331" src="https://github.com/user-attachments/assets/16dbbe0a-2f06-443b-9a4f-289b7f693cc1" />
 
 ---
 
@@ -50,13 +50,13 @@ TamaFlow combines **Local AI**, **Canton**, and **P2P Hyperswarm** into a unifie
 
 ## Deployment (Canton Devnet)
 
-| Module | Party ID / Contract | Link |
-|--------|---------------------|------|
-| Employee Demo Wallet | `employee::12203ca86b7046226e7e69797ac81501e6e585c5e7574db9b34133ac27bd5def150a` | [Lighthouse](https://lighthouse.devnet.cantonloop.com/party/employee%3A%3A12203ca86b7046226e7e69797ac81501e6e585c5e7574db9b34133ac27bd5def150a) |
-| Employer Demo Wallet | `ohm-ohm::1220efe57cb13a797e531d4ad1b24c6b15e9b4fd02d77feddccde8ec06af7dd9e080` | [Lighthouse](https://lighthouse.devnet.cantonloop.com/party/ohm-ohm%3A%3A1220efe57cb13a797e531d4ad1b24c6b15e9b4fd02d77feddccde8ec06af7dd9e080) |
-| Employee CLI Wallet (Hosted) | — | [d3pgy5i52ev547.cloudfront.net](https://d3pgy5i52ev547.cloudfront.net/api/health) |
-| Company Contract | 00ff8857228d7f5f372ee72716f1e0ef30d958e6a1bdd49c1c3ab43f73d5a8a491ca121220d7df1d1bc05edadc3ba23f39700482694fa67dd29740f1741010ac674f4aba31 | — |
-| JPYC Contract | 004e69cbb45b5eefbd0aea9c25b08e0c9ab0c939465edd37a682186742f22f8251ca121220aa7b12404e511df0ce86ad6357329790ee8f77add1507b781874fa8ba826f93f  | — |
+| Module | Party ID / URL |
+|--------|---------------------|
+| Employee Demo Wallet | [`employee::12203ca86b7046226e7e69797ac81501e6e585c5e7574db9b34133ac27bd5def150a`](https://lighthouse.devnet.cantonloop.com/party/employee%3A%3A12203ca86b7046226e7e69797ac81501e6e585c5e7574db9b34133ac27bd5def150a) |
+| Employer Demo Wallet | [`ohm-ohm::1220efe57cb13a797e531d4ad1b24c6b15e9b4fd02d77feddccde8ec06af7dd9e080`](https://lighthouse.devnet.cantonloop.com/party/ohm-ohm%3A%3A1220efe57cb13a797e531d4ad1b24c6b15e9b4fd02d77feddccde8ec06af7dd9e080) |
+| Employee CLI Wallet (Hosted) | [d3pgy5i52ev547.cloudfront.net](https://d3pgy5i52ev547.cloudfront.net/api/health) |
+| Company Contract | `00ff8857228d7f5f372ee72716f1e0ef30d958e6a1bdd49c1c3ab43f73d5a8a491ca121220d7df1d1bc05edadc3ba23f39700482694fa67dd29740f1741010ac674f4aba31` |
+| JPYC Contract | `004e69cbb45b5eefbd0aea9c25b08e0c9ab0c939465edd37a682186742f22f8251ca121220aa7b12404e511df0ce86ad6357329790ee8f77add1507b781874fa8ba826f93f`  | 
 
 Custom contracts are not available on the Lighthouse block explorer. You may need to use Seaport and provide contract IDs manually.
 
