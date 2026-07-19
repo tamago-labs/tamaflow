@@ -38,13 +38,16 @@ TamaFlow combines **Local AI**, **Canton**, and **P2P Hyperswarm** into a unifie
 
 ---
 
-## Highlighted Features
+## Why Canton?
 
-* **Privacy-First Payroll** — Local AI generates payslips and powers a private knowledge base without cloud exposure.
-* **Canton Settlement** — Atomic payroll settlement with DAML smart contracts and attendance tracking.
-* **P2P Hyperswarm** — Secure peer-to-peer layer for payslip delivery, team chat, and knowledge sharing.
-* **Knowledge Base** — RAG-powered document search relayed through P2P. Employers manage, employees search.
-* **Employee Self-Service** — Portal for assets, payslips, attendance check-in, and reward points.
+| Feature | Without Canton | With Canton | Status |
+|---------|---------------|-------------|--------|
+| Atomic payroll settlement | Multiple txs + risk | Single atomic transaction | ✅ Live |
+| Privacy of salary data | Public or centralized | Selective disclosure (employer/employee only) | ✅ Live |
+| Compliance audit trail | Off-chain logs | On-ledger immutable records | ✅ Live |
+| Multi-token support | Fragile | Native Splice/CIP-56 compatible | CC, JPYC  |
+
+**Privacy Proof:** Employee parties only see their own `EmployeeRecord` and `PayslipRecord` contracts.
 
 ---
 
@@ -54,7 +57,7 @@ TamaFlow combines **Local AI**, **Canton**, and **P2P Hyperswarm** into a unifie
 |--------|---------------------|
 | Employee Demo Wallet | [`employee::12203ca86b7046226e7e69797ac81501e6e585c5e7574db9b34133ac27bd5def150a`](https://lighthouse.devnet.cantonloop.com/party/employee%3A%3A12203ca86b7046226e7e69797ac81501e6e585c5e7574db9b34133ac27bd5def150a) |
 | Employer Demo Wallet | [`ohm-ohm::1220efe57cb13a797e531d4ad1b24c6b15e9b4fd02d77feddccde8ec06af7dd9e080`](https://lighthouse.devnet.cantonloop.com/party/ohm-ohm%3A%3A1220efe57cb13a797e531d4ad1b24c6b15e9b4fd02d77feddccde8ec06af7dd9e080) |
-| Employee CLI Wallet (Hosted) | [d3pgy5i52ev547.cloudfront.net](https://d3pgy5i52ev547.cloudfront.net/api/health) |
+| Employee CLI Wallet | [d3pgy5i52ev547.cloudfront.net](https://d3pgy5i52ev547.cloudfront.net/api/health) |
 | Company Contract | `00ff8857228d7f5f372ee72716f1e0ef30d958e6a1bdd49c1c3ab43f73d5a8a491ca121220d7df1d1bc05edadc3ba23f39700482694fa67dd29740f1741010ac674f4aba31` |
 | JPYC Contract | `004e69cbb45b5eefbd0aea9c25b08e0c9ab0c939465edd37a682186742f22f8251ca121220aa7b12404e511df0ce86ad6357329790ee8f77add1507b781874fa8ba826f93f`  | 
 
@@ -98,15 +101,102 @@ const TEMPLATES = {
 
 ### How to Setup
 
+#### Prerequisites
+
+- **Node.js** v22+ (we recommend using [nvm](https://github.com/nvm-sh/nvm))
+- **Java 17+** and **Daml SDK 3.5.1** (only needed for smart contract development)
+- **Git** for cloning the repository
+
 ```bash
-# Employee CLI Wallet
-cd employee-cli && npm install && npm start   # http://localhost:3001
+git clone https://github.com/tamago-labs/tamaflow.git
+cd tamaflow
+```
 
-# Employer Desktop App
-cd desktop-app && npm install && npm run dev  # Electron with hot reload
+#### 1. Employee CLI Wallet
 
-# Employee Portal
-cd frontend && npm install && npm run dev     # http://localhost:3000
+The CLI wallet provides Canton wallet management and P2P Hyperswarm connectivity. Run it locally or deploy to a server.
+
+```bash
+cd employee-cli
+npm install
+npm start                    # Starts on http://localhost:3001
+
+# Optional: connect to a P2P room
+npm run connect              # Connects with invite code
+```
+
+The CLI wallet stores its data in `.wallet.json` and `~/.tamaflow-cli/` (Pear Corestore). On first run, it creates a new Canton wallet automatically.
+
+#### 2. Employer Desktop App
+
+The Electron desktop app is where payroll flows are built, employees are managed, and Canton settlements are processed.
+
+```bash
+cd desktop-app
+npm install
+npm run dev                  # Launches Electron with hot reload
+```
+
+**First-time setup:**
+1. Open Settings → Company Profile and configure your company details
+2. Open Settings → Wallet to create or import your Canton wallet
+3. The embedding model for AI features downloads automatically on first use
+
+#### 3. Employee Portal
+
+The employee portal is a web app for viewing payslips, assets, attendance, and rewards.
+
+```bash
+cd frontend
+npm install
+npm run dev                  # Starts on http://localhost:3000
+```
+
+The portal connects to the Employee CLI wallet. Either run the CLI locally or use the demo wallet for testing.
+
+---
+
+## Data Structure
+
+Following data structure is GDPR clean by design — sensitive data stays local or on-chain with selective disclosure.
+
+| Data | Local Storage | On-Chain (Canton) | P2P Sync |
+|------|--------------|-------------------|----------|
+| **Company** | Full profile (name, country, templates, settings) | Company name, country | — |
+| **Employee** | Full record (salary, tax, pension, role) | Name, role | — |
+| **Attendance** | — | Block count, status, timestamps | — |
+| **Reward Points** | — | Running total | — |
+| **Payslip Content** | HTML template + rendered payslip | Reference ID, period, status | ✅ Hyperswarm |
+| **Chat Messages** | — | — | ✅ Hyperswarm |
+| **Knowledge Base** | Full documents (employer) | — | ✅ P2P relay |
+| **Wallet** | Encrypted keys + UTXOs | — | — |
+| **Room State** | Corestore + invites | — | ✅ Hyperswarm |
+
+---
+
+## Architecture
+
+```
+┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
+│  EMPLOYER CLIENT    │    │   EMPLOYEE CLI      │    │  EMPLOYEE PORTAL    │
+│  (Desktop App)      │    │   (Node.js)         │    │  (Next.js Web)      │
+│                     │    │                     │    │                     │
+│ • Flow Builder      │    │ • Canton Wallet     │    │ • View Assets       │
+│ • Local AI (QVAC)   │◄──►│ • P2P Hyperswarm    │◄──►│ • View Payslips     │
+│ • Payslip Templates │    │ • Team Chat         │    │ • Attendance        │
+│ • Knowledge Base    │    │ • Faucet            │    │ • Rewards Hub       │
+│ • Canton Settlement │    │ • Asset Transfer    │    │ • Knowledge Search  │
+└─────────────────────┘    └─────────────────────┘    └─────────────────────┘
+         │                          │                          │
+         └──────────────────────────┼──────────────────────────┘
+                                    ▼
+                    ┌──────────────────────────────┐
+                    │      CANTON NETWORK          │
+                    │  FiveNorth Seaport DevNet    │
+                    │  • Atomic settlement         │
+                    │  • On-ledger audit trail     │
+                    │  • Withholding tax compliance│
+                    └──────────────────────────────┘
 ```
 
 ---
@@ -225,62 +315,6 @@ Token holding with UTXO model.
 ---
 
 
-## Architecture
-
-```
-┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
-│  EMPLOYER CLIENT    │    │   EMPLOYEE CLI      │    │  EMPLOYEE PORTAL    │
-│  (Desktop App)      │    │   (Node.js)         │    │  (Next.js Web)      │
-│                     │    │                     │    │                     │
-│ • Flow Builder      │    │ • Canton Wallet     │    │ • View Assets       │
-│ • Local AI (QVAC)   │◄──►│ • P2P Hyperswarm    │◄──►│ • View Payslips     │
-│ • Payslip Templates │    │ • Team Chat         │    │ • Attendance        │
-│ • Knowledge Base    │    │ • Faucet            │    │ • Rewards Hub       │
-│ • Canton Settlement │    │ • Asset Transfer    │    │ • Knowledge Search  │
-└─────────────────────┘    └─────────────────────┘    └─────────────────────┘
-         │                          │                          │
-         └──────────────────────────┼──────────────────────────┘
-                                    ▼
-                    ┌──────────────────────────────┐
-                    │      CANTON NETWORK          │
-                    │  FiveNorth Seaport DevNet    │
-                    │  • Atomic settlement         │
-                    │  • On-ledger audit trail     │
-                    │  • Withholding tax compliance│
-                    └──────────────────────────────┘
-```
-
----
-
-## Desktop App Pages
-
-| Page | Description |
-|------|-------------|
-| **Dashboard** | Overview with company info, stat cards, recent activity, quick actions |
-| **Employees** | Manage employee roster with type/status filters, import/export |
-| **Flow Builder** | Visual payroll flow canvas with source → payee → payment cards |
-| **Payment Settings** | Configure payment templates with withholding tax and social security |
-| **Payslips** | 3-panel template manager with AI generation and HTML preview |
-| **Assets** | Canton wallet holdings, pending transfers, send CC to others |
-| **Attendance** | Daily timesheet check-in with reward points |
-| **Knowledge Base** | Manage documents, start/stop embedding model, search test |
-| **Settings** | Company profile, contracts, wallet, P2P hyperswarm config |
-
----
-
-## Employee Portal Pages
-
-| Page | Description |
-|------|-------------|
-| **Dashboard** | Welcome card, onboarding steps, recent payslips, quick actions |
-| **Assets** | View holdings, accept/reject pending transfers, send CC |
-| **Attendance** | Check-in timesheet, view check-in history |
-| **Payslips** | View received payslips with HTML preview |
-| **Rewards Hub** | Track reward points from attendance check-ins |
-| **Knowledge Base** | Search company documents via P2P relay |
-
----
-
 ## Tech Stack
 
 | Layer | Tech |
@@ -297,50 +331,6 @@ Token holding with UTXO model.
 | Web UI | React 19 + Tailwind v4 + framer-motion 12 |
 | Ledger | Canton Network (FiveNorth DevNet) |
 | Language | TypeScript 5 |
-
----
-
-## Knowledge Base
-
-The Knowledge Base uses RAG (Retrieval-Augmented Generation) for document search:
-
-1. **Start Service** — Load the embedding model (GTE-Large) on the desktop app
-2. **Add Documents** — Import text content or fetch from URLs
-3. **Search** — Employees search via the portal; queries relay through P2P
-
-```
-Desktop App (Employer)          Employee Portal
-┌─────────────────┐            ┌─────────────────┐
-│ Start Service   │            │ Search Query    │
-│ Add Documents   │            │ Results Display │
-│ Search Test     │            └────────┬────────┘
-└────────┬────────┘                     │
-         │                              │ P2P Relay
-         ▼                              ▼
-┌─────────────────────────────────────────────────┐
-│              P2P Hyperswarm                      │
-│  rag-search frame → rag-search-result frame      │
-└─────────────────────────────────────────────────┘
-```
-
----
-
-## Payslip Templates
-
-Templates use `{{placeholder}}` syntax for data binding:
-
-| Placeholder | Description |
-|-------------|-------------|
-| `{{companyName}}` | Company name |
-| `{{period}}` | Pay period (e.g., "June 2026") |
-| `{{employeeName}}` | Employee name |
-| `{{grossPay}}` | Gross pay before deductions |
-| `{{netPay}}` | Net pay after deductions |
-| `{{taxAmount}}` | Tax deduction amount |
-| `{{socialSecurity}}` | Social security deduction |
-| `{{withholding}}` | Withholding deduction |
-| `{{currency}}` | Currency code (JPY, USD, etc.) |
-| `{{fxRate}}` | FX conversion rate |
 
 ---
 
