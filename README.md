@@ -31,7 +31,7 @@ TamaFlow combines **Local AI**, **Canton**, and **P2P Hyperswarm** into a unifie
 |----------------------|----------|
 | Just send salary | Withholding tax, social security, legal compliance |
 | No compliance | Ready for accountants in Japan, Thailand, and beyond |
-| No local AI | Local AI generates payslips from settlement data |
+| No local AI | Local AI generates payslips and powers private knowledge base |
 | No team collaboration | P2P Hyperswarm for team chat and knowledge sharing |
 
 **TamaFlow is not just about sending crypto — it's about compliant, auditable payroll that accountants can trust.**
@@ -83,9 +83,9 @@ const TEMPLATES = {
 ### Employee
 
 1. **Open the Portal** — Visit the live demo at [tamaflow.vercel.app](https://tamaflow.vercel.app)
-2. **Setup Your Wallet** — Use the Employee CLI wallet locally or use the [pre-hosted demo wallet](https://d3pgy5i52ev547.cloudfront.net/api/health) on AWS for faster testing
+2. **Setup Your Wallet** — Use the Employee CLI wallet locally or use the [demo wallet](https://d3pgy5i52ev547.cloudfront.net/api/health) on AWS for faster testing
 3. **View Payslips** — Open the Payslips page to access payroll documents sent by your employer
-4. **Manage Assets** — Review payroll payments and transfer Canton Coin (CC) to external wallets when needed
+4. **Manage Assets** — Review payroll payments and transfer assets to external wallets for cash-out or other DeFi
 5. **Daily Check-In** — Perform your daily check-in on-chain to verify your attendance and earn reward points.
 6. **Chat & Search Knowledge** — Chat with your team or search the company handbook with AI. *The employer's desktop app needs to be online.*
 
@@ -115,7 +115,7 @@ cd tamaflow
 
 #### 1. Employee CLI Wallet
 
-The CLI wallet provides Canton wallet management and P2P Hyperswarm connectivity. Run it locally or deploy to a server.
+The CLI wallet provides Canton wallet management and P2P Hyperswarm connectivity. This must run locally on your machine.
 
 ```bash
 cd employee-cli
@@ -353,6 +353,48 @@ Token holding with UTXO model.
 
 ---
 
+
+## Local AI
+
+Tamaflow uses local AI for two purposes: **chat/payslip generation** and **private knowledge base**.
+
+### Chat & Payslip Generation
+
+The desktop app runs local LLMs through QVAC for AI-powered features:
+
+- **General chat** — Ask questions about payroll, compliance, or company policies
+- **Payslip generation** — Generate localized HTML payslips with withholding tax and social security breakdown
+- **Template refinement** — Edit and improve existing payslip templates
+
+**Supported models:**
+
+| Model | Size | Use Case |
+|-------|------|----------|
+| Qwen 1.7B | 1.7B params | Fast generation, good for simple payslips |
+| Qwen 4B | 4B params | Balanced quality/speed |
+| Gemma 4B | 4B params | Google's lightweight model |
+| Gemma 31B | 31B params | High-quality detailed payslips |
+
+Models run entirely on-device — no data leaves the machine.
+
+### Private Knowledge Base
+
+The knowledge base uses a separate **embedding model** (GTE-Large FP16) for document search:
+
+- **Employer** imports documents (text, URLs) and starts the embedding service
+- **Employee** searches via the portal — queries relay through P2P to the employer's machine
+- **Zero cloud** — embeddings and documents stay on the employer's device
+
+```
+Employee Portal                  Employer Desktop
+┌──────────────┐                ┌─────────────────────┐
+│ Search query │──── P2P ────→│ Embedding model     │
+│              │                │ Document store      │
+│ Results      │←── P2P ─────│ Vector search (RAG)  │
+└──────────────┘                └─────────────────────┘
+```
+
+---
 
 ## Tech Stack
 
