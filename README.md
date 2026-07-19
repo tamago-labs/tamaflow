@@ -82,8 +82,6 @@ const TEMPLATES = {
 
 ### Employee
 
-<img width="674" height="398" alt="Screenshot 2026-07-18 114242" src="https://github.com/user-attachments/assets/330e174e-7ec7-4ee8-8741-f446a8371a8b" />
-
 1. **Open the Portal** — Visit the live demo at [tamaflow.vercel.app](https://tamaflow.vercel.app)
 2. **Setup Your Wallet** — Use the Employee CLI wallet locally or use the [pre-hosted demo wallet](https://d3pgy5i52ev547.cloudfront.net/api/health) on AWS for faster testing
 3. **View Payslips** — Open the Payslips page to access payroll documents sent by your employer
@@ -91,11 +89,7 @@ const TEMPLATES = {
 5. **Daily Check-In** — Perform your daily check-in on-chain to verify your attendance and earn reward points.
 6. **Chat & Search Knowledge** — Chat with your team or search the company handbook with AI. *The employer's desktop app needs to be online.*
 
-<img width="402" height="187" alt="Screenshot 2026-07-18 114348" src="https://github.com/user-attachments/assets/b6a233c8-95f3-4791-b185-d0a5848d2be9" />
-
 ### Employer
-
-<img width="477" height="266" alt="Screenshot 2026-07-18 195618" src="https://github.com/user-attachments/assets/7e63df8f-3a83-4fe7-b214-8af0598f4d89" />
 
 1. **Launch the App** — Open the desktop app on your computer
 2. **Configure Your Company** — Use the default Tamago Labs or deploy your own contracts and update the settings
