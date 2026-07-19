@@ -1,6 +1,6 @@
 # TamaFlow - AI Auto-Payroll on Canton for Global Teams
 
-> **Automate compliant payroll with withholding tax, localized payslips, and private salary settlement on Canton.**
+> **Paying salaries is easy. Running compliant payroll is not**
 
 <img width="810" height="463" alt="Screenshot 2026-07-19 091331" src="https://github.com/user-attachments/assets/16dbbe0a-2f06-443b-9a4f-289b7f693cc1" />
 
@@ -242,11 +242,11 @@ Token holding with UTXO model.
          └──────────────────────────┼──────────────────────────┘
                                     ▼
                     ┌──────────────────────────────┐
-                    │      CANTON NETWORK           │
-                    │  FiveNorth Seaport DevNet      │
-                    │  • Atomic settlement           │
-                    │  • On-ledger audit trail        │
-                    │  • Withholding tax compliance   │
+                    │      CANTON NETWORK          │
+                    │  FiveNorth Seaport DevNet    │
+                    │  • Atomic settlement         │
+                    │  • On-ledger audit trail     │
+                    │  • Withholding tax compliance│
                     └──────────────────────────────┘
 ```
 
