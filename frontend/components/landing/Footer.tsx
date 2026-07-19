@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { ArrowUpRight, Github, Twitter } from "lucide-react";
+import { Github } from "lucide-react";
 import Wordmark from "@/components/shared/Wordmark";
 import { SITE } from "@/lib/theme";
 import { marketingNav } from "@/lib/nav";
 
 /**
- * Site-wide footer for the marketing site. Shows the wordmark + a
- * short tagline, three columns of links, the social row, and the
- * mono version badge (matches the desktop-app sidebar footer style).
+ * Site-wide footer for the marketing site.
  */
 export default function Footer() {
   return (
@@ -20,13 +18,6 @@ export default function Footer() {
             <p className="mt-4 text-sm text-brand-navy/70 max-w-xs leading-relaxed">
               {SITE.shortDesc}
             </p>
-            <Link
-              href="/app"
-              className="mt-5 inline-flex items-center gap-1.5 py-2 px-4 bg-brand-blue text-white rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:opacity-90"
-            >
-              Launch App
-              <ArrowUpRight size={12} />
-            </Link>
           </div>
 
           {/* Sections */}
@@ -35,15 +26,14 @@ export default function Footer() {
             links={[
               { href: "#features", label: "Features" },
               { href: "#flow", label: "How it works" },
-              { href: "#why-canton", label: "Why Canton" },
-              { href: "/app", label: "Open app" },
+              { href: "https://github.com/tamago-labs/tamaflow#why-canton", label: "Why Canton" },
             ]}
           />
           <FooterCol
             title="Company"
             links={[
-              { href: "#problem", label: "Problem" },
-              { href: "#solution", label: "Solution" },
+              { href: "https://tamagolabs.com", label: "Tamago Labs" },
+              { href: "mailto:pisuth@tamagolabs.com", label: "Contact Us" },
             ]}
           />
           <FooterCol
@@ -62,23 +52,8 @@ export default function Footer() {
             <p className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
               © {new Date().getFullYear()} {SITE.name}
             </p>
-            {/* <span className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
-              ·
-            </span>
-            <p className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
-              {SITE.version} · TamaFlow
-            </p> */}
           </div>
           <div className="flex items-center gap-3">
-            {marketingNav.slice(0, 3).map((n) => (
-              <a
-                key={n.href}
-                href={n.href}
-                className="font-mono text-[10px] tracking-wider2 text-brand-muted uppercase no-underline hover:text-brand-navy"
-              >
-                {n.label}
-              </a>
-            ))}
             <a
               href="https://github.com/tamago-labs/tamaflow"
               aria-label="GitHub"
@@ -87,15 +62,6 @@ export default function Footer() {
               className="inline-flex items-center justify-center w-8 h-8 border border-brand-border rounded-md text-brand-navy hover:bg-brand-light"
             >
               <Github size={14} />
-            </a>
-            <a
-              href={`https://twitter.com/${SITE.twitter.replace("@", "")}`}
-              aria-label="Twitter"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center justify-center w-8 h-8 border border-brand-border rounded-md text-brand-navy hover:bg-brand-light"
-            >
-              <Twitter size={14} />
             </a>
           </div>
         </div>

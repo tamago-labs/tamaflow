@@ -29,23 +29,23 @@ interface Step {
 const steps: Step[] = [
   {
     num: "01",
-    title: "Import payroll documents",
-    body: "Upload payroll spreadsheets, tax forms, and supporting documents. AI parsing happens entirely on-device, so payroll data never leaves your machine.",
+    title: "Configure",
+    body: "Set up company profile, employees with salary and tax info, and payment templates.",
   },
   {
     num: "02",
-    title: "Review payroll with AI",
-    body: "AI reads each file, builds the payroll run, and flags anything unusual so a manager can review and approve with confidence.",
+    title: "Build Flow",
+    body: "Connect wallets, employees, and payment rules using the visual flow builder.",
   },
   {
     num: "03",
-    title: "Route approvals & settle",
-    body: "Managers approve through configurable role-based workflows with full audit trail. Once approved, settlements are coordinated on Canton.",
+    title: "Run Payroll",
+    body: "Click Start. The system processes payments atomically on Canton with full audit trail.",
   },
   {
     num: "04",
-    title: "Employees receive and access funds",
-    body: "Employees sign in once to verify their identity, receive payroll into their own Canton wallet, and access statements and assets through the Employee Portal.",
+    title: "Distribute",
+    body: "Employees receive payslips via P2P and access assets through the portal.",
   },
 ];
 

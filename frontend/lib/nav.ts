@@ -89,7 +89,6 @@ export const routeLabels: Record<string, string> = {
 export const marketingNav: { href: string; label: string }[] = [
   { href: "#features", label: "Features" },
   { href: "#flow", label: "How it works" },
-  { href: "#demo", label: "Demo" },
 ];
 
 export interface MarketingMoreItem {
@@ -99,6 +98,11 @@ export interface MarketingMoreItem {
 }
 
 export const marketingMore: MarketingMoreItem[] = [
+  {
+    label: "Watch Demo",
+    href: "https://youtu.be/_k3mefQHz2c",
+    external: true,
+  },
   {
     label: "GitHub Repo",
     href: "https://github.com/tamago-labs/tamaflow",

@@ -14,7 +14,7 @@ import { ArrowRight, ArrowUpRight, Monitor, MousePointerClick } from "lucide-rea
  *   └───────────────────────────────────────────────────────────┘
  *   ┌─ Screenshot of /desktop-flow.png ─┬─ 3-step story ───────┐
  *   │                                    │                       │
- *   │   [the actual canvas screenshot]   │  01 Drop a roster    │
+ *   │   [the actual canvas screenshot]   │  01 Add employees    │
  *   │                                    │  02 Wire a template  │
  *   │                                    │  03 Settle on Canton │
  *   └────────────────────────────────────┴───────────────────────┘
@@ -64,8 +64,8 @@ export default function DemoScenario() {
               <Step
                 icon={MousePointerClick}
                 num="01"
-                title="Drop a roster"
-                body="Drag an Employee card from the palette onto the canvas. Add as many as the run needs."
+                title="Add employees"
+                body="Drag Employee cards from the palette onto the canvas. Add as many as the payroll run needs."
               />
               <Step
                 icon={ArrowRight}

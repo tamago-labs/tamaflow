@@ -1,64 +1,41 @@
-import { ShieldCheck, Zap, Sparkles } from "lucide-react";
+import { FileText, Workflow, Zap } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface Feature {
+  num: string;
   icon: LucideIcon;
   title: string;
   body: string;
-  bullets: string[];
-  accent: "blue" | "teal" | "navy" | "ok";
-  /** Optional badge rendered in the top-right of the card. */
-  badge?: string;
+  tags: string[];
 }
 
 const features: Feature[] = [
   {
-    icon: ShieldCheck,
-    title: "Private Payroll",
-    body: "Compensation stays visible only to the parties authorised to see it. No third-party LLM, no intermediary, no leak surface.",
-    bullets: [
-      "On-ledger confidentiality",
-      "Per-employee access scope",
-    ],
-    accent: "blue",
+    num: "01",
+    icon: FileText,
+    title: "Generate",
+    body: "Localized payslips, AI templates, private knowledge base.",
+    tags: ["Local AI", "RAG"],
   },
   {
+    num: "02",
+    icon: Workflow,
+    title: "Manage",
+    body: "Visual payroll flows, tax rules, adding employee data, attendance approval.",
+    tags: ["Flow Builder", "Compliance"],
+  },
+  {
+    num: "03",
     icon: Zap,
-    title: "Atomic Settlement on Canton",
-    body: "Every payroll run settles in a single on-ledger transaction. All parties commit or none do — no partial state, no manual reconciliation.",
-    bullets: [
-      "One transaction per cycle",
-      "Full audit trail on Canton",
-    ],
-    accent: "teal",
-  },
-  {
-    icon: Sparkles,
-    title: "AI-Assisted Payroll",
-    body: "Local AI parses payroll documents, flags anomalies, and surfaces what needs review. Sensitive data never leaves your machine.",
-    bullets: [
-      "Local LLM — no cloud",
-      "Roster + document parsing",
-      "Anomaly detection",
-    ],
-    accent: "navy",
-    badge: "Coming soon",
+    title: "Settle",
+    body: "Atomic settlement on Canton with secure Hyperswarm distribution.",
+    tags: ["Canton", "Hyperswarm"],
   },
 ];
 
-const accentMap: Record<Feature["accent"], string> = {
-  blue: "bg-[#eaeefc] text-brand-blue border-brand-blue",
-  teal: "bg-[#eafaf8] text-brand-tealAccent border-brand-teal",
-  navy: "bg-brand-light text-brand-navy border-brand-border",
-  ok: "bg-[#e6f7ee] text-brand-ok border-brand-ok",
-};
-
 /**
- * "Key Features" — 3-card row (one for each of our three real
- * promises: privacy, Canton settlement, local AI). Each card has a
- * coloured accent badge for the icon and a small mono number/badge
- * in the top-right. The AI card carries a "Coming soon" pill so
- * visitors don't expect a fully-baked AI in v1.
+ * "Key Features" — 3-column numbered layout showing
+ * Generate → Manage → Settle workflow.
  */
 export default function Features() {
   return (
@@ -70,49 +47,47 @@ export default function Features() {
           </p>
           <h2 className="text-3xl md:text-4xl font-light text-brand-navy tracking-tight leading-tight">
             Everything you need to{" "}
-            <span className="text-brand-blue">pay a global team</span>.
+            <span className="text-brand-blue">run payroll on Canton</span>.
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-3 gap-8">
           {features.map((f, i) => (
             <article
               key={f.title}
               className="bg-white border border-brand-border rounded-md p-6 hover:border-brand-blue/40 transition-colors"
             >
-              <div className="flex items-center justify-between mb-4">
-                <span
-                  className={`inline-flex items-center justify-center w-10 h-10 rounded-md border ${accentMap[f.accent]}`}
-                >
+              {/* Number + Icon */}
+              <div className="flex items-center gap-3 mb-4">
+                <span className="font-mono text-2xl font-bold text-brand-teal">
+                  {f.num}
+                </span>
+                <span className="inline-flex items-center justify-center w-10 h-10 rounded-md bg-brand-light border border-brand-border text-brand-blue">
                   <f.icon size={18} />
                 </span>
-                {f.badge ? (
-                  <span className="inline-flex items-center font-mono text-[9px] tracking-wider2 text-brand-muted uppercase font-semibold border border-brand-border rounded-full px-2 py-0.5 bg-brand-light">
-                    {f.badge}
-                  </span>
-                ) : (
-                  <span className="font-mono text-[9px] tracking-wider2 text-brand-muted uppercase">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                )}
               </div>
-              <h3 className="text-lg font-medium text-brand-navy">
+
+              {/* Title */}
+              <h3 className="text-lg font-medium text-brand-navy mb-2">
                 {f.title}
               </h3>
-              <p className="mt-2 text-sm text-brand-navy/70 leading-relaxed">
+
+              {/* Description */}
+              <p className="text-sm text-brand-navy/70 leading-relaxed mb-4">
                 {f.body}
               </p>
-              <ul className="mt-4 space-y-1.5">
-                {f.bullets.map((b) => (
-                  <li
-                    key={b}
-                    className="flex items-center gap-2 text-[12px] text-brand-navy/80"
+
+              {/* Tags */}
+              <div className="flex flex-wrap gap-2">
+                {f.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center px-2.5 py-1 rounded-full bg-brand-light border border-brand-border font-mono text-[10px] font-semibold tracking-wider2 text-brand-navy uppercase"
                   >
-                    <span className="w-1 h-1 rounded-full bg-brand-blue" />
-                    {b}
-                  </li>
+                    {tag}
+                  </span>
                 ))}
-              </ul>
+              </div>
             </article>
           ))}
         </div>

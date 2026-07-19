@@ -28,16 +28,14 @@ export default function CTA() {
           <div className="relative grid lg:grid-cols-[1.4fr_1fr] gap-8 items-center">
             <div>
               <p className="font-mono text-[10px] tracking-wider2 text-brand-teal uppercase font-semibold mb-3">
-                Ready when you are
+                Get started today
               </p>
               <h2 className="text-3xl md:text-4xl font-light leading-tight">
-                Run payroll that{" "}
-                <span className="text-brand-teal">stays private</span> —
-                from roster to settlement.
+                Private payroll that{" "}
+                <span className="text-brand-teal">actually works</span>.
               </h2>
               <p className="mt-4 text-base text-white/70 max-w-xl leading-relaxed">
-                Spin up a local agent, import your roster, and let
-                TamaFlow net, summarise, and atomically settle on Canton.
+                Configure employees, build payroll flows, and settle atomically on Canton.
                 No cloud LLM ever sees your data.
               </p>
             </div>
@@ -50,12 +48,14 @@ export default function CTA() {
                 Launch App
                 <ArrowUpRight size={14} />
               </Link>
-              {/* <a
-                href="#whitepaper"
+              <a
+                href="https://youtu.be/_k3mefQHz2c"
+                target="_blank"
+                rel="noreferrer"
                 className="inline-flex items-center gap-2 py-3 px-7 bg-transparent text-white border border-white/20 rounded-md font-mono text-[11px] font-bold tracking-wider2 uppercase no-underline hover:bg-white/5"
               >
-                Read the Whitepaper
-              </a> */}
+                Watch Demo
+              </a>
             </div>
           </div>
         </div>

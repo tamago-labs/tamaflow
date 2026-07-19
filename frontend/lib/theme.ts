@@ -16,7 +16,7 @@ export const SITE = {
   name: "TamaFlow",
   tagline: "AI Auto-Payroll on Canton",
   shortDesc:
-    "Privacy-first payroll that nets cross-border obligations and settles atomically on Canton — without ever leaking data to a third-party LLM.",
+    "Privacy-first, decentralized payroll platform bridging Web3 settlement with real-world compliance.",
   url: "https://tamaflow.tamagolabs.com",
   twitter: "@tamaflow",
   version: "v0.1",

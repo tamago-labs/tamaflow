@@ -21,10 +21,10 @@ import { Quote } from "lucide-react";
  * the motion across the site feels unified.
  */
 const QUOTE =
-  "TamaFlow helps us pay our team in crypto without breaking Japanese law or messing up the accounting. It's the only payroll product that does both.";
+  "After years of paying payrolls in crypto, we realized the hardest part wasn't the payment—it was everything around it: taxes, payslips, and compliance. TamaFlow was built to solve that.";
 
 const NAME = "Pisuth D.";
-const ROLE = "Representative Director, Tamago Labs Japan";
+const ROLE = "Founder, Tamago Labs Japan";
 
 export default function OneLiner() {
   return (
