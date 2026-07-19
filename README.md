@@ -1,24 +1,27 @@
-# TamaFlow - Private Payroll for Global Teams
+# TamaFlow - AI Auto-Payroll on Canton for Global Teams
 
-> **Paying salaries is easy. Running compliant payroll is not**
+> **Automate compliant payroll with withholding tax, localized payslips, and private salary settlement on Canton.**
 
-<img width="808" height="413" alt="Screenshot 2026-07-18 112651" src="https://github.com/user-attachments/assets/d1ca7194-3c5e-4f4c-aeca-9c082a890ca6" />
+<img width="953" height="499" alt="Screenshot 2026-06-29 115350" src="https://github.com/user-attachments/assets/3b88dd84-b61e-4806-9d8a-bcaacc618446" />
 
 ---
 
 ## What is TamaFlow?
 
-TamaFlow combines **Local AI**, **Hyperswarm**, and **Canton** to modernize payroll for global teams.
+TamaFlow is a privacy-first, decentralized payroll platform built to bridge the gap between Web3 settlement and real-world payroll compliance. Most crypto payroll solutions stop at Wallet A → Wallet B. They transfer salaries but leave companies to manually handle withholding tax, social security, localized payslips, and jurisdiction-specific payroll requirements.
 
-- **Local AI** generates localized payslips and powers a private knowledge base without exposing sensitive data.
-- **Hyperswarm** securely delivers payslips, shares company knowledge, and enables peer-to-peer collaboration.
-- **Canton** provides private, atomic, and auditable payroll settlement.
+TamaFlow combines **Local AI**, **Canton**, and **P2P Hyperswarm** into a unified payroll platform:
 
-### Applications
+1. **Local AI** — Generate localized payslips, manage AI-assisted HTML templates, and power a private knowledge base without exposing sensitive payroll data to cloud services.
+2. **Canton** — Facilitates private payroll settlements using DAML smart contracts to manage daily attendance check-ins and reward point tracking.
+3. **P2P Hyperswarm** — Provides a secure, peer-to-peer network layer for distributing payslips, sharing corporate data, and enabling direct collaboration.
 
-- **Employer Desktop** — Payroll management, local AI, and Canton settlement.
-- **Employee Portal** — Payroll self-service, payslips, assets, and knowledge search.
-- **Employee CLI Wallet** — Canton wallet with Hyperswarm connectivity.
+### Components
+
+- **Employer Client** — Electron desktop app for payroll management, local AI, and Canton settlements.
+- **Employee CLI Wallet** — Node.js CLI for P2P Hyperswarm connectivity, Canton wallet, and employee self-service.
+- **Employee Portal** — Next.js web app for viewing assets, payslips, attendance, and rewards.
+- **Settlement** — Canton Network (FiveNorth Seaport Validator DevNet).
 
 ---
 
@@ -37,55 +40,190 @@ TamaFlow combines **Local AI**, **Hyperswarm**, and **Canton** to modernize payr
 
 ## Highlighted Features
 
-* **Privacy-First Payroll** — Process sensitive payroll data locally with AI without exposing it to cloud services.
-* **AI-Powered Payslip Generation** — Local AI generates formatted payslips from settlement data, supporting Standard, Japanese (給与明細書), and Detailed styles.
-* **Payslip Template Manager** — Create, edit, and manage payslip HTML templates with AI assistance. Templates use exact placeholder variables (`{{grossPay}}`, `{{taxAmount}}`, etc.) for accurate data binding.
-* **Legal Compliance** — Payment templates encode jurisdiction-specific withholding tax and social security rules (Japan, Thailand, and more).
-* **Canton Settlement** — Atomic settlement of multi-route payroll with on-ledger audit trail.
-* **Asset Transfer** — Employees can send Canton Coin (CC) to other parties via P2P.
-* **Knowledge Base** — RAG-powered document search with P2P relay. Employers manage documents; employees search via the portal.
-* **P2P Hyperswarm** — Team chat, payslip delivery, and knowledge sharing via decentralized P2P.
-* **Employee Self-Service** — Employees view assets, receive payslips, check in attendance, and claim reward points.
-* **Rewards Hub** — Track reward points earned from attendance check-ins.
-* **Multi-Currency** — Configure payroll in local fiat while settling securely on Canton.
+* **Privacy-First Payroll** — Local AI generates payslips and powers a private knowledge base without cloud exposure.
+* **Canton Settlement** — Atomic payroll settlement with DAML smart contracts and attendance tracking.
+* **P2P Hyperswarm** — Secure peer-to-peer layer for payslip delivery, team chat, and knowledge sharing.
+* **Knowledge Base** — RAG-powered document search relayed through P2P. Employers manage, employees search.
+* **Employee Self-Service** — Portal for assets, payslips, attendance check-in, and reward points.
+
+---
+
+## Deployment (Canton Devnet)
+
+| Module | Party ID / Contract | Link |
+|--------|---------------------|------|
+| Employee Demo Wallet | `employee::12203ca86b7046226e7e69797ac81501e6e585c5e7574db9b34133ac27bd5def150a` | [Lighthouse](https://lighthouse.devnet.cantonloop.com/party/employee%3A%3A12203ca86b7046226e7e69797ac81501e6e585c5e7574db9b34133ac27bd5def150a) |
+| Employer Demo Wallet | `ohm-ohm::1220efe57cb13a797e531d4ad1b24c6b15e9b4fd02d77feddccde8ec06af7dd9e080` | [Lighthouse](https://lighthouse.devnet.cantonloop.com/party/ohm-ohm%3A%3A1220efe57cb13a797e531d4ad1b24c6b15e9b4fd02d77feddccde8ec06af7dd9e080) |
+| Employee CLI Wallet (Hosted) | — | [d3pgy5i52ev547.cloudfront.net](https://d3pgy5i52ev547.cloudfront.net/api/health) |
+| Company Contract | 00ff8857228d7f5f372ee72716f1e0ef30d958e6a1bdd49c1c3ab43f73d5a8a491ca121220d7df1d1bc05edadc3ba23f39700482694fa67dd29740f1741010ac674f4aba31 | — |
+| JPYC Contract | 004e69cbb45b5eefbd0aea9c25b08e0c9ab0c939465edd37a682186742f22f8251ca121220aa7b12404e511df0ce86ad6357329790ee8f77add1507b781874fa8ba826f93f  | — |
+
+Custom contracts are not available on the Lighthouse block explorer. You may need to use Seaport and provide contract IDs manually.
+
+### Template IDs
+
+```js
+const PACKAGE_ID = '4b54a4a5de912eca2ddfcf7126efe2c95a76a82bc1e61eda26b5260db05bbc48'
+
+const TEMPLATES = {
+  COMPANY_PROFILE: `${PACKAGE_ID}:TamaFlow.Company.CompanyProfile:CompanyProfile`,
+  EMPLOYEE_RECORD: `${PACKAGE_ID}:TamaFlow.Company.EmployeeRecord:EmployeeRecord`,
+  JPYC_ASSET: `${PACKAGE_ID}:TamaFlow.JPYC.Asset:JPYCAsset`,
+  PAYSIP_RECORD: `${PACKAGE_ID}:TamaFlow.Company.PayslipRecord:PayslipRecord`,
+}
+```
 
 ---
 
 ## Quick Start
 
-TamaFlow ships as **three components**: the Employer Client (desktop), the Employee CLI (Node.js), and the Employee Portal (web).
+### Employee
 
-### 1. Employee CLI (local)
+1. **Open the Portal** — Visit the live demo at [tamaflow.vercel.app](https://tamaflow.vercel.app)
+2. **Setup Your Wallet** — Use the Employee CLI wallet locally or use the [pre-hosted demo wallet](https://d3pgy5i52ev547.cloudfront.net/api/health) on AWS for faster testing
+3. **View Payslips** — Open the Payslips page to access payroll documents sent by your employer
+4. **Manage Assets** — Review payroll payments and transfer Canton Coin (CC) to external wallets when needed
+5. **Chat & Search Knowledge** — Chat with your team or search the company handbook with AI. *The employer's desktop app needs to be online.*
 
-The CLI connects to the Canton network and provides P2P Hyperswarm connectivity.
+### Employer
 
-```bash
-cd employee-cli
-npm install
-npm start        # http://localhost:3001
-```
+1. **Launch the App** — Open the desktop app on your computer
+2. **Configure Your Company** — Use the default Tamago Labs or deploy your own contracts and update the settings
+3. **Add Employees** — Configure salary, tax, pension, and social security information
+4. **Create Payment Rules** — Build payment templates for direct salary, withholding tax, and social security deductions
+5. **Build the Payroll Flow** — Connect wallets, employees, and payment rules using the visual flow builder
+6. **Review Payroll** — Verify net salary, deductions, and live fiat conversion before settlement
+7. **Run Payroll** — Click Start. The system will process payments one by one. If one employee's payment fails, you can retry just that step without duplicating successful payments
+8. **Generate Payslips** — Use Local AI to generate localized HTML payslips and customize them when needed
 
-### 2. Employer Client (desktop app)
-
-The desktop app is where payroll flows are built and where the on-device Canton wallet lives.
-
-```bash
-cd desktop-app
-npm install
-npm run dev      # launches Electron with hot reload
-```
-
-### 3. Employee Portal (web)
-
-The frontend is a Next.js app — run locally or visit the deployed version.
+### How to Setup
 
 ```bash
-cd frontend
-npm install
-npm run dev      # http://localhost:3000
+# Employee CLI Wallet
+cd employee-cli && npm install && npm start   # http://localhost:3001
+
+# Employer Desktop App
+cd desktop-app && npm install && npm run dev  # Electron with hot reload
+
+# Employee Portal
+cd frontend && npm install && npm run dev     # http://localhost:3000
 ```
 
 ---
+
+## Smart Contracts
+
+### Package Structure
+
+```
+contracts/daml/TamaFlow/
+├── Company/
+│   ├── Types.daml                # BlockStatus, BlockInfo types
+│   ├── CompanyProfile.daml       # Company on-chain profile + payslip creation
+│   ├── EmployeeRecord.daml       # Employee-company link + attendance + points
+│   └── PayslipRecord.daml        # Lightweight payslip reference on-ledger
+├── JPYC/
+│   ├── Types.daml                # Token constants
+│   ├── Asset.daml                # Token holding (Split/Transfer/Merge)
+│   └── Issuer.daml               # Admin mints tokens
+└── Tests/
+    ├── JPYCTest.daml             # JPYC token tests
+    ├── CompanyTest.daml          # Company + attendance tests
+    └── E2ETest.daml              # Full employee lifecycle test
+```
+
+
+### CompanyProfile
+
+Employer creates company on-chain. Admin creates, employer manages.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| admin | Party | Signatory (company admin) |
+| employer | Party | Observer (manages employees) |
+| companyName | Text | Company name |
+| country | Text | Country code |
+
+**Choices:**
+
+| Choice | Controller | Return | Description |
+|--------|------------|--------|-------------|
+| `AddEmployee` | employer | `ContractId EmployeeRecord` | Link employee to company (nonconsuming) |
+| `CreatePayslip` | employer | `ContractId PayslipRecord` | Register payslip on-ledger (nonconsuming) |
+
+### EmployeeRecord
+
+Employer links employees to company. Employee observes. Contains attendance blocks and reward points.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| employer | Party | Signatory |
+| employee | Party | Observer |
+| companyName | Text | Company name |
+| displayName | Text | Employee name |
+| role | Optional Text | Job role |
+| blocks | TextMap BlockInfo | Attendance blocks (keyed by timestamp) |
+| points | Int | Reward points (starts at 0) |
+
+**Choices:**
+
+| Choice | Controller | Return | Description |
+|--------|------------|--------|-------------|
+| `CheckIn` | employee | `ContractId EmployeeRecord` | Add attendance block + award points |
+| `ConfirmBlock` | employer | `ContractId EmployeeRecord` | Confirm a block |
+| `RejectBlock` | employer | `ContractId EmployeeRecord` | Reject a block |
+
+**Points Logic:**
+
+| Event | Points Added | Running Total |
+|-------|-------------|---------------|
+| First CheckIn (points == 0) | +1000 | 1000 |
+| Subsequent CheckIn | +10 | 1000 + (n × 10) |
+
+**Note:** All choices are consuming — each exercise archives the old contract and creates a new one with updated blocks and points.
+
+### PayslipRecord
+
+Lightweight payslip reference on-ledger. Employer creates via CompanyProfile.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| employer | Party | Signatory |
+| employee | Party | Observer |
+| payslipId | Text | Unique payslip identifier |
+| period | Text | Pay period (e.g. "2026-07") |
+| status | PayslipStatus | Sent or Viewed |
+| createdAt | Time | Creation time |
+
+### JPYCAsset
+
+Token holding with UTXO model.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| issuer | Party | Signatory (minted by) |
+| owner | Party | Observer (current holder) |
+| amount | Decimal | Balance |
+| instrumentId | Text | Always "JPYC" |
+| observers | [Party] | Additional observers |
+
+**Choices:**
+
+| Choice | Controller | Description |
+|--------|------------|-------------|
+| `Split` | owner | Split into payment + change UTXOs |
+| `TransferAsset` | owner | Transfer to new owner |
+| `MergeWith` | owner | Merge two same-owner UTXOs |
+
+### Integration
+
+1. **Attendance:** EmployeeRecord stores attendance blocks and reward points
+2. **Payslips:** CompanyProfile.CreatePayslip creates on-ledger reference. Actual content sent via P2P
+3. **Rewards:** Points embedded in EmployeeRecord — 1000 on first check-in, 10 each subsequent
+4. **Payments:** JPYC Asset Split/Transfer for token payments
+
+---
+
 
 ## Architecture
 
@@ -224,14 +362,6 @@ Templates use `{{placeholder}}` syntax for data binding:
 
 ---
 
-## Coming Soon
-
-* **AI Chat** — Employees ask questions about their compensation, benefits, and company policies.
-* **Global Teams** — Multi-country payroll with jurisdiction-specific compliance.
-* **Reward Redemption** — Exchange reward points for benefits and perks.
-
----
-
 ## License
 
-TBD.
+MIT
