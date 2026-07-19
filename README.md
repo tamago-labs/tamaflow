@@ -181,6 +181,65 @@ Following data structure is GDPR clean by design — sensitive data stays local 
 
 ---
 
+## Peer-to-Peer Collaboration
+
+Built entirely on the **Pear Runtime** ecosystem from Holepunch.
+
+### How It Works
+
+```
+Employer (Desktop App)                    Employee (CLI / Portal)
+┌────────────────────────┐               ┌────────────────────────┐
+│ Creates room           │               │ Joins room via         │
+│ Generates invite code  │──── invite ──→│ invite code            │
+│                        │               │                        │
+│ Hyperswarm ────────────┼──── P2P ─────┼── Hyperswarm           │
+│   Discovery (UDP)      │               │   Discovery (UDP)      │
+│   Connection (TCP)     │               │   Connection (TCP)     │
+│                        │               │                        │
+│ Autobase ──────────────┼── replicate ──┼── Autobase             │
+│   Multi-writer log     │               │   Read-only replica    │
+│                        │               │                        │
+│ HyperDB ───────────────┼── replicate ──┼── HyperDB              │
+│   Chat, Payslips, etc. │               │   Chat, Payslips, etc. │
+└────────────────────────┘               └────────────────────────┘
+```
+
+### Core Components
+
+| Component | Role | Description |
+|-----------|------|-------------|
+| **HyperDHT** | Peer discovery | Internet-wide P2P routing via distributed hash table. Peers identified by public key, not IP. |
+| **Hyperswarm** | Connection management | Discovers peers by topic (invite code) and establishes encrypted TCP connections via hole punching. |
+| **Autobase** | Multi-writer log | Append-only log that all peers replicate. Enables conflict-free collaboration without central coordination. |
+| **HyperDB** | Replicated state | Keyed collections (chat, payslips, AI state) stored over Autobase. Every peer sees the same data. |
+| **Corestore** | Storage layer | Manages Hypercore feeds and encryption keys. Persists P2P state locally. |
+| **Blind Pairing** | Invite system | Generate short invite codes that encode room identity + encryption key. No account required. |
+
+### Invite Code Flow
+
+1. **Employer** creates a room → generates invite code (z32-encoded)
+2. **Employee** enters invite code → Hyperswarm discovers employer's peer
+3. Hole punching establishes direct TCP connection (works through NAT)
+4. Corestore replicates Autobase + HyperDB to the new peer
+5. Both peers can now read/write chat, payslips, and other data
+
+### Data Replication
+
+- **Employer** (host): Full read/write access to all collections
+- **Employee** (guest): Read access to their own data + shared chat/payslips
+- All writes go through Autobase → replicated to all connected peers automatically
+
+### Key Properties
+
+- **No accounts** — Identity is a cryptographic keypair, not a username/password
+- **No cloud** — All data stays on participant devices
+- **No single point of failure** — Any peer can host; room survives if host goes offline
+- **Internet-wide** — HyperDHT handles NAT traversal and peer discovery globally
+- **Encrypted** — All P2P traffic is end-to-end encrypted via Noise protocol
+
+---
+
 ## Smart Contracts
 
 ### Package Structure
